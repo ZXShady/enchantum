@@ -3,6 +3,11 @@
 #include <limits>
 #include <string_view>
 
+#ifndef ENCHANTUM_ASSERT
+  #include <cassert>
+  #define ENCHANTUM_ASSERT(cond, msg, ...) assert(cond&& msg)
+#endif
+
 #ifndef ENCHANTUM_MAX_RANGE
   #define ENCHANTUM_MAX_RANGE 256
 #endif
@@ -14,7 +19,7 @@
 #endif
 
 #if ENCHANTUM_SEARCH_PER_ITERATION < 16
-#error It is recommended to use a higher ENCHANTUM_SEARCH_PER_ITERATION since decreasing it can lead to inaccurate reflection results. 
+  #error It is recommended to use a higher ENCHANTUM_SEARCH_PER_ITERATION since decreasing it can lead to inaccurate reflection results.
 #endif
 
 namespace enchantum {
@@ -34,48 +39,53 @@ concept ScopedEnum = Enum<T> && (!std::is_convertible_v<T, std::underlying_type_
 template<typename T>
 concept UnscopedEnum = Enum<T> && !ScopedEnum<T>;
 
-template<typename E,typename Underlying>
-concept EnumOfUnderlying = Enum<E> && std::same_as<std::underlying_type_t<E>,Underlying>;
+template<typename E, typename Underlying>
+concept EnumOfUnderlying = Enum<E> && std::same_as<std::underlying_type_t<E>, Underlying>;
 
-template <Enum E>
-inline constexpr bool is_bitflag =  
-(
-    requires(E e) { { e & e } -> std::same_as<E>; } ||
-    requires(E e) { { e & e } -> std::same_as<bool>; }
-) &&
-requires(E e) {
-    { ~e } -> std::same_as<E>;
-    { e | e } -> std::same_as<E>;
-    { e &= e } -> std::same_as<E&>;
-    { e |= e } -> std::same_as<E&>;
+template<Enum E>
+inline constexpr bool is_bitflag = requires(E e) {
+  requires std::same_as<decltype(e & e), bool> || std::same_as<decltype(e & e), E>;
+  { ~e } -> std::same_as<E>;
+  { e | e } -> std::same_as<E>;
+  { e &= e } -> std::same_as<E&>;
+  { e |= e } -> std::same_as<E&>;
 };
 
 template<typename T>
 concept BitFlagEnum = Enum<T> && is_bitflag<T>;
 
+
 template<typename T>
 struct enum_traits;
 
-template<SignedEnum E> struct enum_traits<E> {
-private:
-  using U = std::underlying_type_t<E>;
-  using L = std::numeric_limits<U>;
-public:
-  static constexpr auto min        = (L::min)() > ENCHANTUM_MIN_RANGE ? (L::min)() : ENCHANTUM_MIN_RANGE;
-  static constexpr auto max        = (L::max)() < ENCHANTUM_MAX_RANGE ? (L::max)() : ENCHANTUM_MAX_RANGE;
-  static constexpr bool is_bitflag = false;
-};
-
-template<UnsignedEnum E>
+template<SignedEnum E>
 struct enum_traits<E> {
 private:
   using U = std::underlying_type_t<E>;
   using L = std::numeric_limits<U>;
 public:
-  static constexpr auto min        = ENCHANTUM_MIN_RANGE < 0 ? 0 : ENCHANTUM_MIN_RANGE;
-  static constexpr auto max        = (L::max)() < ENCHANTUM_MAX_RANGE ? (L::max)() : ENCHANTUM_MAX_RANGE;
-  static constexpr bool is_bitflag = false;
+  static constexpr auto min = (L::min)() > ENCHANTUM_MIN_RANGE ? (L::min)() : ENCHANTUM_MIN_RANGE;
+  static constexpr auto max = (L::max)() < ENCHANTUM_MAX_RANGE ? (L::max)() : ENCHANTUM_MAX_RANGE;
 };
 
+template<UnsignedEnum E>
+struct enum_traits<E> {
+private:
+  using T = std::underlying_type_t<E>;
+  using L = std::numeric_limits<T>;
+public:
+  static constexpr auto min = []() {
+    if constexpr (std::is_same_v<T, bool>)
+      return false;
+    else
+      return static_cast<T>(ENCHANTUM_MIN_RANGE) < 0 ? 0 : static_cast<T>(ENCHANTUM_MIN_RANGE);
+  }();
+  static constexpr auto max = []() {
+    if constexpr (std::is_same_v<T, bool>)
+      return true;
+    else
+      return (L::max)() < static_cast<T>(ENCHANTUM_MAX_RANGE) ? (L::max)() : static_cast<T>(ENCHANTUM_MAX_RANGE);
+  }();
+};
 
 } // namespace enchantum
