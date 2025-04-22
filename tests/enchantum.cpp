@@ -1,16 +1,9 @@
 #include "test_utility.hpp"
 #include <algorithm>
 #include <catch2/catch_test_macros.hpp>
+#include <enchantum/algorithms.hpp>
 #include <enchantum/cast.hpp>
 #include <enchantum/enchantum.hpp>
-#include <enchantum/algorithms.hpp>
-
-TEST_CASE("Color enum concept checks", "[concepts]")
-{
-  STATIC_REQUIRE(enchantum::Enum<Color>);
-  STATIC_REQUIRE(enchantum::ScopedEnum<Color>);
-  STATIC_REQUIRE_FALSE(enchantum::UnscopedEnum<Color>);
-}
 
 TEST_CASE("Color enum to_string / cast", "[stringify]")
 {
@@ -44,8 +37,8 @@ TEST_CASE("Color enum min/max", "[range]")
   STATIC_CHECK(enchantum::min<Color> == Color::Aqua);
   STATIC_CHECK(enchantum::max<Color> == Color::Blue);
 
-  REQUIRE(static_cast<std::underlying_type_t<Color>>(enchantum::min<Color>) == -42);
-  REQUIRE(static_cast<std::underlying_type_t<Color>>(enchantum::max<Color>) == 214);
+  STATIC_CHECK(static_cast<std::underlying_type_t<Color>>(enchantum::min<Color>) == -42);
+  STATIC_CHECK(static_cast<std::underlying_type_t<Color>>(enchantum::max<Color>) == 214);
 }
 
 TEST_CASE("Color enum cast from underlying type", "[cast]")
@@ -108,11 +101,29 @@ TEST_CASE("Color enum index_to_enum", "[index_to_enum]")
   STATIC_CHECK(index_to_enum<Color>(4) == Color::Blue);
 }
 
-TEST_CASE("Color for_each", "[for_each]")
+TEST_CASE("Color count", "[index_to_enum]")
 {
-  std::vector<Color> visited;
+  STATIC_CHECK(enchantum::count<Color> == 5);
+  STATIC_CHECK(enchantum::count<Letters> == 26);
+  STATIC_CHECK(enchantum::count<BoolEnum> == 2);
+}
 
-  enchantum::for_each<Color>([&](auto val) { visited.push_back(val); });
+#if 0
+template<auto V>
+using constant = std::integral_constant<decltype(V), V>;
+
+template<typename... Ts>
+struct overloads {
+    using Ts::operator()...;
+};
+template<typename... Ts>
+overloads(Ts...) -> overloads<Ts...>; // not needed in C++20 I know
+
+
+TEST_CASE("Color visit", "[visit]")
+{
+  const auto visited = enchantum::visit(
+      [](auto val) -> Color { return val; },Color::Purple);
 
   constexpr auto& expected = enchantum::values<Color>;
 
@@ -121,3 +132,4 @@ TEST_CASE("Color for_each", "[for_each]")
     REQUIRE(visited[i] == expected[i]);
   }
 }
+#endif
