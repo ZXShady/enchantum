@@ -26,6 +26,7 @@ option(ENCHANTUM_BUILD_TESTS "Tests for this `enum reflection` library" OFF)
 option(ENCHANTUM_BUILD_BENCHMARKS "Benchmarks for this `enum reflection` library" OFF)
 
 if(ENCHANTUM_BUILD_TESTS)
+  enable_testing()
   add_subdirectory(tests)
 endif()
 
