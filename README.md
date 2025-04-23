@@ -1,45 +1,118 @@
 # Enchantum
 
+**Enchantum** is a modern **C++20** library for **compile-time enum reflection**. It offers fast and lightweight handling of enum values, names, and bitflags — all built with clean C++ concepts in mind.
 
-Enchantum is a **C++20** library designed to provide faster compile time enum reflection. With Enchantum, you can easily handle enum values, names, bitflag support, and much more — all with modern C++ concepts.
+Note: Currently supported on **MSVC** and **GCC**. Clang support is coming soon TM.
 
-**Note** only currently implemented for MSVC and GCC and Clang impl coming soon!
+Tested with **Visual Studio 2022 (v17.13.6)**.
 
+[Features](docs/features.md)
 
+# Examples
 
-**Note** this was tested on Visual Studio latest version (17.13.6 at that time)
+## Basic Enum to String
 
-[features](docs/features.md)
+```cpp
+#include <enchantum/enchantum.hpp>
 
-# Why would I use this over the `magic_enum`?
+enum class Color { Red, Green, Blue };
 
+Color c = Color::Green;
+std::string_view name = enchantum::to_string(c);
+std::cout << name << '\n'; // Outputs: Green
+```
 
-## Compile Time Benchmark Results
+## Iterating over values
+```cpp
+#include <enchantum/enchantum.hpp>
 
-*Note: These were ran 3 times and took the average.*
+enum class Status { Ok = 0, Warning = 1, Error = 2 };
 
-### Range: -128 to 128 with to_string/enum_name calls for 200 small enums with 16 members from 0-15 values
+for (auto value : enchantum::values<Status>) {
+    std::cout << static_cast<int>(value) << ": " << enchantum::to_string(value) << '\n';
+}
+// Outputs:
+// 0: Ok
+// 1: Warning
+// 2: Error
+```
 
-| LIBRARY        | TIME                | NOTES                                |
-|----------------|---------------------|--------------------------------------|
-| `magic_enum`   | 01:20.626 minutes    |                                      |
-| `enchantum`    | 33.416 seconds       | `ENCHANTUM_SEARCH_ITER_COUNT` = 32   |
+## Checking for validity
+```cpp
+#include <enchantum/enchantum.hpp>
+
+enum class Direction { North, South, East, West };
+
+std::cout << std::boolalpha << enchantum::contains<Direction>("North") << '\n'; // true
+std::cout << std::boolalpha << enchantum::contains<Direction>("Up") << '\n'; // false
+std::cout << std::boolalpha << enchantum::contains(Direction(-42)) << '\n'; // false
+std::cout << std::boolalpha << enchantum::contains<Direction>(0) << '\n'; // true
+```
+## Min Max Count
+```cpp
+
+enum class Errno { BadSomething = -1, IamGood = 0, IAmBadV2 = 1 };
+
+std::cout << "Min: " << static_cast<int>(enchantum::min<Result>) << '\n'; // -1 BadSomething
+std::cout << "Max: " << static_cast<int>(enchantum::max<Result>) << '\n'; // 1 IAmBadV2
+std::cout << "Count: " << enchantum::count<Result> << '\n'; // 3
+```
 
 ---
 
-### Range: -256 to 256 with to_string/enum_name calls for 32 big enums with 200 members from 0-199 values
+## Why use Enchantum over [`magic_enum`](https://github.com/Neargye/magic_enum)?
 
-| LIBRARY        | TIME                | NOTES                                |
-|----------------|---------------------|--------------------------------------|
-| `magic_enum`   | 37.032 seconds      |                                      |
-| `enchantum`    | 22.212 seconds      | `ENCHANTUM_SEARCH_ITER_COUNT` = 32   |
+If you're looking for faster compile times with enum reflection-heavy code, **Enchantum** delivers.
 
+## Compile Time Benchmarks (per Compiler)
 
-### Range: -1024 to 1024 with to_string/enum_name calls for 200 small enums with 16 members from 0-15 values
-**NOTE** only ran once.
+All tests were performed with `enchantum::to_string` / `magic_enum::enum_name` calls over various enum sizes.
 
-| LIBRARY        | TIME                | NOTES                                |
-|----------------|---------------------|--------------------------------------|
-| `magic_enum`   | ~20 minutes and still not finished I got bored and killed the compiler seconds      |                                      |
-| `enchantum`    | 03:12.947 minutes      | `ENCHANTUM_SEARCH_ITER_COUNT` = 32   |
+Each test was run 3 times and averaged unless otherwise noted.
 
+### Small Enums (200 enums, 16 values each, range: -128 to 128)
+
+| Compiler | Library      | Time           | Notes                                |
+|----------|--------------|----------------|--------------------------------------|
+| MSVC     | magic_enum   | 1:20.626 mins  |                                      |
+| MSVC     | enchantum    | 33.416   secs  | `ENCHANTUM_SEARCH_ITER_COUNT = 32`   |
+| GCC      | magic_enum   | 39.01    secs  |                                      |
+| GCC      | enchantum    | 18.40    secs  | `ENCHANTUM_SEARCH_ITER_COUNT = 32`   |
+| Clang    | magic_enum   | Not supported  |                                      |
+| Clang    | enchantum    | Not supported  |                                      |
+
+---
+
+### Large Enums (32 enums, 200 values each, range: -256 to 256)
+
+| Compiler | Library      | Time           | Notes                                |
+|----------|--------------|----------------|--------------------------------------|
+| MSVC     | magic_enum   | 37.032 secs    |                                      |
+| MSVC     | enchantum    | 22.212 secs    | `ENCHANTUM_SEARCH_ITER_COUNT = 32`   |
+| GCC      | magic_enum   | 18.40    secs  |                                      |
+| GCC      | enchantum    | 10.60    secs  |                                      |
+| Clang    | magic_enum   | Not supported  |                                      |
+| Clang    | enchantum    | Not supported  |                                      |
+
+---
+
+### Very Large Enum Range (200 enums, 16 values each, range: -1024 to 1024)
+
+*Only ran once due to long compilation times.*
+
+| Compiler | Library      | Time           | Notes                                          |
+|----------|--------------|----------------|------------------------------------------------|
+| MSVC     | magic_enum   | >20 mins (killed I got bored) | Compiler did not finish         |
+| MSVC     | enchantum    | 3:12.947 mins   | `ENCHANTUM_SEARCH_ITER_COUNT = 32`            |
+| GCC      | magic_enum   | >15 mins (killed I got bored as well)  | Compiler did not finish|
+| GCC      | enchantum    | 6:21.57 mins    | `ENCHANTUM_SEARCH_ITER_COUNT = 32`            |
+| Clang    | magic_enum   | Not supported   |                                               |
+| Clang    | enchantum    | Not supported   |                                               |
+
+---
+
+## Summary
+
+**Enchantum** significantly reduces compile times in enum-heavy projects compared to [`magic_enum`](https://github.com/Neargye/magic_enum), especially at larger scales.
+
+---
