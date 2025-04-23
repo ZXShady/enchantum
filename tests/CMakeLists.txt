@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.15.0)
 include(CheckCXXCompilerFlag)
 
 include(FetchContent)
+
 FetchContent_Declare(
   Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git

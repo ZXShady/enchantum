@@ -2,13 +2,6 @@ cmake_minimum_required(VERSION 3.15.0)
 include(CheckCXXCompilerFlag)
 
 include(FetchContent)
-FetchContent_Declare(
-  conjure_enum
-  GIT_REPOSITORY https://github.com/fix8mt/conjure_enum
-  GIT_SHALLOW ON
-  GIT_TAG master
-)
-FetchContent_MakeAvailable(conjure_enum)
  
 include(FetchContent)
 FetchContent_Declare(magic_enum
