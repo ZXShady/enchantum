@@ -65,7 +65,7 @@ enum class Letters  {
 } // namespace
 
 
-enum Unscoped {};
+enum Unscoped : int {};
 
 template<typename... Commas>
 struct TypeWithCommas;

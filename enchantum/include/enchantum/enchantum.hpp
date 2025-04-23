@@ -1,6 +1,10 @@
 #pragma once
 
-#if defined(_MSC_VER)
+#if defined(__clang__)
+  #error Clang is not usable
+#elif defined(__GNUC__) || defined(__GNUG__)
+  #include "enchantum_gcc.hpp"
+#elif defined(_MSC_VER)
   #include "enchantum_msvc.hpp"
 #endif
 
