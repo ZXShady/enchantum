@@ -78,13 +78,13 @@ public:
     if constexpr (std::is_same_v<T, bool>)
       return false;
     else
-      return static_cast<T>(ENCHANTUM_MIN_RANGE) < 0 ? 0 : static_cast<T>(ENCHANTUM_MIN_RANGE);
+      return (ENCHANTUM_MIN_RANGE) < 0 ? 0 : (ENCHANTUM_MIN_RANGE);
   }();
   static constexpr auto max = []() {
     if constexpr (std::is_same_v<T, bool>)
       return true;
     else
-      return (L::max)() < static_cast<T>(ENCHANTUM_MAX_RANGE) ? (L::max)() : static_cast<T>(ENCHANTUM_MAX_RANGE);
+      return (L::max)() < (ENCHANTUM_MAX_RANGE) ? (L::max)() : (ENCHANTUM_MAX_RANGE);
   }();
 };
 

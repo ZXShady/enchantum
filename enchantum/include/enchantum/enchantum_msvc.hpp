@@ -65,11 +65,20 @@ namespace details {
     }
     return count;
   }
+
+  template<int SizeOfUnderlyingType>
   constexpr int totalHexDigitsInRange(int64_t start, int64_t end)
   {
     int total = 0;
     for (int64_t i = start; i <= end; ++i) {
-      total += hexCharCount(static_cast<uint64_t>(i)); // convert negative to unsigned 2's comp
+      if constexpr (SizeOfUnderlyingType == 1)
+        total += hexCharCount(static_cast<std::uint8_t>(i)); // convert negative to unsigned 2's comp
+      else if constexpr (SizeOfUnderlyingType == 2)
+        total += hexCharCount(static_cast<std::uint16_t>(i)); // convert negative to unsigned 2's comp
+      else if constexpr (SizeOfUnderlyingType == 4 || SizeOfUnderlyingType == 8)
+        total += hexCharCount(static_cast<std::uint64_t>(i)); // convert negative to unsigned 2's comp
+      else
+        static_assert(SizeOfUnderlyingType == 1, "Invalid SizeOfUnderlyingType");
     }
     return total;
   }
@@ -78,9 +87,10 @@ namespace details {
   template<auto V>
   constexpr auto __cdecl var_name_func() noexcept
   {
-    constexpr auto type_name_length = type_name<typename decltype(V)::value_type>.size();
-    constexpr auto min              = std::int64_t(V.front());
-    constexpr auto max              = std::int64_t(V.back());
+    using T                          = typename decltype(V)::value_type;
+    constexpr auto  type_name_length = type_name<T>.size();
+    constexpr auto  min              = std::int64_t(V.front());
+    constexpr auto  max              = std::int64_t(V.back());
 
     // This monster is a way to discard useless long signatures it checks the longest possible
     // signature with all the values being casts because it is most likely and if it is then it discards it
@@ -91,10 +101,9 @@ namespace details {
     constexpr auto prefix_len = SZC("auto __cdecl enchantum::details::var_name_func<class std::array<enum ") +
       type_name_length + SZC(",") + numLength(V.size()) + SZC(">{enum ") + type_name_length;
 
-    constexpr auto             siglen = (prefix_len + ((SZC("(enum ") + type_name_length + SZC(")0x,")) * V.size()) +
-                             (totalHexDigitsInRange(min, max)) + SZC("}>(void) noexcept") - 1);
-    constexpr std::string_view p      = __FUNCSIG__;
-    constexpr auto             len    = SZC(__FUNCSIG__);
+    constexpr auto             siglen  = (prefix_len + ((SZC("(enum ") + type_name_length + SZC(")0x,")) * V.size()) +
+                             (totalHexDigitsInRange<sizeof(T)>(min, max)) + SZC("}>(void) noexcept") - 1);
+    constexpr auto             len     = SZC(__FUNCSIG__);
     if constexpr (len != siglen) {
       return __FUNCSIG__ + prefix_len;
     }
@@ -139,10 +148,9 @@ namespace details {
   constexpr auto reflection_data() noexcept
   {
     constexpr auto funcsig   = std::string_view(details::var_name<V>);
-    auto           funcsig_2 = std::string_view(details::var_name<V>);
 
-    constexpr auto funcsig_len     = funcsig.size();
     constexpr auto reflection_data = [name = funcsig]() mutable {
+      constexpr auto        funcsig_len            = funcsig.size();
       constexpr const auto& enum_type_name_storage = type_name<typename decltype(V)::value_type>;
       constexpr auto enum_type_name = std::string_view(enum_type_name_storage.data(), enum_type_name_storage.size());
       name.remove_suffix(sizeof(">(void) noexcept") - 1);
@@ -244,8 +252,8 @@ namespace details {
       std::size_t index = 0;
       for (std::size_t chunk = 0; chunk < chunks; ++chunk) {
         for (std::size_t i = 0; i < ChunkSize; ++i) {
-          if (index < total)
-            arrays[chunk][i] = static_cast<Enum>(Min + index++);
+          arrays[chunk][i]     = static_cast<Enum>(Min + index);
+          ++index;
         }
       }
 
@@ -282,7 +290,7 @@ namespace details {
 template<std::array array_of_enums, typename Pair>
 constexpr auto reflect()
 {
-  constexpr auto expr = std::string_view(details::var_name<array_of_enums>);
+  constexpr auto  expr = std::string_view(details::var_name<array_of_enums>);
   if constexpr (expr.empty()) {
     return std::array<Pair, 0>{};
   }
@@ -318,6 +326,27 @@ constexpr auto reflect()
 }
 
 template<Enum E, typename Pair = std::pair<E, std::string_view>>
+inline constexpr auto entries_()
+{
+  using traits = enum_traits<E>;
+  //#if 0
+  constexpr auto array_of_array_enums = details::array_of_enums<E, traits::min, traits::max>();
+  //  #else
+  //  constexpr auto array_of_array_enums_ = details::array_of_enums<std::underlying_type_t<E>, traits::min, traits::max>();
+  //  constexpr auto array_of_array_enums  = std::bit_cast <
+  //    std::array<std::array<Enum, ENCHANTUM_SEARCH_PER_ITERATION>, array_of_array_enums_.size()>>(array_of_array_enums_);
+  //#endif
+  auto p = []<std::array A, std::size_t... Idx>(std::index_sequence<Idx...>) {
+    return enchantum::details::concat_arrays(enchantum::reflect<A[Idx], Pair>()...);
+  }.template operator()<array_of_array_enums>(std::make_index_sequence<array_of_array_enums.size()>());
+  return []<std::array A, std::size_t... Idx>(std::index_sequence<Idx...>) {
+    return enchantum::details::concat_arrays(enchantum::reflect<A[Idx], Pair>()...);
+  }.template operator()<array_of_array_enums>(std::make_index_sequence<array_of_array_enums.size()>());
+  //  return details::entries_iteration<a, E, Pair>();
+}
+
+
+template<Enum E, typename Pair = std::pair<E, std::string_view>>
 inline constexpr auto entries = []() {
   using traits = enum_traits<E>;
   //#if 0
@@ -337,4 +366,3 @@ template<EnumOfUnderlying<bool> E, typename Pair>
 inline constexpr auto entries<E, Pair> = enchantum::reflect<std::array{E(false), E(true)}, Pair>();
 
 } // namespace enchantum
-

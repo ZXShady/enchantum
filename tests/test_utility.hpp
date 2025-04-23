@@ -64,6 +64,31 @@ enum class Letters  {
 };
 } // namespace
 
+enum class Direction2D : std::uint8_t {
+  None  = 0,
+  Left  = 1,
+  Right = 3,
+  Up    = 2,
+  Down  = 4,
+
+  East  = Right,
+  West  = Left,
+  North = Up,
+  South = Down
+};
+
+enum class Direction3D : std::int16_t {
+  None  = 0,
+  Left  = 1,
+  Right = 3,
+  Up    = 2,
+  Down  = 4,
+  Front = 5,
+  Back  = 7,
+
+  Top = Up,
+};
+
 
 enum Unscoped : int {};
 

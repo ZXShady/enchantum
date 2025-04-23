@@ -57,3 +57,4 @@ template<Enum E>
 }
 
 } // namespace enchantum
+

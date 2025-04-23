@@ -92,9 +92,11 @@ TEST_CASE("Color enum index_to_enum", "[index_to_enum]")
   STATIC_CHECK(enchantum::index_to_enum<Color>(3) == Color::Red);
   STATIC_CHECK(enchantum::index_to_enum<Color>(4) == Color::Blue);
 }
-TEST_CASE("Color count", "[index_to_enum]")
+TEST_CASE("Color count", "[count]")
 {
   STATIC_CHECK(enchantum::count<Color> == 5);
   STATIC_CHECK(enchantum::count<Letters> == 26);
   STATIC_CHECK(enchantum::count<BoolEnum> == 2);
+  STATIC_CHECK(enchantum::count<Direction2D> == 5);
+  STATIC_CHECK(enchantum::count<Direction3D> == 7);
 }
