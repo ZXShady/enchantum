@@ -6,7 +6,7 @@ namespace LongNamespaced::Namespace2 {
 template<typename... IAmHereForCommasInTypeName>
 struct Really_Unreadable_Class_Name {
 
-  enum class Color {
+  enum class Color : std::int16_t {
     Aqua   = -42,
     Purple = 21,
     Green = 124,
@@ -26,9 +26,13 @@ struct Really_Unreadable_Class_Name {
     Flag7 = 1 << 7
   };
 
-  
-  
-  
+  enum UnscopedColor : std::int64_t {
+    Aqua   = -42,
+    Purple = 21,
+    Green  = 124,
+    Red    = 213,
+    Blue,
+  };
   
 };
 } // namespace LongNamespaced::Namespace2
@@ -100,6 +104,8 @@ using Color = LongNamespaced::Namespace2::
 
 using Flags = LongNamespaced::Namespace2::
   Really_Unreadable_Class_Name<int, long, int***, TypeWithCommas<int, long[3], TypeWithCommas<long, int>>>::Flags;
+using UnscopedColor = LongNamespaced::Namespace2::
+  Really_Unreadable_Class_Name<int, long, int***, TypeWithCommas<int, long[3], TypeWithCommas<long, int>>>::UnscopedColor;
 
 
 Flags operator~(Flags);

@@ -3,7 +3,6 @@
 #include "test_utility.hpp"
 #include <algorithm>
 #include <catch2/catch_test_macros.hpp>
-#include <enchantum/algorithms.hpp>
 #include <enchantum/cast.hpp>
 #include <enchantum/enchantum.hpp>
 
@@ -46,7 +45,7 @@ TEST_CASE("Color enum cast from underlying type", "[cast]")
   STATIC_CHECK(enchantum::cast<Color>(T(Color::Blue)) == Color::Blue);
   STATIC_CHECK(enchantum::cast<Color>(T(Color::Purple)) == Color::Purple);
   STATIC_CHECK(enchantum::cast<Color>(T(Color::Aqua)) == Color::Aqua);
-  STATIC_CHECK(!enchantum::cast<Color>(T(0xdeadbeef)));
+  STATIC_CHECK(!enchantum::cast<Color>(T(2138)));
 }
 
 TEST_CASE("Color enum cast from string_view", "[cast]")

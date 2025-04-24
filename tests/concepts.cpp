@@ -23,42 +23,42 @@ TEST_CASE("Concept checks", "[concepts]")
 
   SECTION("ScopedEnum concept check")
   {
+    STATIC_CHECK(!enchantum::ScopedEnum<int>);
     STATIC_CHECK(enchantum::ScopedEnum<Letters>);
     STATIC_CHECK(enchantum::ScopedEnum<Color>);
     STATIC_CHECK(enchantum::ScopedEnum<Flags>);
     STATIC_CHECK(enchantum::ScopedEnum<BoolEnum>);
     STATIC_CHECK(!enchantum::ScopedEnum<Unscoped>);
-    STATIC_CHECK(!enchantum::ScopedEnum<int>);
   }
 
   SECTION("UnscopedEnum concept check")
   {
+    STATIC_CHECK(!enchantum::UnscopedEnum<int>);
     STATIC_CHECK(!enchantum::UnscopedEnum<Color>);
     STATIC_CHECK(!enchantum::UnscopedEnum<Letters>);
     STATIC_CHECK(!enchantum::UnscopedEnum<Flags>);
     STATIC_CHECK(!enchantum::UnscopedEnum<BoolEnum>);
     STATIC_CHECK(enchantum::UnscopedEnum<Unscoped>);
-    STATIC_CHECK(!enchantum::UnscopedEnum<int>);
   }
 
   SECTION("SignedEnum concept check")
   {
+    STATIC_CHECK(!enchantum::SignedEnum<int>);
     STATIC_CHECK(enchantum::SignedEnum<Color>);
     STATIC_CHECK(enchantum::SignedEnum<Letters>);
     STATIC_CHECK(!enchantum::SignedEnum<Flags>);
     STATIC_CHECK(!enchantum::SignedEnum<BoolEnum>);
     STATIC_CHECK(enchantum::SignedEnum<Unscoped>);
-    STATIC_CHECK(!enchantum::SignedEnum<int>);
   }
 
   SECTION("UnsignedEnum concept check")
   {
+    STATIC_CHECK(!enchantum::UnsignedEnum<int>);
     STATIC_CHECK(!enchantum::UnsignedEnum<Color>);
     STATIC_CHECK(!enchantum::UnsignedEnum<Letters>);
     STATIC_CHECK(enchantum::UnsignedEnum<Flags>);
     STATIC_CHECK(enchantum::UnsignedEnum<BoolEnum>);
     STATIC_CHECK(!enchantum::UnsignedEnum<Unscoped>);
-    STATIC_CHECK(!enchantum::UnsignedEnum<int>);
   }
 
 

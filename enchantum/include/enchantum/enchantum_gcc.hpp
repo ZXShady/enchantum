@@ -2,9 +2,9 @@
 
 #include "common.hpp"
 #include <array>
+#include <climits>
 #include <cstdint>
 #include <string_view>
-#include <climits>
 
 #define SZC(x) (sizeof(x) - 1)
 
@@ -90,7 +90,7 @@ namespace details {
         next_threshold *= 10;
 
       std::int64_t range_end = next_threshold - 1;
-      range_end         = range_end < end ? range_end : end;
+      range_end              = range_end < end ? range_end : end;
 
       int num_digits = numLength(i);
       total += (range_end - i + 1) * num_digits;
@@ -200,7 +200,6 @@ namespace details {
 		constexpr auto reflection_data() noexcept
 		{
 			constexpr auto funcsig = std::string_view(details::var_name<V>);
-
 			constexpr auto funcsig_len = funcsig.size();
 			constexpr auto reflection_data = [name = funcsig]() mutable {
 				constexpr const auto& enum_type_name_storage = type_name_unnamed<typename decltype(V)::value_type>;

@@ -4,7 +4,7 @@ project(enchantum LANGUAGES CXX)
 if(POLICY CMP0128)
     cmake_policy(SET CMP0128 NEW)
 endif()
- 
+  
 set(INCDIR "enchantum/include")
 set(INCS "")
 file(GLOB_RECURSE INCS "${INCDIR}/*.hpp")
