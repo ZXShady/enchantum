@@ -4,6 +4,8 @@
 
 Note: Currently supported on **MSVC** and **GCC**. Clang support is coming soon TM.
 
+Note 2: **GCC** implementation currently does not support C style enums.  
+
 Tested with **Visual Studio 2022 (v17.13.6)**.
 
 [Features](docs/features.md)
@@ -28,13 +30,13 @@ std::cout << name << '\n'; // Outputs: Green
 
 enum class Status { Ok = 0, Warning = 1, Error = 2 };
 
-for (auto value : enchantum::values<Status>) {
-    std::cout << static_cast<int>(value) << ": " << enchantum::to_string(value) << '\n';
+for (auto [value,string]: enchantum::entries<Status>) {
+    std::cout << string  << " = " static_cast<int>(value) << '\n';
 }
 // Outputs:
-// 0: Ok
-// 1: Warning
-// 2: Error
+// Ok = 0
+// Warning = 1
+// Error = 2
 ```
 
 ## Checking for validity
@@ -90,7 +92,7 @@ Each test was run 3 times and averaged unless otherwise noted.
 | MSVC     | magic_enum   | 37.032 secs    |                                      |
 | MSVC     | enchantum    | 22.212 secs    | `ENCHANTUM_SEARCH_ITER_COUNT = 32`   |
 | GCC      | magic_enum   | 18.40    secs  |                                      |
-| GCC      | enchantum    | 10.60    secs  |                                      |
+| GCC      | enchantum    | 10.60    secs  | `ENCHANTUM_SEARCH_ITER_COUNT = 32`   |
 | Clang    | magic_enum   | Not supported  |                                      |
 | Clang    | enchantum    | Not supported  |                                      |
 
