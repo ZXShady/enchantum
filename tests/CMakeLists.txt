@@ -14,6 +14,7 @@ add_executable(tests)
 target_link_libraries(tests enchantum::enchantum Catch2::Catch2 Catch2::Catch2WithMain)
 
 if(ENCHANTUM_RUNTIME_TESTS)
+	message(STATUS "enchantum tests are being ran at runtime")
 	target_compile_definitions(tests PRIVATE CATCH_CONFIG_RUNTIME_STATIC_REQUIRE)
 endif()
 

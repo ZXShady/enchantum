@@ -1,46 +1,33 @@
-#pragma once
-
-#include "common.hpp"
 #include <array>
+#include <bit>
+#include <cassert>
 #include <climits>
-#include <cstdint>
 #include <string_view>
-
-#define SZC(x) (sizeof(x) - 1)
-
+#include <type_traits>
+#include <utility>
+#include "common.hpp"
 
 namespace enchantum {
 
 namespace details {
 
-  template<auto _>
-  constexpr auto type_var_func() noexcept
-  {
-    /*
-					constexpr auto enchantum::details::type_var_func() [with auto _ = (<unnamed>::LongNamespaced::Namespace2::<unnamed>::Really_Unreadable_Class_Name<int, long int, int***, TypeWithCommas<int, long int[3], TypeWithCommas<long int, int> > >::Numbers::A]
-					*/
-    /*
-"constexpr auto enchantum::details::type_var_func() [with auto _ = TestEnum::False]"
-"constexpr auto enchantum::details::type_var_func() [with auto _ = (TestEnum)0]"
-*/
-    constexpr auto len = SZC("constexpr auto enchantum::details::type_var_func()[with auto _ = ");
-    if constexpr (__PRETTY_FUNCTION__[len + 1] == '(') // if it is a cast to an enum
-    {
-      constexpr auto s = std::string_view(__PRETTY_FUNCTION__ + len + SZC("(") + 1);
-      return s.substr(0, s.rfind(')'));
-    }
-    else {
-      constexpr auto s = std::string_view(__PRETTY_FUNCTION__ + len + SZC(" "));
-      return s.substr(0, s.rfind("::"));
-    }
-  }
+  // string view with the simplest code that does not consume any constexpr steps
+  struct str_view {};
 
   template<typename _>
   constexpr auto type_name_func() noexcept
   {
-    std::array<char, SZC(__PRETTY_FUNCTION__) - SZC("constexpr auto enchantum::details::type_name_func() [with _ = ]")> ret;
-    for (std::size_t i = 0; i < ret.size(); ++i)
-      ret[i] = __PRETTY_FUNCTION__[SZC("constexpr auto enchantum::details::type_name_func() [with _ = ") + i];
+    // constexpr auto f() [with _ = Scoped]
+    //return __PRETTY_FUNCTION__;
+    constexpr auto funcname = std::string_view(
+      __PRETTY_FUNCTION__ + (sizeof("constexpr auto enchantum::details::type_name_func() [with _ = ") - 1));
+    // (sizeof("auto __cdecl enchantum::details::type_name_func<") - 1)
+    constexpr auto         size = funcname.size() - (sizeof("]") - 1);
+    std::array<char, size> ret;
+    auto* const            ret_data      = ret.data();
+    const auto* const      funcname_data = funcname.data();
+    for (std::size_t i = 0; i < size; ++i)
+      ret_data[i] = funcname_data[i];
     return ret;
   }
 
@@ -63,330 +50,267 @@ namespace details {
   inline constexpr auto type_name = type_name_func<T>();
 
 
-  constexpr int numLength(std::uint64_t number)
+  template<auto Enum>
+  constexpr auto enum_in_array_name() noexcept
   {
-    int length = 0;
-    do {
-      ++length;
-      number /= 10;
-    } while (number > 0);
-    return length;
-  }
+    // constexpr auto f() [with auto _ = (
+    //constexpr auto f() [with auto _ = (Scoped)0]
+    std::string_view s = __PRETTY_FUNCTION__ +
+      sizeof("constexpr auto enchantum::details::enum_in_array_name() [with auto Enum = ") - 1;
+    s.remove_suffix(sizeof("]") - 1);
 
-
-  constexpr std::int64_t totalBase10Digits(std::int64_t start, std::int64_t end)
-  {
-    std::int64_t total = 0;
-
-    if (start < 0) {
-      total += static_cast<std::int64_t>(-start) + totalBase10Digits(1, -start);
-      start = 0;
+    //
+    if constexpr (ScopedEnum<decltype(Enum)>) {
+      if (s.front() == '(') {
+        s.remove_prefix(1);
+        s.remove_suffix(sizeof(")0") - 1);
+        return s;
+      }
+      else {
+        return s.substr(0, s.rfind("::"));
+      }
     }
-
-    for (std::int64_t i = start; i <= end;) {
-      std::int64_t next_threshold = 10;
-
-      while (next_threshold <= i)
-        next_threshold *= 10;
-
-      std::int64_t range_end = next_threshold - 1;
-      range_end              = range_end < end ? range_end : end;
-
-      int num_digits = numLength(i);
-      total += (range_end - i + 1) * num_digits;
-
-      i = range_end + 1;
+    else {
+      if (s.front() == '(') {
+        s.remove_prefix(1);
+        s.remove_suffix(sizeof(")0") - 1);
+      }
+      if (const auto pos = s.rfind("::"); pos != s.npos)
+        return s.substr(0, pos);
+      return std::string_view();
     }
-
-    return total;
   }
 
-
-  constexpr std::size_t find_enum_name_and_skipped_count(const std::string_view funcsig,
-                                                         const std::string_view enum_name,
-                                                         std::size_t&           skipped)
+  template<typename Enum>
+  constexpr auto length_of_enum_in_template_array_if_casting() noexcept
   {
-    constexpr std::string_view colon = "::";
-    std::size_t                pos1  = 0;
-    while ((pos1 = funcsig.find(enum_name, pos1)) != std::string_view::npos) {
-      // After finding str1, check if str2 follows it immediately
-      if (funcsig.substr(pos1 + enum_name.size()).starts_with(colon))
-        return pos1 + enum_name.size() + colon.size(); // 2 is "::" length
-      ++skipped;
-      pos1 += enum_name.size(); // we know we are in an array text
+    if constexpr (ScopedEnum<Enum>) {
+      constexpr auto s = enum_in_array_name<Enum{}>();
+      return s.substr(0, s.rfind("::")).size();
     }
-    return std::string_view::npos;
-  }
-
-  constexpr std::size_t count_substr(std::string_view s, std::string_view target) noexcept
-  {
-    std::size_t count = 0;
-    std::size_t pos   = 0;
-    while ((pos = s.find(target, pos)) != std::string_view::npos) {
-      ++count;
-      pos += target.length();
+    else {
+      constexpr auto  s      = enum_in_array_name<Enum{}>().size();
+      constexpr auto& tyname = type_name<Enum>;
+      constexpr auto  str    = std::string_view(tyname.data(), tyname.size());
+      if (constexpr auto pos = str.rfind("::"); pos != str.npos) {
+        return s + str.substr(pos).size();
+      }
+      else {
+        return s + tyname.size();
+      }
     }
-    return count;
   }
 
-  template<typename T>
-  inline constexpr auto type_name_unnamed = type_var_func<T{}>();
-
-  constexpr std::size_t find_enum_name(const std::string_view funcsig, const std::string_view enum_name)
+  template<auto Array>
+  constexpr auto var_name() noexcept
   {
-    std::size_t skipped = 0; // unused
-    return find_enum_name_and_skipped_count(funcsig, enum_name, skipped);
-  }
+    //constexpr auto f() [with auto _ = std::array<E, 6>{std::__array_traits<E, 6>::_Type{a, b, c, e, d, (E)6}}]
 
-  // explicitly specifiying the calling convention so it is consistent in the __PRETTY_FUNCTION__
-  template<auto V>
-  constexpr auto var_name_func() noexcept
-  {
-
-    /*
-					constexpr auto enchantum::details::var_name_func() [with auto V = std::array<{anonymous}::LongNamespaced::Namespace2::{anonymous}::Really_Unreadable_Class_Name2::Color, 2>{std::__array_traits<{anonymous}::LongNamespaced::Namespace2::{anonymous}::Really_Unreadable_Class_Name2::Color, 2>::_Type{(<unnamed>::LongNamespaced::Namespace2::<unnamed>::Really_Unreadable_Class_Name2::Color)-1, (<unnamed>::LongNamespaced::Namespace2::<unnamed>::Really_Unreadable_Class_Name2::Color)0}}]
-					*/
-    using T = typename decltype(V)::value_type;
+    using T = typename decltype(Array)::value_type;
 #define SZC(x) (sizeof(x) - 1)
-    /*
-							constexpr auto enchantum::details::var_name_func() [with auto V = std::array<A, 6>{std::__array_traits<A, 6>::_Type{(A)-1, A::a, A::c, A::d, (A)4, (A)111}}]
-							*/
-    constexpr auto& type_name         = details::type_name<T>;
-    constexpr auto& type_name_unnamed = details::type_name_unnamed<T>;
+    std::size_t    funcsig_off   = SZC("constexpr auto enchantum::details::var_name() [with auto Array = std::array<");
+    constexpr auto type_name_len = enchantum::details::type_name<T>.size();
+    funcsig_off += 2 * (type_name_len + SZC(" ,"));
+    funcsig_off += SZC(">{std::__array_traits<");
+    funcsig_off += SZC(">::_Type{");
+    constexpr auto Size = Array.size();
     // clang-format off
-			constexpr auto prefix_len1 = SZC(
-				"constexpr auto enchantum::details::var_name_func() [with auto V = std::array<")
-				+ type_name.size()
-				+ SZC(", ")
-				+ numLength(V.size())
-				+ SZC(">{std::__array_traits<")
-				+ type_name.size()
-				+ SZC(", ")
-				+ numLength(V.size())
-				+ SZC(">::_Type{"); // intentionally ommitted template params
-			// clang-foramt on
-			constexpr auto  type_repeat_count =
-				(SZC("(), ") + type_name_unnamed.size()) * V.size() - SZC(", "); // for each element in array and twice in the declarations
-			constexpr auto total_digit_length = totalBase10Digits(std::int64_t(V.front()), std::int64_t(V.back()));
-			constexpr auto total = prefix_len1 + type_repeat_count + total_digit_length + SZC("}}]");
-			//return __PRETTY_FUNCTION__;
-			if constexpr (SZC(__PRETTY_FUNCTION__) == total)
-				if constexpr (std::string_view::npos != details::find_enum_name(__PRETTY_FUNCTION__ + prefix_len1,
-					std::string_view(type_name_unnamed.data(), type_name_unnamed.size())))
-					return __PRETTY_FUNCTION__ + prefix_len1;
-				else
-					return "";
-			else
-				return __PRETTY_FUNCTION__ + prefix_len1;
-			//return prefix_len1 + prefix_len2 + prefix_len3 + type_name_length * 2;
-			//return std::pair(std::array<std::size_t,6>{prefix_len1,prefix_len2,prefix_len3,suffix_len1,type_repeat_count,total_digit_length},std::string_view(__PRETTY_FUNCTION__));
-			//constexpr auto funcname = std::string_view(
-			//  __PRETTY_FUNCTION__ + (sizeof("auto __cdecl enchantum::details::var_name_func<") - 1));
-			//// (sizeof("auto __cdecl enchantum::details::type_name_func<") - 1)
-			//constexpr auto         size = funcname.size() - (sizeof(">(void) noexcept") - 1);
-			//std::array<char, size> ret;
-			//auto* const            ret_data      = ret.data();
-			//const auto* const      funcname_data = funcname.data();
-			//for (std::size_t i = 0; i < size; ++i)
-			//  ret_data[i] = funcname_data[i];
-			//return ret;
-		}
+			funcsig_off += 2 * (Size < 10 ? 1
+				: Size < 100 ? 2
+				: Size < 1000 ? 3
+				: Size < 10000 ? 4
+				: Size < 100000 ? 5
+				: Size < 1000000 ? 6
+				: Size < 10000000 ? 7
+				: Size < 100000000 ? 8
+				: Size < 1000000000 ? 9
+				: 10);
+    // clang-format on
+    return std::string_view(__PRETTY_FUNCTION__ + funcsig_off, SZC(__PRETTY_FUNCTION__) - funcsig_off - (sizeof("}}]") - 1));
+  }
 
 
-		template<auto V>
-		inline constexpr auto var_name = var_name_func<V>();
+  template<typename T, bool IsBitFlag, auto Min, decltype(Min) Max>
+  constexpr auto generate_arrays()
+  {
+    using Enum = T;
+    if constexpr (IsBitFlag) {
+      constexpr std::size_t  bits = sizeof(T) * CHAR_BIT;
+      std::array<Enum, bits> a{};
+      for (std::size_t i = 0; i < bits; ++i)
+        a[i] = static_cast<Enum>(static_cast<std::make_unsigned_t<T>>(1) << i);
+      return a;
+    }
+    else {
+      static_assert(Min < Max, "enum_traits::min must be less than enum_traits::max");
+      std::array<Enum, (Max - Min) + 1> array;
+      auto* const                 array_data = array.data();
+      for (std::size_t i = 0; i < array.size(); ++i)
+        array_data[i] = static_cast<Enum>(i + Min);
+      return array;
+    }
+  }
 
-		template<std::array V>
-		constexpr auto reflection_data() noexcept
-		{
-			constexpr auto funcsig = std::string_view(details::var_name<V>);
-			constexpr auto funcsig_len = funcsig.size();
-			constexpr auto reflection_data = [name = funcsig]() mutable {
-				constexpr const auto& enum_type_name_storage = type_name_unnamed<typename decltype(V)::value_type>;
-				constexpr auto enum_type_name = std::string_view(enum_type_name_storage.data(), enum_type_name_storage.size());
-				name.remove_suffix(sizeof("}}]") - 1);
-				struct {
-					char                       buffer[funcsig_len]{};
-					std::array<bool, V.size()> enum_is_valid{};
-					std::size_t                valid_count{};
-				} ret_val;
-				std::size_t buffer_index = 0;
+  template<auto Copy>
+  inline constexpr auto static_storage_for = Copy;
 
-				std::size_t skipped = 0;
-				auto        pos = find_enum_name_and_skipped_count(name, enum_type_name, skipped);
-				while (pos != name.npos) {
-					if (const auto comma = name.find(",", pos); comma != name.npos) {
-						const auto enum_name = name.substr(pos, comma - pos);
-						for (std::size_t i = 0, size = enum_name.size(); i < size; ++i)
-							ret_val.buffer[buffer_index + i] = enum_name[i];
+  template<typename E, typename Pair, auto Min, auto Max>
+  constexpr auto reflect() noexcept
+  {
+    constexpr auto elements = []() {
+      constexpr auto length_of_enum_in_template_array_casting = length_of_enum_in_template_array_if_casting<E>();
+      constexpr auto Array = generate_arrays<std::underlying_type_t<E>, BitFlagEnum<E>, Min, Max>();
+      using EnumArray      = std::array<E, Array.size()>;
+      auto str             = var_name<std::bit_cast<EnumArray>(Array)>();
+      struct RetVal {
+        std::array<Pair, Array.size()> pairs;
+        std::size_t                    total_string_length = 0;
+        std::size_t                    valid_count         = 0;
+      } ret;
+      std::size_t    index             = 0;
+      constexpr auto enum_in_array_len = enum_in_array_name<E{}>().size();
+      while (index < Array.size()) {
+        if (str.front() == '(') {
+          str.remove_prefix(sizeof("(") - 1 + length_of_enum_in_template_array_casting + sizeof(")0") -
+                            1); // there is atleast 1 base 10 digit
+          //if(!str.empty())
+          //	std::cout << "after str \"" << str << '"' << '\n';
 
-						buffer_index += enum_name.size();
-						buffer_index += 1;
-						name.remove_prefix(comma + 1); // one past comma
-					}
-					else {
-						// Text is
-						// A::Val
-						auto enum_name = name.substr(pos);
-						for (std::size_t i = 0, size = enum_name.size(); i < size; ++i)
-							ret_val.buffer[buffer_index + i] = enum_name[i];
-					
-						buffer_index += enum_name.size();
-						name = std::string_view{}; // end of string
-					}
-					++ret_val.valid_count;
-					ret_val.enum_is_valid[skipped] = true;
-					pos = find_enum_name_and_skipped_count(name, enum_type_name, skipped); 
-					// The string is shortened by `.remove_prefix` therefore we need to account for the element passed
-					++skipped; 
-				}
-				return ret_val;
-				}();
+          if (const auto commapos = str.find(","); commapos != str.npos)
+            str.remove_prefix(commapos + 2);
 
-			return [reflection_data]() {
-				constexpr auto min_length = [reflection_data]() {
-					std::size_t len = 0;
-					for (std::size_t i = 0; i < sizeof(reflection_data.buffer); ++i) {
-						if (reflection_data.buffer[i] == '\0' && reflection_data.buffer[i + 1] == '\0')
-							return len + 1;
-						++len;
-					}
-					return len;
-					}();
-				struct {
-					char                       strings[min_length];
-					std::array<bool, V.size()> is_valid;
-					std::size_t                valid_count;
-				} data;
-				for (std::size_t i = 0; i < min_length; ++i) {
-					data.strings[i] = reflection_data.buffer[i];
-				}
-				data.valid_count = reflection_data.valid_count;
-				data.is_valid = reflection_data.enum_is_valid;
-				return data;
-				}();
-		}
+          //std::cout << "strsize \"" << str.size() << '"' << '\n';
+        }
+        else {
+          str.remove_prefix(enum_in_array_len);
+          if constexpr (enum_in_array_len != 0)
+            str.remove_prefix(sizeof("::") - 1);
+          const auto commapos = str.find(",");
 
-		template<auto V>
-		inline constexpr auto static_var = reflection_data<V>();
+          const auto name = str.substr(0, commapos);
 
-		template<typename Enum, auto Min, auto Max>
-		constexpr auto array_of_enums()
-		{
-			if constexpr (BitFlagEnum<Enum>) {
-				using T = std::underlying_type_t<Enum>;
-				constexpr std::size_t                 bits = sizeof(T) * CHAR_BIT;
-				std::array<std::array<Enum, bits>, 1> a{};
-				for (std::size_t i = 0; i < bits; ++i)
-					a[0][i] = static_cast<Enum>(static_cast<std::make_unsigned_t<T>>(1) << i);
-				return a;
-			}
-			else {
-				static_assert(Min < Max, "Min must be less than Max");
+          ret.pairs[index] = Pair{E(Array[index]), name};
+          ret.total_string_length += name.size() + 1;
 
-				constexpr auto        ChunkSize = ENCHANTUM_SEARCH_PER_ITERATION;
-				constexpr std::size_t total = Max - Min;
-				constexpr std::size_t chunks = (total + ChunkSize - 1) / ChunkSize; // ceiling division
+          if (commapos != str.npos)
+            str.remove_prefix(commapos + 2);
+          ++ret.valid_count;
+        }
+        ++index;
+      }
+      return ret;
+    }();
 
-				std::array<std::array<Enum, ChunkSize>, chunks> arrays{};
-
-				std::size_t index = 0;
-				for (std::size_t chunk = 0; chunk < chunks; ++chunk) {
-					for (std::size_t i = 0; i < ChunkSize; ++i) {
-						if (index < total)
-							arrays[chunk][i] = static_cast<Enum>(Min + index++);
-					}
-				}
-
-				return arrays;
-			}
-		}
-
-		template<typename Array, typename... Arrays>
-		constexpr auto concat_arrays(const Array& first, const Arrays&... rest)
-		{
-			using T = typename Array::value_type;
-			constexpr std::size_t     total_size = Array{}.size() + (Arrays{}.size() + ... + 0);
-			std::array<T, total_size> result;
-			std::size_t               offset = 0;
-
-			for (const auto& elem : first)
-				result[offset++] = elem;
-			(([&] {
-				for (const auto& elem : rest)
-					result[offset++] = elem;
-				}()),
-				...);
-
-			return result;
-		}
+    //constexpr auto elements = []() {
+    //	constexpr auto length_of_enum_in_template_array_casting = length_of_enum_in_template_array_if_casting<E>();
+    //	constexpr auto Array = generate_arrays<std::underlying_type_t<E>, BitFlagEnum<E>, Min, Max>();
+    //	using EnumArray = std::array<E, Array.size()>;
+    //	auto str = var_name<std::bit_cast<EnumArray>(Array)>();
+    //	struct RetVal {
+    //		std::array<Pair, Array.size()> pairs;
+    //		std::size_t                 total_string_length = 0;
+    //		std::size_t                 valid_count = 0;
+    //	} ret;
+    //	std::size_t    index = 0;
+    //	constexpr auto enum_in_array_len = enum_in_array_name < E{} > ().size();
+    //
+    //	while (index < Array.size()) {
+    //		if (str.front() == '(') {
+    //			str.remove_prefix(sizeof("(") - 1 + length_of_enum_in_template_array_casting + sizeof(")0") - 1); // there is atleast 1 base 10 digit
+    //			//if(!str.empty())
+    //			//	std::cout << "after str \"" << str << '"' << '\n';
+    //
+    //			if (const auto commapos = str.find(",");commapos != str.npos)
+    //				str.remove_prefix(commapos + 2);
+    //
+    //			//std::cout << "strsize \"" << str.size() << '"' << '\n';
+    //		}
+    //		else {
+    //			str.remove_prefix(enum_in_array_len);
+    //			if constexpr (enum_in_array_len != 0)
+    //				str.remove_prefix(sizeof("::") - 1);
+    //			const auto commapos = str.find(",");
+    //
+    //			const auto name = str.substr(0, commapos);
+    //
+    //			ret.pairs[index] = Pair{ E(Array[index]), name };
+    //			ret.total_string_length += name.size() + 1;
+    //
+    //			if (commapos != str.npos)
+    //				str.remove_prefix(commapos + 2);
+    //			++ret.valid_count;
+    //
+    //
+    //		}
+    //		++index;
+    //	}
+    //	return ret;
+    //	}();
 
 
-	} // namespace details
+    //std::cout << "ELEMET COUNT " << elements.pairs.size() << '\n';
+    //for (auto& [e, v] : elements.pairs) {
+    //	if(!v.empty())
+    //	std::cout << '"' << v << '"' << '\n';
+    //}
+
+    //    [](const auto& pairs) {
+    //  std::size_t count = 0;
+    //  for (auto& [_, v] : pairs) {
+    //    if (v.empty())
+    //      continue;
+    //
+    //    ++count;
+    //    count += v.size();
+    //  }
+    //  return count;
+    //}(elements.pairs);
 
 
-	//template<Enum E>
-	//constexpr std::size_t enum_count = details::enum_count<E>;
+    constexpr auto strings = [elements]() {
+      std::array<char, elements.total_string_length> strings{};
+      std::size_t                                    index = 0;
+      for (const auto& [_, s] : elements.pairs) {
+        if (s.empty())
+          continue;
 
-	template<std::array array_of_enums, typename Pair>
-	constexpr auto reflect()
-	{
-		constexpr auto expr = std::string_view(details::var_name<array_of_enums>);
-		if constexpr (expr.empty()) {
-			return std::array<Pair, 0>{};
-		}
-		else {
-			constexpr auto data = details::reflection_data<array_of_enums>();
-			return[]<auto data>() {
-				if constexpr (false || data.valid_count == 0) {
-					return std::array<Pair, 0>{};
-				}
-				else {
-					std::array<Pair, data.valid_count> ret;
-					for (std::size_t i = 0, count = 0, ret_index = 0; i < sizeof(data.strings); ++i) {
-						if (data.strings[i] == '\0') {
-							//const auto& da    = data; // for debugging
-							auto& [_, string] = ret[ret_index];
-							string = std::string_view(data.strings + count, i - count);
-							count = i + 1;
-							++ret_index;
-						}
-					}
+        for (std::size_t i = 0; i < s.size(); ++i)
+          strings[index++] = s[i];
+        ++index;
+      }
+      return strings;
+    }();
+    //std::cout << "ELEMET COUNT " << elements.pairs.size() << '\n';
 
-					for (std::size_t i = 0, ret_index = 0; i < data.is_valid.size(); ++i) {
-						if (data.is_valid[i]) {
-							auto& [val, _] = ret[ret_index];
-							val = array_of_enums[i];
-							++ret_index;
-						}
-					}
-					return ret;
-				}
-			}.template operator() < data > ();
-		}
-	}
+    std::array<Pair, elements.valid_count> ret;
+    std::size_t                            string_index    = 0;
+    std::size_t                            string_index_to = 0;
 
-	template<Enum E, typename Pair = std::pair<E, std::string_view>>
-	inline constexpr auto entries = []() {
-		using traits = enum_traits<E>;
-		//#if 0
-		constexpr auto array_of_array_enums = details::array_of_enums<E, traits::min, traits::max>(); // not to have to account for stupid trailing element
-		//  #else
-		//  constexpr auto array_of_array_enums_ = details::array_of_enums<std::underlying_type_t<E>, traits::min, traits::max>();
-		//  constexpr auto array_of_array_enums  = std::bit_cast <
-		//    std::array<std::array<Enum, ENCHANTUM_SEARCH_PER_ITERATION>, array_of_array_enums_.size()>>(array_of_array_enums_);
-		//#endif
-		return[]<std::array A, std::size_t... Idx>(std::index_sequence<Idx...>) {
-			return enchantum::details::concat_arrays(enchantum::reflect<A[Idx], Pair>()...);
-		}.template operator() < array_of_array_enums > (std::make_index_sequence<array_of_array_enums.size()>());
-		//  return details::entries_iteration<a, E, Pair>();
-		}();
+    std::size_t     index = 0;
+    constexpr auto& str   = static_storage_for<strings>;
+    for (auto& [e, s] : elements.pairs) {
+      if (s.empty())
+        continue;
+      auto& [re, rs] = ret[index++];
+      re             = e;
+      for (std::size_t i = string_index; i < str.size(); ++i) {
+        string_index_to = i;
+        if (str[i] == '\0')
+          break;
+      }
+      rs           = {&str[string_index], &str[string_index_to]};
+      string_index = string_index_to + 1;
+    }
+    return ret;
+  }
 
-	template<EnumOfUnderlying<bool> E, typename Pair>
-	inline constexpr auto entries<E, Pair> = enchantum::reflect < std::array{ E(false), E(true) }, Pair > (); // apparently this works???
+} // namespace details
+
+
+//template<Enum E>
+//constexpr std::size_t enum_count = details::enum_count<E>;
+
+template<Enum E, typename Pair = std::pair<E, std::string_view>>
+inline constexpr auto entries = details::reflect<E, Pair, enum_traits<E>::min, enum_traits<E>::max>();
 
 } // namespace enchantum
-
-
-
-#undef SZC

@@ -14,11 +14,9 @@ TEST_CASE("Color enum std::format", "[stringify][std_format]")
 
 TEST_CASE("UnscopedColor enum std::format", "[stringify][std_format]")
 {
-#if defined _MSC_VER && !defined __clang__
   CHECK(std::format("{}", UnscopedColor::Green) == "Green");
   CHECK(std::format("{}", UnscopedColor::Red) == "Red");
   CHECK(std::format("{}", UnscopedColor::Blue) == "Blue");
   CHECK(std::format("{}", UnscopedColor::Purple) == "Purple");
   CHECK(std::format("{}", UnscopedColor::Aqua) == "Aqua");
-#endif
 }
