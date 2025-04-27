@@ -65,7 +65,7 @@ constexpr auto visit(Func func, Enums... enums) noexcept(std::is_nothrow_invocab
 #endif
 
 template<Enum E, typename Func>
-constexpr auto for_each(Func func) noexcept(std::is_nothrow_invocable_v<Func, E>)
+constexpr void for_each(Func func) noexcept(std::is_nothrow_invocable_v<Func, E>)
 {
   [&func]<std::size_t... Idx>(std::index_sequence<Idx...>) {
     (void)(func(std::integral_constant<E, values<E>[Idx]> {}), ...);
