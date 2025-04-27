@@ -14,13 +14,6 @@
 #ifndef ENCHANTUM_MIN_RANGE
   #define ENCHANTUM_MIN_RANGE (-ENCHANTUM_MAX_RANGE)
 #endif
-#ifndef ENCHANTUM_SEARCH_PER_ITERATION
-  #define ENCHANTUM_SEARCH_PER_ITERATION 32
-#endif
-
-#if ENCHANTUM_SEARCH_PER_ITERATION < 16
-  #error It is recommended to use a higher ENCHANTUM_SEARCH_PER_ITERATION since decreasing it can lead to inaccurate reflection results.
-#endif
 
 namespace enchantum {
 
