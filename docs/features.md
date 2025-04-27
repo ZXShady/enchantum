@@ -347,5 +347,82 @@ requires(E e) {
 ---
 
 ### for_each
+Defined in header `algorithms.hpp`
 
-// not documentaed
+```cpp
+template<Enum E, typename Func>
+constexpr void for_each(Func func) noexcept(std::is_nothrow_invocable_v<Func, E>);
+```
+
+- **Description**:  
+  Runs the callable `func` for each enum in `values<E>` as a `std::integral_constant<E,values<E>[INDEX]>`
+
+- **Parameters**:
+  - `func`: The callable to call
+
+- **Returns**:  
+  `void`
+- **Example**:
+
+  ```cpp
+  enum class Color { Red, Green, Blue };
+  auto color = enchantum::for_each<Color>(
+    [](auto e) {
+      if constexpr(e == Color::Red || e == Color::Blue)
+        std::cout << enchantum::to_string(e.value) << '\n`;
+      else 
+        std::cout << "I hate green trains" << '\n';
+    }
+  );
+  ```
+
+
+# Stream Operators
+
+The `operator<<` and `operator>>` are provided in the `enchantum` library to enable **streaming** of enum values to and from input/output streams. These operators are defined in the nested `istream_operators` and `ostream_operators` namespaces in headers `istream.hpp` and `ostream.hpp` respectivly.
+
+There is also the convienence header `iostream.hpp` which includes both of them and has a new nested namespace that contains the istream operators and ostream operators
+
+## `operator>>` (Stream Output Operator)
+
+```cpp
+namespace ostream_operators {
+  template<typename CharType,Enum E>
+  std::basic_ostream<CharType>& operator<<(std::basic_ostream<CharType>& os, E value);
+}
+```
+
+
+## `operator>>` (Stream Input Operator)
+
+```cpp
+namespace istream_operators {
+  template<typename CharType,Enum E>
+  std::basic_istream<CharType>& operator<<(std::basic_ostream<CharType>& os, E value);
+}
+```
+
+**iostream.hpp**
+```cpp
+#include "istream.hpp"
+#include "ostream.hpp"
+
+namespace enchantum::iostream_operators {
+using ::enchantum::istream_operators::operator>>;
+using ::enchantum::ostream_operators::operator<<;
+} // namespace enchantum::iostream_operators
+```
+
+## fmt::format / std::format support
+
+There is headers for them.
+
+`fmt_format.hpp`/`std_format.hpp`
+
+```cpp
+#include <format> // or fmt
+#include <enchantum/std_format.hpp> // or fmt
+
+enum class Letters {a,b,c,e,d};
+std::cout << std::format("{} then {} then {}",Letters::a,Letters::b,Letters::c); // a then b then c
+```
