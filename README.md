@@ -4,9 +4,7 @@
 
 Note: Currently supported on **MSVC** and **GCC**. Clang support is coming soon TM.
 
-Note 2: **GCC** implementation currently does not support C style enums.  
-
-Tested with **Visual Studio 2022 (v17.13.6)**.
+Tested with **Visual Studio 2022 (v17.13.6)** and **GCC (14.2.0)**.
 
 [Features](docs/features.md)
 
@@ -74,27 +72,27 @@ Each test was run 3 times and averaged unless otherwise noted.
 
 ### Small Enums (200 enums, 16 values each, range: -128 to 128)
 
-| Compiler | Library      | Time           | Notes                                |
-|----------|--------------|----------------|--------------------------------------|
-| MSVC     | magic_enum   | 1:20.626 mins  |                                      |
-| MSVC     | enchantum    | 33.416   secs  | `ENCHANTUM_SEARCH_ITER_COUNT = 32`   |
-| GCC      | magic_enum   | 39.01    secs  |                                      |
-| GCC      | enchantum    | 18.40    secs  | `ENCHANTUM_SEARCH_ITER_COUNT = 32`   |
-| Clang    | magic_enum   | Not supported  |                                      |
-| Clang    | enchantum    | Not supported  |                                      |
+| Compiler | Library      | Time           |
+|----------|--------------|----------------|
+| MSVC     | magic_enum   | 1:20.626 mins  |
+| MSVC     | enchantum    | 22.06    secs  |
+| GCC      | magic_enum   | 39.01    secs  |
+| GCC      | enchantum    | 8.91     secs  |
+| Clang    | magic_enum   | Not supported  |
+| Clang    | enchantum    | Not supported  |
 
 ---
 
 ### Large Enums (32 enums, 200 values each, range: -256 to 256)
 
-| Compiler | Library      | Time           | Notes                                |
-|----------|--------------|----------------|--------------------------------------|
-| MSVC     | magic_enum   | 37.032 secs    |                                      |
-| MSVC     | enchantum    | 22.212 secs    | `ENCHANTUM_SEARCH_ITER_COUNT = 32`   |
-| GCC      | magic_enum   | 18.40    secs  |                                      |
-| GCC      | enchantum    | 10.60    secs  | `ENCHANTUM_SEARCH_ITER_COUNT = 32`   |
-| Clang    | magic_enum   | Not supported  |                                      |
-| Clang    | enchantum    | Not supported  |                                      |
+| Compiler | Library      | Time           |
+|----------|--------------|----------------|
+| MSVC     | magic_enum   | 37.032   secs  |
+| MSVC     | enchantum    | 14.17    secs  |
+| GCC      | magic_enum   | 18.40    secs  |
+| GCC      | enchantum    | 6.78     secs  |
+| Clang    | magic_enum   | Not supported  |
+| Clang    | enchantum    | Not supported  |
 
 ---
 
@@ -102,19 +100,19 @@ Each test was run 3 times and averaged unless otherwise noted.
 
 *Only ran once due to long compilation times.*
 
-| Compiler | Library      | Time           | Notes                                          |
-|----------|--------------|----------------|------------------------------------------------|
-| MSVC     | magic_enum   | >20 mins (killed I got bored) | Compiler did not finish         |
-| MSVC     | enchantum    | 3:12.947 mins   | `ENCHANTUM_SEARCH_ITER_COUNT = 32`            |
-| GCC      | magic_enum   | >15 mins (killed I got bored as well)  | Compiler did not finish|
-| GCC      | enchantum    | 6:21.57 mins    | `ENCHANTUM_SEARCH_ITER_COUNT = 32`            |
-| Clang    | magic_enum   | Not supported   |                                               |
-| Clang    | enchantum    | Not supported   |                                               |
+| Compiler | Library      | Time                                   |
+|----------|--------------|----------------------------------------|
+| MSVC     | magic_enum   | >20 mins (killed I got bored)          |
+| MSVC     | enchantum    | ~2 mins                                |
+| GCC      | magic_enum   | >15 mins (killed I got bored as well)  |
+| GCC      | enchantum    | 1 min 10 secs                          |
+| Clang    | magic_enum   | Not supported                          |
+| Clang    | enchantum    | Not supported                          |
 
 ---
 
 ## Summary
 
-**Enchantum** significantly reduces compile times in enum-heavy projects compared to [`magic_enum`](https://github.com/Neargye/magic_enum), especially at larger scales.
+**Enchantum** massively reduces compile times in enum-heavy projects compared to [`magic_enum`](https://github.com/Neargye/magic_enum), especially at larger scales and ranges like  `-1024` to `1024` test above.
 
 ---
