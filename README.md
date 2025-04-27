@@ -1,25 +1,33 @@
 # Enchantum
 
-**Enchantum** is a modern **C++20** library for **compile-time enum reflection**. It offers fast and lightweight handling of enum values, names, and bitflags — all built with clean C++ concepts in mind.
+**Enchantum** (enchant enum) is a modern **C++20** library for **compile-time enum reflection**. It offers fast and lightweight handling of enum values, names, and bitflags — all built with clean C++ concepts in mind.
 
-Note: Currently supported on **MSVC** and **GCC**. Clang support is coming soon TM.
+Note: Currently supported on **MSVC** and **GCC**. Clang support is very coming soon TM.
 
 Tested with **Visual Studio 2022 (v17.13.6)** and **GCC (14.2.0)**.
+
+>Every year, countless turtles perish due to the pollution created by large build servers. Save the turtles—and your build times—by switching to **Enchantum** for faster enum reflection! 
+
+**Source**: I made it up.
 
 [Features](docs/features.md)
 
 # Examples
-
+_Look at tests for more examples_
 ## Basic Enum to String
 
 ```cpp
 #include <enchantum/enchantum.hpp>
+#include <enchantum/ostream.hpp>
+using namespace enchantum::ostream_operators;
 
 enum class Color { Red, Green, Blue };
 
 Color c = Color::Green;
 std::string_view name = enchantum::to_string(c);
 std::cout << name << '\n'; // Outputs: Green
+
+std::cout << c << '\n'; // Outputs: Green
 ```
 
 ## Iterating over values
@@ -113,6 +121,11 @@ Each test was run 3 times and averaged unless otherwise noted.
 
 ## Summary
 
-**Enchantum** massively reduces compile times in enum-heavy projects compared to [`magic_enum`](https://github.com/Neargye/magic_enum), especially at larger scales and ranges like  `-1024` to `1024` test above.
+**Enchantum** massively reduces compile times in enum-heavy projects compared to [`magic_enum`](https://github.com/Neargye/magic_enum), especially at larger scales and ranges like  `-1024` to `1024` test above it is a difference of 1 minute to not even finishing compilation and making my laptop a heater.
+
+Also personally trying my library on my project saved the compile times from ~2 minutes for a full rebuild to just ~1 minute and 30 seconds I was very surprised magic enum took whole 30 seconds.
+
+Well an advantage to [`magic_enum`](https://github.com/Neargye/magic_enum) is its C++17 support,
+I guess it is an advantage to [`conjure_enum`](https://github.com/fix8mt/conjure_enum)
 
 ---
