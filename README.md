@@ -56,18 +56,18 @@ Each test was run 3 times and averaged unless otherwise noted.
 
 ### Small Enums (200 enums, 16 values each, range: -128 to 128)
 
-| Compiler | `magic_enum` (secs) | `enchantum` (secs) | Saved Time |
+| Compiler | `magic_enum` (secs) | `enchantum` (secs) | Saved Time (secs) |
 |----------|-------------------|------------------|----------------|
-| MSVC     | 80.63            | 22.06            | 72.64%         |
-| GCC      | 39.01             | 8.91             | 77.16%         |
+| MSVC     | 80.63            | 22.06            | 58          |
+| GCC      | 39.01             | 8.91             | 30         |
 
 
 ### Large Enums (32 enums, 200 values each, range: -256 to 256)
 
-| Compiler | `magic_enum` (secs) | `enchantum` (secs) | Saved Time |
+| Compiler | `magic_enum` (secs) | `enchantum` (secs) | Saved Time (secs) |
 |----------|----------------------|---------------------|----------------|
-| MSVC     | 37.03               | 14.17               | 61.72%         |
-| GCC      |  18.40                | 6.78                | 63.15%         |
+| MSVC     | 37.03               | 14.17               | 23        |
+| GCC      |  18.40                | 6.78                | 11         |
 
 ---
 
@@ -77,8 +77,8 @@ Each test was run 3 times and averaged unless otherwise noted.
 
 | Compiler | magic_enum          | enchantum |
 |----------|---------------------|-----------|
-| MSVC     | >20 mins (killed I got bored)   | ~120 secs   |
-| GCC      | >15 mins (killed I got bored)   | ~70 secs   |
+| MSVC     | over 20 mins and compiler killed I got bored   | ~120 secs   |
+| GCC      | over 15 mins and compiler killed I got bored   | ~70 secs   |
 
 
 ---
