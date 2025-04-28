@@ -61,9 +61,9 @@ std::cout << std::boolalpha << enchantum::contains<Direction>(0) << '\n'; // tru
 
 enum class Errno { BadSomething = -1, IamGood = 0, IAmBadV2 = 1 };
 
-std::cout << "Min: " << static_cast<int>(enchantum::min<Result>) << '\n'; // -1 BadSomething
-std::cout << "Max: " << static_cast<int>(enchantum::max<Result>) << '\n'; // 1 IAmBadV2
-std::cout << "Count: " << enchantum::count<Result> << '\n'; // 3
+std::cout << "Min: " << static_cast<int>(enchantum::min<Errno>) << '\n'; // -1 BadSomething
+std::cout << "Max: " << static_cast<int>(enchantum::max<Errno>) << '\n'; // 1 IAmBadV2
+std::cout << "Count: " << enchantum::count<Errno> << '\n'; // 3
 ```
 
 ---
@@ -76,31 +76,22 @@ If you're looking for faster compile times with enum reflection-heavy code, **En
 
 All tests were performed with `enchantum::to_string` / `magic_enum::enum_name` calls over various enum sizes.
 
-Each test was run 3 times and averaged unless otherwise noted.
+Each test was run 3 times and averaged unless otherwise noted and all time is in seconds.
 
 ### Small Enums (200 enums, 16 values each, range: -128 to 128)
 
-| Compiler | Library      | Time           |
-|----------|--------------|----------------|
-| MSVC     | magic_enum   | 1:20.626 mins  |
-| MSVC     | enchantum    | 22.06    secs  |
-| GCC      | magic_enum   | 39.01    secs  |
-| GCC      | enchantum    | 8.91     secs  |
-| Clang    | magic_enum   | Not supported  |
-| Clang    | enchantum    | Not supported  |
-
+| Compiler | magic_enum      | enchantum |
+|----------|-----------------|-----------|
+| MSVC     | 80.626          | 22.06     |
+| GCC      | 39.01           | 8.91      |
 ---
 
 ### Large Enums (32 enums, 200 values each, range: -256 to 256)
 
-| Compiler | Library      | Time           |
-|----------|--------------|----------------|
-| MSVC     | magic_enum   | 37.032   secs  |
-| MSVC     | enchantum    | 14.17    secs  |
-| GCC      | magic_enum   | 18.40    secs  |
-| GCC      | enchantum    | 6.78     secs  |
-| Clang    | magic_enum   | Not supported  |
-| Clang    | enchantum    | Not supported  |
+| Compiler | magic_enum      | enchantum |
+|----------|-----------------|-----------|
+| MSVC     | 37.032          | 14.17     |
+| GCC      | 18.40           | 6.78      |
 
 ---
 
@@ -108,14 +99,11 @@ Each test was run 3 times and averaged unless otherwise noted.
 
 *Only ran once due to long compilation times.*
 
-| Compiler | Library      | Time                                   |
-|----------|--------------|----------------------------------------|
-| MSVC     | magic_enum   | >20 mins (killed I got bored)          |
-| MSVC     | enchantum    | ~2 mins                                |
-| GCC      | magic_enum   | >15 mins (killed I got bored as well)  |
-| GCC      | enchantum    | 1 min 10 secs                          |
-| Clang    | magic_enum   | Not supported                          |
-| Clang    | enchantum    | Not supported                          |
+| Compiler | magic_enum          | enchantum |
+|----------|---------------------|-----------|
+| MSVC     | >20 mins (killed I got bored)   | ~120   |
+| GCC      | >15 mins (killed I got bored)   | ~70    |
+
 
 ---
 
