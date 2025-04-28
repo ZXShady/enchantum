@@ -12,6 +12,90 @@ Tested with **Visual Studio 2022 (v17.13.6)** and **GCC (14.2.0)**.
 
 [Features](docs/features.md)
 
+[CMake Integration](#cmake-integration)
+
+
+# Why yet another enum reflection library?
+
+Why would you want to use this library over [`magic_enum`](https://github.com/Neargye/magic_enum) or [`simple_enum`](https://github.com/arturbac/simple_enum) or [`conjure_enum`](https://github.com/fix8mt/conjure_enum)?
+
+[`magic_enum`](https://github.com/Neargye/magic_enum) 
+
+**advantages**
+   - macro free (no annoying intrusive macros)
+   - C++17 support
+
+**disadvantages**
+   - slow in compile times and it increases exponentially the higher `MAGIC_ENUM_MAX_RANGE` macro is
+
+
+[`conjure_enum`](https://github.com/fix8mt/conjure_enum)
+
+didn't personally test it since I could not get it to compile but from the readme of it it says it is like `magic_enum` in compile times or even worse.
+
+
+[`simple_enum`](https://github.com/arturbac/simple_enum)
+
+**advantages**
+   - fast compiling
+
+**disadvantages**
+   - requires modification to existing code (specifying last/first)
+   - slow compiling if the `last/first` range is too big
+
+
+If you're looking for faster compile times with enum reflection-heavy code without annoying manual specifying of ranges or macros, **Enchantum** delivers while still being fast in compile times.
+
+
+
+## Compile Time Benchmarks
+
+All tests were performed with `enchantum::to_string(x)` / `magic_enum::enum_name(x)` calls over various enum sizes.
+
+Each test was run 3 times and averaged unless otherwise noted.
+
+### Small Enums (200 enums, 16 values each, range: -128 to 128)
+
+| Compiler | `magic_enum` (secs) | `enchantum` (secs) | Saved Time |
+|----------|-------------------|------------------|----------------|
+| MSVC     | 80.63            | 22.06            | 72.64%         |
+| GCC      | 39.01             | 8.91             | 77.16%         |
+
+
+### Large Enums (32 enums, 200 values each, range: -256 to 256)
+
+| Compiler | `magic_enum` (secs) | `enchantum` (secs) | Saved Time |
+|----------|----------------------|---------------------|----------------|
+| MSVC     | 37.03               | 14.17               | 61.72%         |
+| GCC      |  18.40                | 6.78                | 63.15%         |
+
+---
+
+### Very Large Enum Range (200 enums, 16 values each, range: -1024 to 1024)
+
+*Only ran once due to long compilation times.*
+
+| Compiler | magic_enum          | enchantum |
+|----------|---------------------|-----------|
+| MSVC     | >20 mins (killed I got bored)   | ~120 secs   |
+| GCC      | >15 mins (killed I got bored)   | ~70 secs   |
+
+
+---
+
+## Summary
+
+**Enchantum** massively reduces compile times in enum-heavy projects compared to [`magic_enum`](https://github.com/Neargye/magic_enum), especially at larger scales and ranges like  `-1024` to `1024` test above it is a difference of 1 minute to not even finishing compilation and making my laptop a heater.
+
+Also personally trying my library on my project saved the compile times from ~2 minutes for a full rebuild to just ~1 minute and 30 seconds I was very surprised magic enum took whole 30 seconds.
+
+Well an advantage to [`magic_enum`](https://github.com/Neargye/magic_enum) is its C++17 support.
+
+---
+
+
+
+
 # Examples
 _Look at tests for more examples_
 ## Basic Enum to String
@@ -68,52 +152,12 @@ std::cout << "Count: " << enchantum::count<Errno> << '\n'; // 3
 
 ---
 
-## Why use Enchantum over [`magic_enum`](https://github.com/Neargye/magic_enum)?
 
-If you're looking for faster compile times with enum reflection-heavy code, **Enchantum** delivers.
+# CMake Integration
 
-## Compile Time Benchmarks (per Compiler)
+The **cmake** file provides the target `enchantum::enchantum` since this library is header-only it is very simple to use you can copy paste the files and add the include directory or use **cmake** and the library as a submodule. 
 
-All tests were performed with `enchantum::to_string` / `magic_enum::enum_name` calls over various enum sizes.
-
-Each test was run 3 times and averaged unless otherwise noted and all time is in seconds.
-
-### Small Enums (200 enums, 16 values each, range: -128 to 128)
-
-| Compiler | magic_enum      | enchantum |
-|----------|-----------------|-----------|
-| MSVC     | 80.626          | 22.06     |
-| GCC      | 39.01           | 8.91      |
----
-
-### Large Enums (32 enums, 200 values each, range: -256 to 256)
-
-| Compiler | magic_enum      | enchantum |
-|----------|-----------------|-----------|
-| MSVC     | 37.032          | 14.17     |
-| GCC      | 18.40           | 6.78      |
-
----
-
-### Very Large Enum Range (200 enums, 16 values each, range: -1024 to 1024)
-
-*Only ran once due to long compilation times.*
-
-| Compiler | magic_enum          | enchantum |
-|----------|---------------------|-----------|
-| MSVC     | >20 mins (killed I got bored)   | ~120   |
-| GCC      | >15 mins (killed I got bored)   | ~70    |
-
-
----
-
-## Summary
-
-**Enchantum** massively reduces compile times in enum-heavy projects compared to [`magic_enum`](https://github.com/Neargye/magic_enum), especially at larger scales and ranges like  `-1024` to `1024` test above it is a difference of 1 minute to not even finishing compilation and making my laptop a heater.
-
-Also personally trying my library on my project saved the compile times from ~2 minutes for a full rebuild to just ~1 minute and 30 seconds I was very surprised magic enum took whole 30 seconds.
-
-Well an advantage to [`magic_enum`](https://github.com/Neargye/magic_enum) is its C++17 support,
-I guess it is an advantage to [`conjure_enum`](https://github.com/fix8mt/conjure_enum)
-
----
+```cpp
+add_subdirectory("third_party/enchantum")
+target_link_libraries(your_executable enchantum::enchantum)
+```
