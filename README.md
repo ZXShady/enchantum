@@ -125,7 +125,7 @@ std::cout << c << '\n'; // Outputs: Green
 
 enum class Status { Ok = 0, Warning = 1, Error = 2 };
 
-for (auto [value,string]: enchantum::entries<Status>) {
+for (auto& [value,string]: enchantum::entries<Status>) {
     std::cout << string  << " = " static_cast<int>(value) << '\n';
 }
 // Outputs:
