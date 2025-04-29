@@ -1,106 +1,110 @@
 # Enchantum
 
-**Enchantum** (enchant enum) is a modern **C++20** library for **compile-time enum reflection**. It offers fast and lightweight handling of enum values, names, and bitflags — all built with clean C++ concepts in mind.
+**Enchantum** (short for "enchant enum") is a modern **C++20** header-only library for **compile-time enum reflection**. It provides fast, lightweight access to enum values, names, and bitflags — all built with clean, idiomatic C++ in mind.
 
-Tested locally with **Visual Studio 2022 (v17.13.6)**, **GCC (14.2.0)**,**Clang** (20.1.2).
+> Every year, countless turtles perish due to the pollution caused by slow, bloated build systems.  
+ Save the turtles — and your compile times — by switching to **Enchantum**.
 
->Every year, countless turtles perish due to the pollution created by large build servers. Save the turtles—and your build times—by switching to **Enchantum** for faster enum reflection! 
-
-**Source**: I made it up.
+**Source:** I made it up.
 
 [Features](docs/features.md)
 
+[Why another enum reflection library?](#why-another-enum-reflection-library)
+
 [CMake Integration](#cmake-integration)
 
+Tested locally with:
+- Visual Studio 2022 (v17.13.6)
+- GCC 14.2.0
+- Clang 20.1.2
 
-# Why yet another enum reflection library?
-
-Why would you want to use this library over [`magic_enum`](https://github.com/Neargye/magic_enum) or [`simple_enum`](https://github.com/arturbac/simple_enum) or [`conjure_enum`](https://github.com/fix8mt/conjure_enum)?
-
-[`magic_enum`](https://github.com/Neargye/magic_enum) 
-
-**advantages**
-   - macro free (no annoying intrusive macros)
-   - C++17 support
-
-**disadvantages**
-   - slow in compile times and it increases exponentially the higher `MAGIC_ENUM_MAX_RANGE` macro is
-
-
-[`conjure_enum`](https://github.com/fix8mt/conjure_enum)
-
-didn't personally test it since I could not get it to compile but from the readme of it it says it is like `magic_enum` in compile times or even worse.
-
-
-[`simple_enum`](https://github.com/arturbac/simple_enum)
-
-**advantages**
-   - fast compiling
-
-**disadvantages**
-   - requires modification to existing code (specifying last/first)
-   - slow compiling if the `last/first` range is too big
-
-
-If you're looking for faster compile times with enum reflection-heavy code without annoying manual specifying of ranges or macros, **Enchantum** delivers while still being fast in compile times.
-
-
-
-## Compile Time Benchmarks
-
-All tests were performed with `enchantum::to_string(x)` / `magic_enum::enum_name(x)` calls over various enum sizes.
-
-Each test was run 3 times and averaged unless otherwise noted.
-
-### Small Enums (200 enums, 16 values each, range: -128 to 128)
-
-| Compiler | `magic_enum` (secs)   | `enchantum` (secs)  | Saved Time (secs) |
-|----------|-----------------------|---------------------|-------------------|
-| MSVC     | 80.63                 | 22.06               | 58                |
-| GCC      | 39.01                 | 8.91                | 30                |
-| Clang    | 57.92                 | 21.23               | 36                |
-
-
-enchantum_small_enums.cpp compiled in 21.23 seconds
-magic_enum_small_enums.cpp compiled in 56.82 seconds
-### Large Enums (32 enums, 200 values each, range: -256 to 256)
-
-| Compiler | `magic_enum` (secs)   | `enchantum` (secs) | Saved Time (secs) |
-|----------|-----------------------|---------------------|------------------|
-| MSVC     | 37.03                 | 14.17               | 23               |
-| GCC      |  18.40                | 6.78                | 11               |
-| Clang    | 23.54                 | 6.8                 | 18               |
 ---
 
-### Very Large Enum Range (200 enums, 16 values each, range: -1024 to 1024)
+## Why Another Enum Reflection Library?
 
-*Only ran once due to long compilation times.*
+There are several enum reflection libraries out there — so why use **Enchantum** instead of [magic_enum](https://github.com/Neargye/magic_enum), [simple_enum](https://github.com/arturbac/simple_enum), or [conjure_enum](https://github.com/fix8mt/conjure_enum)?
 
-| Compiler | magic_enum                      |                         enchantum |
-|---------------------------|-----------------------------|-----------------------|
-| MSVC     | over 20 mins and compiler killed manually I got bored   | ~120 secs  |
-| GCC      | over 15 mins and compiler killed manually I got bored   | ~70 secs   |
-| Clang      | over 15 mins and compiler killed manually             | ~80 secs   |
+### magic_enum
+
+**Pros**
+- Header-only and macro-free
+- Supports C++17
+
+**Cons**
+- Compile times grow significantly with larger `MAGIC_ENUM_MAX_RANGE`
+- Requires alternate APIs like `magic_enum::enum_name<E::V>()` to mitigate compile-time costs
+
+### conjure_enum
+
+*Note: Could not get this to compile locally. Based on the README, compile times are similar to or worse than magic_enum.*
+
+### simple_enum
+
+**Pros**
+- Fast compile times but only if range is small
+
+**Cons**
+- Requires specifying enum first/last values manually
+- Compile time slows down with large enum ranges
+
+### enchantum
+
+**Pros**
+- Avoids intrusive macros
+- No manual range definitions required  (but supported if desired)
+- Delivers fast compile times
+- Clean and simple API `enchantum::to_string(E)` no `enchantum::to_string<E::V>()` since compile times are fast
+
+**Cons**
+- C++20 required
+
+---
+
+## Compile-Time Benchmarks
+
+Each benchmark was run 3 times and averaged unless noted otherwise.
+`range` is `ENCHANTUM_MAX_RANGE` and `MAGIC_ENUM_RANGE_MAX`
+### Small Enums  
+*200 enums, 16 values each, range: -128 to 128*
+
+| Compiler | magic_enum (s) | Enchantum (s) | Time Saved |
+|----------|----------------|----------------|-------------|
+| MSVC     | 80.63          | 22.06          | 58.57       |
+| GCC      | 39.01          | 8.91           | 30.10       |
+| Clang    | 57.92          | 21.23          | 36.69       |
+
+### Large Enums  
+*32 enums, 200 values each, range: -256 to 256*
+
+| Compiler | magic_enum (s) | Enchantum (s) | Time Saved |
+|----------|----------------|----------------|-------------|
+| MSVC     | 37.03          | 14.17          | 22.86       |
+| GCC      | 18.40          | 6.78           | 11.62       |
+| Clang    | 23.54          | 6.80           | 16.74       |
+
+### Very Large Enum Range  
+*200 enums, 16 values each, range: -1024 to 1024*
+
+*Only ran once due to extreme compilation times.*
+
+| Compiler | magic_enum     | Enchantum     |
+|----------|----------------|---------------|
+| MSVC     | >20 min (killed) | ~120 sec      |
+| GCC      | >15 min (killed) | ~70 sec       |
+| Clang    | >15 min (killed) | ~80 sec       |
 
 ---
 
 ## Summary
 
-**Enchantum** massively reduces compile times in enum-heavy projects compared to [`magic_enum`](https://github.com/Neargye/magic_enum), especially at larger scales and ranges like  `-1024` to `1024` test above it is a difference of 1 minute to not even finishing compilation and making my laptop a heater.
+**Enchantum** significantly reduces compile times in enum-heavy projects. In my own project, switching from magic_enum reduced full rebuild times from about 2 minutes to 1 minute and 30 seconds which I was very surprised that `magic_enum` alone took 30 seconds.
 
-Also personally trying my library on my project saved the compile times from ~2 minutes for a full rebuild to just ~1 minute and 30 seconds I was very surprised magic enum took whole 30 seconds.
-
-Well an advantage to [`magic_enum`](https://github.com/Neargye/magic_enum) is its C++17 support.
+The only trade-off is that Enchantum requires C++20, while `magic_enum` supports C++17.
 
 ---
 
-
-
-
-# Examples
-_Look at tests for more examples_
-## Basic Enum to String
-
+## Examples
+### Enum to String
 ```cpp
 #include <enchantum/enchantum.hpp>
 #include <enchantum/ostream.hpp>
@@ -115,7 +119,7 @@ std::cout << name << '\n'; // Outputs: Green
 std::cout << c << '\n'; // Outputs: Green
 ```
 
-## Iterating over values
+### Iterating over values
 ```cpp
 #include <enchantum/enchantum.hpp>
 
@@ -130,7 +134,7 @@ for (auto [value,string]: enchantum::entries<Status>) {
 // Error = 2
 ```
 
-## Checking for validity
+### Checking for validity
 ```cpp
 #include <enchantum/enchantum.hpp>
 
@@ -141,7 +145,7 @@ std::cout << std::boolalpha << enchantum::contains<Direction>("Up") << '\n'; // 
 std::cout << std::boolalpha << enchantum::contains(Direction(-42)) << '\n'; // false
 std::cout << std::boolalpha << enchantum::contains<Direction>(0) << '\n'; // true
 ```
-## Min Max Count
+### Min Max Count
 ```cpp
 
 enum class Errno { BadSomething = -1, IamGood = 0, IAmBadV2 = 1 };
