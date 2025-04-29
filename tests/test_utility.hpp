@@ -1,5 +1,7 @@
 #pragma once
 #include <cstdint>
+#include <type_traits>
+#include "case_insensitive.hpp"
 
 // Tests whether string parsing will break if commas occur in typename
 namespace LongNamespaced::Namespace2 {
@@ -23,7 +25,6 @@ struct Really_Unreadable_Class_Name {
     Flag4 = 1 << 4,
     Flag5 = 1 << 5,
     Flag6 = 1 << 6,
-    Flag7 = 1 << 7
   };
 
   enum UnscopedColor : std::int64_t {
@@ -34,6 +35,8 @@ struct Really_Unreadable_Class_Name {
     Blue,
   };
 };
+
+
 } // namespace LongNamespaced::Namespace2
 
 namespace {
@@ -96,19 +99,30 @@ enum class Direction3D : std::int16_t {
 enum Unscoped : int {
 };
 
+enum UnscopedCStyle {
+  Unscoped_CStyle_Val0   = -11,
+  Unscoped_CStyle_Value1 = 0,
+  Unscoped_CStyle_Value2 = 55,
+  Unscoped_CStyle_Value3 = 32,
+  Unscoped_CStyle_Value4 = 11,
+};
+
 template<typename... Commas>
 struct TypeWithCommas;
 
 // Clang seems to have weird behavior with enum in templates
-// It does not display them in pretty function names unless atleast 1 member of the enum was 
+// It does not display them in pretty function names unless atleast 1 member of the enum was
 // used.
 #ifdef __clang__
-using Color = decltype(LongNamespaced::Namespace2::
-  Really_Unreadable_Class_Name<int, long, int***, TypeWithCommas<int, long[3], TypeWithCommas<long, int>>>::Color::Aqua);
-using Flags = decltype(LongNamespaced::Namespace2::
-  Really_Unreadable_Class_Name<int, long, int***, TypeWithCommas<int, long[3], TypeWithCommas<long, int>>>::Flags::Flag0);
-using UnscopedColor = decltype(LongNamespaced::Namespace2::
-  Really_Unreadable_Class_Name<int, long, int***, TypeWithCommas<int, long[3], TypeWithCommas<long, int>>>::UnscopedColor::Aqua);
+using Color         = decltype(LongNamespaced::Namespace2::
+                         Really_Unreadable_Class_Name<int, long, int***, TypeWithCommas<int, long[3], TypeWithCommas<long, int>>>::Color::Aqua);
+using Flags         = decltype(LongNamespaced::Namespace2::
+                         Really_Unreadable_Class_Name<int, long, int***, TypeWithCommas<int, long[3], TypeWithCommas<long, int>>>::Flags::Flag0);
+using UnscopedColor = decltype(LongNamespaced::Namespace2::Really_Unreadable_Class_Name<
+                               int,
+                               long,
+                               int***,
+                               TypeWithCommas<int, long[3], TypeWithCommas<long, int>>>::UnscopedColor::Aqua);
 #else
 using Color = LongNamespaced::Namespace2::
   Really_Unreadable_Class_Name<int, long, int***, TypeWithCommas<int, long[3], TypeWithCommas<long, int>>>::Color;
@@ -119,13 +133,31 @@ using UnscopedColor = LongNamespaced::Namespace2::
   Really_Unreadable_Class_Name<int, long, int***, TypeWithCommas<int, long[3], TypeWithCommas<long, int>>>::UnscopedColor;
 #endif
 
-Flags  operator~(Flags);
-bool   operator&(Flags, Flags);
-Flags  operator|(Flags, Flags);
-Flags& operator|=(Flags&, Flags);
-Flags& operator&=(Flags&, Flags);
+
+[[nodiscard]] constexpr Flags operator~(Flags e) noexcept
+{
+  using T = std::underlying_type_t<Flags>;
+  return static_cast<Flags>(~static_cast<T>(e));
+}
+
+[[nodiscard]] constexpr Flags operator|(Flags a, Flags b) noexcept
+{
+  using T = std::underlying_type_t<Flags>;
+  return static_cast<Flags>(static_cast<T>(a) | static_cast<T>(b));
+}
+
+[[nodiscard]] constexpr Flags operator&(Flags a, Flags b) noexcept
+{
+  using T = std::underlying_type_t<Flags>;
+  return static_cast<Flags>(static_cast<T>(a) & static_cast<T>(b));
+}
+
+constexpr Flags& operator|=(Flags& a, Flags b) noexcept { return a = a | b; }
+
+constexpr Flags& operator&=(Flags& a, Flags b) noexcept { return a = a & b; }
 
 enum class BoolEnum : bool {
   False,
   True
 };
+

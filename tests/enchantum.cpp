@@ -1,34 +1,32 @@
-
-
 #include "test_utility.hpp"
 #include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <enchantum/cast.hpp>
 #include <enchantum/enchantum.hpp>
-
-TEST_CASE("Color enum to_string / cast", "[stringify]")
+TEST_CASE("Color enum to_string", "[to_string]")
 {
-  // to_string tests
   STATIC_CHECK(enchantum::to_string(Color::Green) == "Green");
   STATIC_CHECK(enchantum::to_string(Color::Red) == "Red");
   STATIC_CHECK(enchantum::to_string(Color::Blue) == "Blue");
   STATIC_CHECK(enchantum::to_string(Color::Purple) == "Purple");
   STATIC_CHECK(enchantum::to_string(Color::Aqua) == "Aqua");
-  // cast tests (valid)
+}
+
+TEST_CASE("Color enum cast", "[cast]")
+{
   STATIC_CHECK(enchantum::cast<Color>("Green") == Color::Green);
   STATIC_CHECK(enchantum::cast<Color>("Red") == Color::Red);
   STATIC_CHECK(enchantum::cast<Color>("Blue") == Color::Blue);
   STATIC_CHECK(enchantum::cast<Color>("Purple") == Color::Purple);
   STATIC_CHECK(enchantum::cast<Color>("Aqua") == Color::Aqua);
-  // cast tests (invalid)
-  STATIC_CHECK(!enchantum::cast<Color>("ZXShady"));
-  STATIC_CHECK(!enchantum::cast<Color>("red"));   // case-sensitive
-  STATIC_CHECK(!enchantum::cast<Color>("GREEN")); // all caps
+  
+  STATIC_CHECK_FALSE(enchantum::cast<Color>("ZXShady"));
+  STATIC_CHECK_FALSE(enchantum::cast<Color>("red"));   // case-sensitive
+  STATIC_CHECK_FALSE(enchantum::cast<Color>("GREEN")); // all caps
 }
 
-TEST_CASE("Color enum min/max", "[range]")
+TEST_CASE("Color enum min/max", "[range][min_max]")
 {
-
   STATIC_CHECK(enchantum::min<Color> == Color::Aqua);
   STATIC_CHECK(enchantum::max<Color> == Color::Blue);
 
@@ -45,7 +43,7 @@ TEST_CASE("Color enum cast from underlying type", "[cast]")
   STATIC_CHECK(enchantum::cast<Color>(T(Color::Blue)) == Color::Blue);
   STATIC_CHECK(enchantum::cast<Color>(T(Color::Purple)) == Color::Purple);
   STATIC_CHECK(enchantum::cast<Color>(T(Color::Aqua)) == Color::Aqua);
-  STATIC_CHECK(!enchantum::cast<Color>(T(2138)));
+  STATIC_CHECK_FALSE(enchantum::cast<Color>(T(2138)));
 }
 
 TEST_CASE("Color enum cast from string_view", "[cast]")
@@ -56,22 +54,10 @@ TEST_CASE("Color enum cast from string_view", "[cast]")
   STATIC_CHECK(enchantum::cast<Color>("Purple") == Color::Purple);
   STATIC_CHECK(enchantum::cast<Color>("Aqua") == Color::Aqua);
 
-  STATIC_CHECK(!enchantum::cast<Color>("Chartreuse"));
-  STATIC_CHECK(!enchantum::cast<Color>("BLUE"));
+  STATIC_CHECK_FALSE(enchantum::cast<Color>("Chartreuse"));
+  STATIC_CHECK_FALSE(enchantum::cast<Color>("BLUE"));
 }
 
-struct {
-  constexpr bool operator()(std::string_view lhs, std::string_view rhs)
-  {
-    constexpr auto tolower = [](char c) { return (c >= 'A' && c <= 'Z') ? c + ('a' - 'A') : c; };
-    if (lhs.size() != rhs.size())
-      return false;
-    for (std::size_t i = 0; i < lhs.size(); ++i)
-      if (tolower(lhs[i]) != tolower(rhs[i]))
-        return false;
-    return true;
-  }
-} constexpr case_insensitive;
 
 TEST_CASE("Color enum cast with custom binary predicate (case insensitive)", "[cast]")
 {
@@ -80,7 +66,7 @@ TEST_CASE("Color enum cast with custom binary predicate (case insensitive)", "[c
   STATIC_CHECK(enchantum::cast<Color>("bLuE", case_insensitive) == Color::Blue);
   STATIC_CHECK(enchantum::cast<Color>("purple", case_insensitive) == Color::Purple);
   STATIC_CHECK(enchantum::cast<Color>("AQUA", case_insensitive) == Color::Aqua);
-  STATIC_CHECK(!enchantum::cast<Color>("zxSHADY", case_insensitive));
+  STATIC_CHECK_FALSE(enchantum::cast<Color>("zxSHADY", case_insensitive));
 }
 
 TEST_CASE("Color enum index_to_enum", "[index_to_enum]")

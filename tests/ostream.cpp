@@ -17,7 +17,7 @@ TEST_CASE("ostream operator<< outputs enum name")
 
   SECTION("Invalid Enum")
   {
-    oss << Color(0xdead);
+    oss << static_cast<Color>(0xdead);
     REQUIRE(oss.str().empty());
   }
 }
