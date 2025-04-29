@@ -2,13 +2,14 @@ name: CMake Matrix CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - "main"
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - "main"
 
 jobs:
   build:
-
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -21,8 +22,6 @@ jobs:
             compiler: msvc
           - os: windows-latest
             compiler: gcc
-          - os: windows-latest
-            compiler: clang
       fail-fast: false
 
     env:
@@ -51,6 +50,10 @@ jobs:
     - name: Install CMake (Windows)
       if: runner.os == 'Windows'
       run: choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' --yes --force
+
+    - name: Install Clang (Windows)
+      if: runner.os == 'Windows' && matrix.compiler == 'clang'
+      run: choco install llvm --version=18.1.0 --yes --force
 
     - name: Configure CMake
       run: >
