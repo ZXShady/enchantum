@@ -5,7 +5,9 @@
 
 #ifndef ENCHANTUM_ASSERT
   #include <cassert>
-  #define ENCHANTUM_ASSERT(cond, msg, ...) assert(cond&& msg)
+// clang-format off
+  #define ENCHANTUM_ASSERT(cond, msg, ...) assert(cond && msg)
+// clang-format on
 #endif
 
 #ifndef ENCHANTUM_MAX_RANGE

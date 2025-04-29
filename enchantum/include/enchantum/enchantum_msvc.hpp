@@ -6,18 +6,16 @@
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#include "details/string_view.hpp"
 
 namespace enchantum {
 
 namespace details {
 
-  // string view with the simplest code that does not consume any constexpr steps
-  struct str_view {};
-
   template<typename>
   constexpr auto type_name_func() noexcept
   {
-    constexpr auto funcname = std::string_view(
+    constexpr auto funcname = string_view(
       __FUNCSIG__ + (sizeof("auto __cdecl enchantum::details::type_name_func<enum ") - 1));
     // (sizeof("auto __cdecl enchantum::details::type_name_func<") - 1)
     constexpr auto         size = funcname.size() - (sizeof(">(void) noexcept") - 1);
@@ -29,28 +27,13 @@ namespace details {
     return ret;
   }
 
-  //  constexpr bool has_single_valid_enum(const std::size_t      type_name_length,
-  //                                       const std::string_view funcsig,
-  //                                       std::int64_t           min,
-  //                                       std::int64_t           max)
-  //  {
-  //#define SZC(str) (sizeof(str) - 1)
-  //    // IMPORTANT THIS NAME SHOULD MATCH THE FUNCTION BELWO
-  //    auto p = SZC("auto __cdecl enchantum::details::var_name_func<class std::array<enum ") + type_name_length +
-  //      SZC(",") + numLength(max - min) + SZC(">{enum ") + type_name_length +
-  //      ((SZC("(") + SZC("enum ") + type_name_length + SZC(")0x,")) * (max - min)) +
-  //      (totalHexDigitsInRange(min, max - 1)) + SZC("}>(void) noexcept") - 1;
-  //#undef SZC
-  //    return funcsig.size() != p;
-  //  }
-
   template<typename T>
   inline constexpr auto type_name = type_name_func<T>();
 
   template<auto Enum>
   constexpr auto enum_in_array_name() noexcept
   {
-    std::string_view s = __FUNCSIG__ + sizeof("auto __cdecl enchantum::details::enum_in_array_name<") - 1;
+    string_view s = __FUNCSIG__ + sizeof("auto __cdecl enchantum::details::enum_in_array_name<") - 1;
     s.remove_suffix(sizeof(">(void) noexcept") - 1);
 
     if constexpr (ScopedEnum<decltype(Enum)>) {
@@ -72,23 +55,6 @@ namespace details {
         return s.substr(0, pos);
       return std::string_view();
     }
-#if 0
-    if (s.front() == '(') {
-      s.remove_prefix(1 + sizeof("enum ") - 1);
-      s.remove_suffix(sizeof(")0x0") - 1);
-    }
-
-    if constexpr (enchantum::ScopedEnum<decltype(Enum)>) {
-      if (const auto pos = s.rfind("::"); pos != s.npos)
-        return s.substr(0, pos);
-      return std::string_view();
-    }
-    else {
-      if (const auto pos = s.rfind("::"); pos != s.npos)
-        return s.substr(0, pos);
-      return std::string_view();
-    }
-#endif
   }
 
   template<auto Array>
@@ -117,6 +83,7 @@ namespace details {
     funcsig_off += SZC(">{enum ") + type_name_len;
     return std::string_view(__FUNCSIG__ + funcsig_off, SZC(__FUNCSIG__) - funcsig_off - (sizeof("}>(void) noexcept") - 1));
   }
+  #undef SZC
 
 
   template<typename T, bool IsBitFlag, auto Min, decltype(Min) Max>
@@ -188,19 +155,6 @@ namespace details {
   {
     constexpr auto elements = get_elements<E, Pair, details::generate_arrays<E, BitFlagEnum<E>, Min, Max>()>();
 
-    //    [](const auto& pairs) {
-    //  std::size_t count = 0;
-    //  for (auto& [_, v] : pairs) {
-    //    if (v.empty())
-    //      continue;
-    //
-    //    ++count;
-    //    count += v.size();
-    //  }
-    //  return count;
-    //}(elements.pairs);
-
-
     constexpr auto strings = [elements]() {
       std::array<char, elements.total_string_length> strings{};
       std::size_t                                    index = 0;
@@ -238,12 +192,6 @@ namespace details {
   }
 } // namespace details
 
-
-template<Enum E, typename Pair = std::pair<E, std::string_view>>
-inline constexpr auto entries = details::reflect<E, Pair, enum_traits<E>::min, enum_traits<E>::max>();
-
-template<EnumOfUnderlying<bool> E, typename Pair>
-inline constexpr auto entries<E, Pair> = details::reflect<E, Pair, false, true>();
 
 } // namespace enchantum
 

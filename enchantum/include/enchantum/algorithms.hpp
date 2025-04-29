@@ -63,13 +63,21 @@ constexpr auto visit(Func func, Enums... enums) noexcept(std::is_nothrow_invocab
   }(std::make_index_sequence<count<Enums>>()...);
 }
 #endif
-
-template<Enum E, typename Func>
-constexpr void for_each(Func func) noexcept(std::is_nothrow_invocable_v<Func, E>)
-{
-  [&func]<std::size_t... Idx>(std::index_sequence<Idx...>) {
+#if 0
+namespace details {
+  template<enchantum::Enum E, typename Func, std::size_t... Idx>
+  constexpr void for_each(Func& func, std::index_sequence<Idx...>) noexcept(
+    noexcept((func(std::integral_constant<E, values<E>[Idx]> {}), ...)))
+  {
     (void)(func(std::integral_constant<E, values<E>[Idx]> {}), ...);
-  }(std::make_index_sequence<count<E>>());
-}
+  }
 
+} // namespace details
+
+template<Enum E, E Func>
+constexpr void for_each(Func func) noexcept(noexcept(details::for_each<E>(func, std::make_index_sequence<count<E>>{})))
+{
+  details::for_each<E>(func, std::make_index_sequence<count<E>>());
+}
+#endif
 } // namespace enchantum

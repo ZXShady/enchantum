@@ -1,11 +1,13 @@
 #include "common.hpp"
 #include <array>
-#include <bit>
 #include <cassert>
 #include <climits>
 #include <string_view>
 #include <type_traits>
 #include <utility>
+
+#include "details/string_view.hpp"
+
 
 namespace enchantum {
 namespace details {
@@ -148,11 +150,11 @@ namespace details {
   }
 
 
-  template<typename T, bool IsBitFlag, auto Min, decltype(Min) Max>
+  template<typename T, auto Min, decltype(Min) Max>
   constexpr auto generate_arrays()
   {
     using Enum = T;
-    if constexpr (IsBitFlag) {
+    if constexpr (BitFlagEnum<Enum>) {
       constexpr std::size_t  bits = sizeof(T) * CHAR_BIT;
       std::array<Enum, bits> a{};
       for (std::size_t i = 0; i < bits; ++i)
@@ -176,7 +178,7 @@ namespace details {
   constexpr auto reflect() noexcept
   {
     constexpr auto elements = []() {
-      constexpr auto Array = generate_arrays<E, BitFlagEnum<E>, Min, Max>();
+      constexpr auto Array = details::generate_arrays<E, Min, Max>();
       auto str             = [Array]<std::size_t... Idx>(std::index_sequence<Idx...>) {
         return var_name<Array[Idx]...>();
       }(std::make_index_sequence<Array.size()>());
@@ -268,7 +270,5 @@ namespace details {
 //template<Enum E>
 //constexpr std::size_t enum_count = details::enum_count<E>;
 
-template<Enum E, typename Pair = std::pair<E, std::string_view>>
-inline constexpr auto entries = details::reflect<E, Pair, enum_traits<E>::min, enum_traits<E>::max>();
 
 } // namespace enchantum

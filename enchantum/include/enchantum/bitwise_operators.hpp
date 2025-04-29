@@ -45,24 +45,48 @@ template<Enum E>
 }
 
 template<Enum E>
-[[nodiscard]] constexpr E& operator|=(E& a, E b) noexcept
+constexpr E& operator|=(E& a, E b) noexcept
 {
   using T  = std::underlying_type_t<E>;
   return a = static_cast<E>(static_cast<T>(a) | static_cast<T>(b));
 }
 
 template<Enum E>
-[[nodiscard]] constexpr E& operator&=(E& a, E b) noexcept
+constexpr E& operator&=(E& a, E b) noexcept
 {
   using T  = std::underlying_type_t<E>;
   return a = static_cast<E>(static_cast<T>(a) & static_cast<T>(b));
 }
 
 template<Enum E>
-[[nodiscard]] constexpr E& operator^=(E& a, E b) noexcept
+constexpr E& operator^=(E& a, E b) noexcept
 {
   using T  = std::underlying_type_t<E>;
   return a = static_cast<E>(static_cast<T>(a) ^ static_cast<T>(b));
 }
 
 } // namespace enchantum::bitwise_operators
+
+#define ENCHANTUM_DEFINE_BITWISE_FOR(Enum)                                                \
+  [[nodiscard]] constexpr Enum operator&(Enum a, Enum b) noexcept                         \
+  {                                                                                       \
+    using T = std::underlying_type_t<Enum>;                                               \
+    return static_cast<Enum>(static_cast<T>(a) & static_cast<T>(b));                      \
+  }                                                                                       \
+  [[nodiscard]] constexpr Enum operator|(Enum a, Enum b) noexcept                         \
+  {                                                                                       \
+    using T = std::underlying_type_t<Enum>;                                               \
+    return static_cast<Enum>(static_cast<T>(a) | static_cast<T>(b));                      \
+  }                                                                                       \
+  [[nodiscard]] constexpr Enum operator^(Enum a, Enum b) noexcept                         \
+  {                                                                                       \
+    using T = std::underlying_type_t<Enum>;                                               \
+    return static_cast<Enum>(static_cast<T>(a) ^ static_cast<T>(b));                      \
+  }                                                                                       \
+  constexpr Enum&              operator&=(Enum& a, Enum b) noexcept { return a = a & b; } \
+  constexpr Enum&              operator|=(Enum& a, Enum b) noexcept { return a = a | b; } \
+  constexpr Enum&              operator^=(Enum& a, Enum b) noexcept { return a = a ^ b; } \
+  [[nodiscard]] constexpr Enum operator~(Enum a) noexcept                                 \
+  {                                                                                       \
+    return static_cast<Enum>(~static_cast<std::underlying_type_t<Enum>>(a));              \
+  }
