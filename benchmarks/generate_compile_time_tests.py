@@ -8,11 +8,11 @@ max_range = int(input("Enter the max range for MAGIC_ENUM_RANGE_MAX and ENCHANTU
 def create_test(magic_enum: bool, filename: str):
     with open(filename, "w") as f:
         f.write(f"""
-#define ENCHANTUM_MAX_RANGE            {max_range}
-#define ENCHANTUM_MIN_RANGE            ({-max_range})
-#define ENCHANTUM_SEARCH_PER_ITERATION 32
-#define MAGIC_ENUM_RANGE_MAX           {max_range}
-#define MAGIC_ENUM_RANGE_MIN           (-{max_range})
+#define RANGE {max_range}
+#define ENCHANTUM_MAX_RANGE            RANGE
+#define MAGIC_ENUM_RANGE_MAX           RANGE
+#define ENCHANTUM_MIN_RANGE            (-ENCHANTUM_MAX_RANGE)
+#define MAGIC_ENUM_RANGE_MIN           (-MAGIC_ENUM_RANGE_MAX)
 """)
         if magic_enum:
             f.write("#include <magic_enum/magic_enum.hpp>\n\n")

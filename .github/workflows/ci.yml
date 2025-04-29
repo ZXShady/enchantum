@@ -15,12 +15,14 @@ jobs:
       matrix:
         os: [windows-latest, ubuntu-latest]
         build_type: [Debug, Release]
-        compiler: [msvc, gcc]
+        compiler: [msvc, gcc, clang]
         exclude:
           - os: ubuntu-latest
             compiler: msvc
           - os: windows-latest
             compiler: gcc
+          - os: windows-latest
+            compiler: clang
       fail-fast: false
 
     env:
@@ -34,7 +36,17 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake g++ ninja-build
+        sudo apt-get install -y ninja-build
+        if [[ "${{ matrix.compiler }}" == "gcc" ]]; then
+          sudo apt-get install -y g++
+        elif [[ "${{ matrix.compiler }}" == "clang" ]]; then
+          sudo apt-get install -y wget lsb-release gnupg
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 18
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
+        fi
 
     - name: Install CMake (Windows)
       if: runner.os == 'Windows'
@@ -46,6 +58,9 @@ jobs:
         -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
         -DENCHANTUM_BUILD_TESTS=ON
         ${{ matrix.os == 'windows-latest' && '-G "Visual Studio 17 2022" -A x64' || '-G Ninja' }}
+      env:
+        CC: ${{ matrix.compiler == 'clang' && 'clang' || (matrix.compiler == 'gcc' && 'gcc' || '') }}
+        CXX: ${{ matrix.compiler == 'clang' && 'clang++' || (matrix.compiler == 'gcc' && 'g++' || '') }}
 
     - name: Build
       run: cmake --build build --config ${{ env.BUILD_TYPE }}

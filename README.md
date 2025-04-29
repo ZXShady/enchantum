@@ -2,9 +2,7 @@
 
 **Enchantum** (enchant enum) is a modern **C++20** library for **compile-time enum reflection**. It offers fast and lightweight handling of enum values, names, and bitflags — all built with clean C++ concepts in mind.
 
-Note: Currently supported on **MSVC** and **GCC**. Clang support is very coming soon TM.
-
-Tested with **Visual Studio 2022 (v17.13.6)** and **GCC (14.2.0)**.
+Tested locally with **Visual Studio 2022 (v17.13.6)**, **GCC (14.2.0)**,**Clang** (20.1.2).
 
 >Every year, countless turtles perish due to the pollution created by large build servers. Save the turtles—and your build times—by switching to **Enchantum** for faster enum reflection! 
 
@@ -56,30 +54,33 @@ Each test was run 3 times and averaged unless otherwise noted.
 
 ### Small Enums (200 enums, 16 values each, range: -128 to 128)
 
-| Compiler | `magic_enum` (secs) | `enchantum` (secs) | Saved Time (secs) |
-|----------|-------------------|------------------|----------------|
-| MSVC     | 80.63            | 22.06            | 58          |
-| GCC      | 39.01             | 8.91             | 30         |
+| Compiler | `magic_enum` (secs)   | `enchantum` (secs)  | Saved Time (secs) |
+|----------|-----------------------|---------------------|-------------------|
+| MSVC     | 80.63                 | 22.06               | 58                |
+| GCC      | 39.01                 | 8.91                | 30                |
+| Clang    | 57.92                 | 21.23               | 36                |
 
 
+enchantum_small_enums.cpp compiled in 21.23 seconds
+magic_enum_small_enums.cpp compiled in 56.82 seconds
 ### Large Enums (32 enums, 200 values each, range: -256 to 256)
 
-| Compiler | `magic_enum` (secs) | `enchantum` (secs) | Saved Time (secs) |
-|----------|----------------------|---------------------|----------------|
-| MSVC     | 37.03               | 14.17               | 23        |
-| GCC      |  18.40                | 6.78                | 11         |
-
+| Compiler | `magic_enum` (secs)   | `enchantum` (secs) | Saved Time (secs) |
+|----------|-----------------------|---------------------|------------------|
+| MSVC     | 37.03                 | 14.17               | 23               |
+| GCC      |  18.40                | 6.78                | 11               |
+| Clang    | 23.54                 | 6.8                 | 18               |
 ---
 
 ### Very Large Enum Range (200 enums, 16 values each, range: -1024 to 1024)
 
 *Only ran once due to long compilation times.*
 
-| Compiler | magic_enum          | enchantum |
-|----------|---------------------|-----------|
-| MSVC     | over 20 mins and compiler killed I got bored   | ~120 secs   |
-| GCC      | over 15 mins and compiler killed I got bored   | ~70 secs   |
-
+| Compiler | magic_enum                      |                         enchantum |
+|---------------------------|-----------------------------|-----------------------|
+| MSVC     | over 20 mins and compiler killed manually I got bored   | ~120 secs  |
+| GCC      | over 15 mins and compiler killed manually I got bored   | ~70 secs   |
+| Clang      | over 15 mins and compiler killed manually             | ~80 secs   |
 
 ---
 

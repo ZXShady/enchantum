@@ -1,7 +1,7 @@
 #pragma once
 
 #if defined(__clang__)
-  #error Clang is not usable
+  #include "enchantum_clang.hpp"
 #elif defined(__GNUC__) || defined(__GNUG__)
   #include "enchantum_gcc.hpp"
 #elif defined(_MSC_VER)
