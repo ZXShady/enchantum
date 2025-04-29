@@ -1,4 +1,3 @@
-cmake_minimum_required(VERSION 3.15.0)
 include(CheckCXXCompilerFlag)
 include(FetchContent)
  
@@ -20,9 +19,6 @@ endif()
 
 if(MSVC)
   target_compile_options(tests PRIVATE /Za /permissive-)
-endif()
-
-if(MSVC)
   target_compile_options(tests PRIVATE /W4)
 else()
   target_compile_options(tests PRIVATE -Wall -Wextra -Wconversion -Wpedantic)
