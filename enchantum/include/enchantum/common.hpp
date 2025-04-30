@@ -2,12 +2,18 @@
 #include <concepts>
 #include <limits>
 #include <string_view>
+#include <type_traits>
 
 #ifndef ENCHANTUM_ASSERT
   #include <cassert>
 // clang-format off
   #define ENCHANTUM_ASSERT(cond, msg, ...) assert(cond && msg)
 // clang-format on
+#endif
+
+#ifndef ENCHANTUM_THROW
+  // additional info such as local variables are here
+  #define ENCHANTUM_THROW(exception, ...) throw exception
 #endif
 
 #ifndef ENCHANTUM_MAX_RANGE

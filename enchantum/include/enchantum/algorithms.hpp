@@ -2,6 +2,7 @@
 
 #include "enchantum.hpp"
 #include <concepts>
+#include <utility>
 
 namespace enchantum {
 
@@ -63,21 +64,19 @@ constexpr auto visit(Func func, Enums... enums) noexcept(std::is_nothrow_invocab
   }(std::make_index_sequence<count<Enums>>()...);
 }
 #endif
-#if 0
 namespace details {
-  template<enchantum::Enum E, typename Func, std::size_t... Idx>
-  constexpr void for_each(Func& func, std::index_sequence<Idx...>) noexcept(
-    noexcept((func(std::integral_constant<E, values<E>[Idx]> {}), ...)))
+
+  template<typename E, typename Func, std::size_t... I>
+  constexpr auto for_each(Func& f, std::index_sequence<I...>)
   {
-    (void)(func(std::integral_constant<E, values<E>[Idx]> {}), ...);
+    (void)(f(std::integral_constant<E, values<E>[I]> {}), ...);
   }
 
 } // namespace details
 
-template<Enum E, E Func>
-constexpr void for_each(Func func) noexcept(noexcept(details::for_each<E>(func, std::make_index_sequence<count<E>>{})))
+template<Enum E, typename Func>
+constexpr void for_each(Func f)
 {
-  details::for_each<E>(func, std::make_index_sequence<count<E>>());
+  details::for_each<E>(f, std::make_index_sequence<count<E>>{});
 }
-#endif
 } // namespace enchantum
