@@ -90,3 +90,4 @@ constexpr E& operator^=(E& a, E b) noexcept
   {                                                                                       \
     return static_cast<Enum>(~static_cast<std::underlying_type_t<Enum>>(a));              \
   }
+

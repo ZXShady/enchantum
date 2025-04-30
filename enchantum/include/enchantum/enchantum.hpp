@@ -46,7 +46,6 @@ inline constexpr bool is_contiguous<E> = entries<E>.size() == 2;
 template<typename E>
 concept ContiguousEnum = Enum<E> && is_contiguous<E>;
 
-
 template<Enum E>
 inline constexpr bool is_contiguous_bitflag = []() {
   if constexpr (!BitFlagEnum<E>) {
@@ -61,7 +60,6 @@ inline constexpr bool is_contiguous_bitflag = []() {
     return true;
   }
 }();
-
 template<typename E>
 concept ContiguousBitFlagEnum = BitFlagEnum<E> && is_contiguous_bitflag<E>;
 
@@ -163,7 +161,7 @@ template<Enum E>
     ++i;
   }
   ENCHANTUM_ASSERT(false, "invalid enum passed to `enum_to_index` ", e);
-  return std::size_t(-1); 
+  return std::size_t(-1);
 }
 
 template<ContiguousEnum E>

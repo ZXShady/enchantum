@@ -29,6 +29,24 @@ inline constexpr E values_ors = [] {
 }();
 
 template<BitFlagEnum E>
+constexpr bool contains_bitflag(E value) noexcept
+{
+  using T = std::underlying_type_t<E>;
+  T check_value{0};
+  for (const auto v : values<E>)
+    if (v == (static_cast<T>(value) & static_cast<T>(v)))
+      check_value |= v;
+  return check_value != 0 && check_value == value;
+}
+
+template<ContiguousBitFlagEnum E>
+constexpr bool contains_bitflag(E value) noexcept
+{
+  using T = std::underlying_type_t<E>;
+  return static_cast<T>(value) >= static_cast<T>(min<E>) && static_cast<T>(value) <= static_cast<T>(max<E>);
+}
+
+template<BitFlagEnum E>
 [[nodiscard]] constexpr string to_string_bitflag(E value, char sep = '|')
 {
   using T = std::underlying_type_t<E>;
@@ -74,7 +92,7 @@ template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
 template<BitFlagEnum E>
 [[nodiscard]] constexpr optional<E> cast_bitflag(string_view s, char sep = '|') noexcept
 {
-  return enchantum::cast_bitflag(s, sep, [](const auto& a, const auto& b) { return a == b; });
+  return enchantum::cast_bitflag<E>(s, sep, [](const auto& a, const auto& b) { return a == b; });
 }
 
 template<BitFlagEnum E>
