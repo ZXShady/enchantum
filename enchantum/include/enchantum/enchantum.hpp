@@ -3,28 +3,18 @@
 #include "details/string_view.hpp"
 
 #if defined(__clang__)
-  #include "enchantum_clang.hpp"
+  #include "details/enchantum_clang.hpp"
 #elif defined(__GNUC__) || defined(__GNUG__)
-  #include "enchantum_gcc.hpp"
+  #include "details/enchantum_gcc.hpp"
 #elif defined(_MSC_VER)
-  #include "enchantum_msvc.hpp"
+  #include "details/enchantum_msvc.hpp"
 #endif
 
 #include "common.hpp"
 #include <type_traits>
 
-#ifndef ENCHANTUM_ALIAS_STRING_VIEW
-  #include <string_view>
-#endif
-
 
 namespace enchantum {
-#ifdef ENCHANTUM_ALIAS_STRING_VIEW
-ENCHANTUM_ALIAS_STRING_VIEW;
-#else
-using ::std::string_view;
-#endif
-
 
 template<Enum E, typename Pair = std::pair<E, string_view>>
 inline constexpr auto entries = details::reflect<E, Pair, enum_traits<E>::min, enum_traits<E>::max>();
@@ -77,9 +67,9 @@ inline constexpr std::size_t count = entries<E>.size();
 template<typename String = string_view, Enum E>
 [[nodiscard]] constexpr String to_string(E value) noexcept
 {
-  for (const auto& [e, s] : entries<E, std::pair<E, String>>)
+  for (const auto& [e, s] : entries<E>)
     if (value == e)
-      return s;
+      return String(s);
   return String();
 }
 
@@ -88,8 +78,8 @@ template<typename String = string_view, ContiguousEnum E>
 {
   using T          = std::underlying_type_t<E>;
   const auto index = std::size_t(static_cast<T>(value) - static_cast<T>(min<E>));
-  if (index < entries<E, std::pair<E, String>>.size())
-    return entries<E>[index].second;
+  if (index < entries<E>.size())
+    return String(entries<E>[index].second);
   return String();
 }
 
@@ -129,10 +119,20 @@ template<Enum E>
 
 
 template<Enum E>
-[[nodiscard]] constexpr bool contains(std::string_view name) noexcept
+[[nodiscard]] constexpr bool contains(string_view name) noexcept
 {
   for (const auto& s : names<E>)
     if (s == name)
+      return true;
+  return false;
+}
+
+
+template<Enum E, std::predicate<string_view, string_view> BinaryPredicate>
+[[nodiscard]] constexpr bool contains(string_view name, BinaryPredicate binary_predicate) noexcept
+{
+  for (const auto& s : names<E>)
+    if (binary_predicate(name, s))
       return true;
   return false;
 }
