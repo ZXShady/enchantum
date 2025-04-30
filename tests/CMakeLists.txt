@@ -10,6 +10,8 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(tests)
 
+target_include_directories(tests PRIVATE "third_party")
+
 target_link_libraries(tests enchantum::enchantum Catch2::Catch2 Catch2::Catch2WithMain)
 
 if(ENCHANTUM_RUNTIME_TESTS)
