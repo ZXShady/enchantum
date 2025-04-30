@@ -74,14 +74,14 @@ template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
   T           check_value{};
   std::size_t pos = 0;
   for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
-    if (const auto v = cast<E>(s.substr(pos, i - pos)))
+    if (const auto v = enchantum::cast<E>(s.substr(pos, i - pos)))
       check_value |= static_cast<T>(*v);
     else
       return optional<E>();
     pos = i + 1;
   }
 
-  if (const auto v = cast<E>(s.substr(pos), binary_pred))
+  if (const auto v = enchantum::cast<E>(s.substr(pos), binary_pred))
     check_value |= static_cast<T>(*v); // Combine the last bit flag
   else
     return optional<E>{}; // Invalid value, return empty optional
