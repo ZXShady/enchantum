@@ -6,8 +6,8 @@
 #include "next_value.hpp"
 #if __has_include(<fmt/format.h>)
 #include "fmt_format.hpp"
-#else
-#include "std_format.hpp"
+#elif __has_include(<format>)
+  #include "std_format.hpp"
 #endif
 #include "bitflags.hpp"
 #include "iostream.hpp"

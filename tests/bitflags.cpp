@@ -90,12 +90,13 @@ TEST_CASE("contains_bitflag", "[contains][bitflags]")
   {
     // shut down warnings about unneeded internal declarations
     EntityStatus e{};
+    EntityStatus e2{};
     (void)(e & e);
-    (void)(e &= e);
-    (void)(e |= e);
+    (void)(e &= e2);
+    (void)(e |= e2);
     (void)(e | e);
     (void)(e ^ e);
-    (void)(e ^= e);
+    (void)(e ^= e2);
     (void)(~e);
   }
   SECTION("DirectionFlags")

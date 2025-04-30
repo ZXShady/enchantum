@@ -8,9 +8,21 @@
 
 #include "string_view.hpp"
 
+#if __clang_major__ < 20
+  #pragma clang diagnostic push
+  #pragma clang diagnostic ignored "-Wenum-constexpr-conversion"
+#endif
 
 namespace enchantum {
 namespace details {
+
+#if __clang_major__ >= 20
+  template<typename T, auto V, typename = void>
+  inline constexpr bool is_valid_cast = false;
+
+  template<typename T, auto V>
+  inline constexpr bool is_valid_cast<T, V, std::void_t<std::integral_constant<T, static_cast<T>(V)>>> = true;
+
   template<typename T, std::underlying_type_t<T> max_range = 1>
   constexpr auto valid_cast_range()
   {
@@ -24,7 +36,7 @@ namespace details {
         // while clang makes it a subsituation failure which we can check for
         // using std::inegral_constant makes sure this is a constant expression situation
         // for SFINAE to occur
-        if constexpr (requires { std::integral_constant<T, static_cast<T>(max_range)>{}; })
+        if constexpr (is_valid_cast<T, max_range>)
           return valid_cast_range<T, max_range * 2>();
         else
           return max_range - 1;
@@ -43,7 +55,7 @@ namespace details {
         // while clang makes it a subsituation failure which we can check for
         // using std::inegral_constant makes sure this is a constant expression situation
         // for SFINAE to occur
-        if constexpr (requires { std::integral_constant<T, static_cast<T>(max_range)>{}; })
+        if constexpr (is_valid_cast<T, max_range>)
           return valid_cast_range<T, max_range * 2>();
         else
           return max_range / 2;
@@ -53,6 +65,16 @@ namespace details {
       }
     }
   }
+#else
+  template<typename T, std::underlying_type_t<T> max_range = 1>
+  constexpr auto valid_cast_range()
+  {
+    if constexpr (max_range >= 0)
+      return ENCHANTUM_MAX_RANGE;
+    else
+      return ENCHANTUM_MIN_RANGE;
+  }
+#endif
 } // namespace details
 
 template<UnscopedEnum E>
@@ -179,7 +201,7 @@ namespace details {
   {
     constexpr auto elements = []() {
       constexpr auto Array = details::generate_arrays<E, Min, Max>();
-      auto str             = [Array]<std::size_t... Idx>(std::index_sequence<Idx...>) {
+      auto           str   = [Array]<std::size_t... Idx>(std::index_sequence<Idx...>) {
         return var_name<Array[Idx]...>();
       }(std::make_index_sequence<Array.size()>());
 
@@ -272,3 +294,7 @@ namespace details {
 
 
 } // namespace enchantum
+
+#if __clang_major__ < 20
+  #pragma clang diagnostic pop
+#endif
