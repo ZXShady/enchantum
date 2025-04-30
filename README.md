@@ -2,14 +2,17 @@
 
 **Enchantum** (short for "enchant enum") is a modern **C++20** header-only library for **compile-time enum reflection**. It provides fast, lightweight access to enum values, names, and bitflags — all built with clean, idiomatic C++ in mind.
 
-> Every year, countless turtles perish due to the pollution caused by slow, bloated build systems.  
+> Every year, countless turtles perish due to the pollution caused by slow, bloated build times.  
  Save the turtles — and your compile times — by switching to **Enchantum**.
 
 **Source:** I made it up.
 
-[Features](docs/features.md)
 
 [Why another enum reflection library?](#why-another-enum-reflection-library)
+
+[Features](docs/features.md)
+
+[Limitations](docs/limitations.md)
 
 [CMake Integration](#cmake-integration)
 
