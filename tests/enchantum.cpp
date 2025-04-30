@@ -84,4 +84,6 @@ TEST_CASE("Color count", "[count]")
   STATIC_CHECK(enchantum::count<BoolEnum> == 2);
   STATIC_CHECK(enchantum::count<Direction2D> == 5);
   STATIC_CHECK(enchantum::count<Direction3D> == 7);
+  CHECK(enchantum::enum_traits<UnscopedCStyle>::min != 0);
+  CHECK(enchantum::enum_traits<UnscopedCStyle>::max != 0);
 }
