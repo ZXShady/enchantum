@@ -1,4 +1,4 @@
-name: CMake Matrix CI
+name: CI
 
 on:
   push:
@@ -13,7 +13,7 @@ defaults:
 
 jobs:
   build:
-    name: ${{ matrix.platform.name }}
+    name: ${{ matrix.platform.name }} -  ${{ matrix.build_type.name }}
     runs-on: ${{ matrix.platform.os }}
 
     strategy:
@@ -24,11 +24,11 @@ jobs:
           - { name: Windows Clang 16, os: windows-latest, compiler: clang, version: 16.0.0, flags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=libc++" }
           - { name: Windows Clang 17, os: windows-latest, compiler: clang, version: 17.0.1, flags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=libc++" }
           - { name: Windows Clang 18, os: windows-latest, compiler: clang, version: 18, flags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=libc++" }
-          - { name: Windows Clang 18 (MSVC STL), os: windows-latest, compiler: clang, version: 18, flags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=msvc" }
+          - { name: Windows Clang 18 (MSVC STL), os: windows-latest, compiler: clang, version: 18, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           - { name: Windows Clang 19, os: windows-latest, compiler: clang, version: 19, flags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=libc++" }
-          - { name: Windows Clang 19 (MSVC STL), os: windows-latest, compiler: clang, version: 19, flags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=msvc" }
+          - { name: Windows Clang 19 (MSVC STL), os: windows-latest, compiler: clang, version: 19, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           - { name: Windows Clang 20, os: windows-latest, compiler: clang, version: 20.1.2, flags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=libc++" }
-          - { name: Windows Clang 20 (MSVC STL), os: windows-latest, compiler: clang, version: 20.1.2, flags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=msvc" }
+          - { name: Windows Clang 20 (MSVC STL), os: windows-latest, compiler: clang, version: 20.1.2, flags: "-DCMAKE_CXX_COMPILER=clang++" }
 
           - { name: MacOS Clang Latest, os: macos-latest, compiler: clang, flags: "-DCMAKE_CXX_COMPILER=clang++" }
 
@@ -54,12 +54,6 @@ jobs:
       - name: Setup MSVC Dev Command Prompt
         if: runner.os == 'Windows' && matrix.platform.compiler == 'msvc'
         uses: ilammy/msvc-dev-cmd@v1
-
-     # - name: Set MSVC compiler environment
-     #   if: runner.os == 'Windows' && matrix.platform.compiler == 'msvc'
-     #   run: |
-     #     echo "CC=cl" >> $GITHUB_ENV
-     #     echo "CXX=cl" >> $GITHUB_ENV
 
       - name: Setup Clang
         if: runner.os != 'macos' && matrix.platform.compiler == 'clang'
