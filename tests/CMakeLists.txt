@@ -1,8 +1,4 @@
-﻿include(CheckCXXCompilerFlag)
-include(CheckCXXSourceCompiles)
-include(FetchContent)
-
-
+﻿include(FetchContent)
 FetchContent_Declare( 
   Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
@@ -14,7 +10,7 @@ add_executable(tests)
 
 target_include_directories(tests PRIVATE "third_party")
 
-target_link_libraries(tests enchantum::enchantum Catch2::Catch2 Catch2::Catch2WithMain)
+target_link_libraries(tests PRIVATE enchantum::enchantum Catch2::Catch2WithMain)
 
 if(ENCHANTUM_RUNTIME_TESTS)
   message(STATUS "enchantum tests are being ran at runtime")
@@ -30,15 +26,21 @@ endif()
 
 file(GLOB_RECURSE SRCS "*.cpp" "*.hpp")
 
-# Check for std::format support
-check_cxx_source_compiles("
-#include <format>
-int main() {
-  auto s = std::format(\"{}\", 42);
-  return 0;
-}
-" HAS_STD_FORMAT)
 
+if(MSVC)
+set(CMAKE_REQUIRED_FLAGS "/std:c++20")
+else()
+set(CMAKE_REQUIRED_FLAGS "-std=c++20")
+endif()
+check_cxx_source_compiles("
+    #include <format>
+    int main() {
+        auto s = std::format(\"{}\",42);
+        (void)s;
+        return 0;
+    }" 
+    HAS_STD_FORMAT
+)
 
 if(NOT HAS_STD_FORMAT)
     message(STATUS "This compiler does not support <format> header not running std_format.cpp tests")

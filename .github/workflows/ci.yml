@@ -21,14 +21,11 @@ jobs:
       matrix:
         platform:
           - { name: Windows MSVC, os: windows-latest, compiler: msvc, flags: "" }
-          - { name: Windows Clang 16, os: windows-latest, compiler: clang, version: 16.0.0, flags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=libc++" }
-          - { name: Windows Clang 17, os: windows-latest, compiler: clang, version: 17.0.1, flags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=libc++" }
-          - { name: Windows Clang 18, os: windows-latest, compiler: clang, version: 18, flags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=libc++" }
-          - { name: Windows Clang 18 (MSVC STL), os: windows-latest, compiler: clang, version: 18, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Windows Clang 19, os: windows-latest, compiler: clang, version: 19, flags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=libc++" }
-          - { name: Windows Clang 19 (MSVC STL), os: windows-latest, compiler: clang, version: 19, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Windows Clang 20, os: windows-latest, compiler: clang, version: 20.1.2, flags: "-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=libc++" }
-          - { name: Windows Clang 20 (MSVC STL), os: windows-latest, compiler: clang, version: 20.1.2, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          - { name: Windows Clang 16, os: windows-latest, compiler: clang, version: 16.0.0, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          - { name: Windows Clang 17, os: windows-latest, compiler: clang, version: 17.0.1, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          - { name: Windows Clang 18, os: windows-latest, compiler: clang, version: 18, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          - { name: Windows Clang 19, os: windows-latest, compiler: clang, version: 19, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          - { name: Windows Clang 20, os: windows-latest, compiler: clang, version: 20.1.2, flags: "-DCMAKE_CXX_COMPILER=clang++" }
 
           - { name: MacOS Clang Latest, os: macos-latest, compiler: clang, flags: "-DCMAKE_CXX_COMPILER=clang++" }
 
