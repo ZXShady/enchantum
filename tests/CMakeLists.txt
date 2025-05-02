@@ -2,19 +2,6 @@
 include(CheckCXXSourceCompiles)
 include(FetchContent)
 
-# Check for std::format support
-set(CMAKE_REQUIRED_FLAGS "-std=c++20")
-check_cxx_source_compiles("
-#include <format>
-int main() {
-  auto s = std::format(\"{}\", 42);
-  return 0;
-}
-" HAS_STD_FORMAT)
-
-if(NOT HAS_STD_FORMAT)
-  message(STATUS "This compiler does not support <format> header not running std_format.cpp tests")
-endif()
 
 FetchContent_Declare( 
   Catch2
@@ -43,7 +30,18 @@ endif()
 
 file(GLOB_RECURSE SRCS "*.cpp" "*.hpp")
 
+# Check for std::format support
+check_cxx_source_compiles("
+#include <format>
+int main() {
+  auto s = std::format(\"{}\", 42);
+  return 0;
+}
+" HAS_STD_FORMAT)
+
+
 if(NOT HAS_STD_FORMAT)
+    message(STATUS "This compiler does not support <format> header not running std_format.cpp tests")
 	list(REMOVE_ITEM SRCS "${CMAKE_CURRENT_SOURCE_DIR}/std_format.cpp")
 endif()
 
