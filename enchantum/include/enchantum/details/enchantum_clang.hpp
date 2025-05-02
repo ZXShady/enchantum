@@ -206,7 +206,7 @@ namespace details {
       }(std::make_index_sequence<Array.size()>());
 
       struct RetVal {
-        std::array<Pair, decltype(Array){}.size()> pairs;
+        std::array<Pair, decltype(Array){}.size()> pairs{};
         std::size_t                                total_string_length = 0;
         std::size_t                                valid_count         = 0;
       } ret;

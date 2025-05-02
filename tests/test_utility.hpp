@@ -161,3 +161,8 @@ enum class BoolEnum : bool {
   True
 };
 
+
+template<typename...>
+struct type_list; // not wanting to include tuple to detect if I am missing a header in tests
+
+using AllEnumsTestTypes = type_list<Color,UnscopedColor,UnscopedCStyle,BoolEnum,Flags,Direction2D,Direction3D,Letters>;

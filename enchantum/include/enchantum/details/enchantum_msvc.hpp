@@ -117,7 +117,7 @@ namespace details {
 
     auto str = var_name<Array>();
     struct RetVal {
-      std::array<Pair, Array.size()> pairs;
+      std::array<Pair, Array.size()> pairs{};
       std::size_t                    total_string_length = 0;
       std::size_t                    valid_count         = 0;
     } ret;
@@ -125,7 +125,7 @@ namespace details {
     constexpr auto enum_in_array_len = enum_in_array_name<E{}>().size();
     while (index < Array.size()) {
       if (str.front() == '(') {
-        str.remove_prefix(sizeof("(enum") - 1 + type_name_len + sizeof(")0x0") - 1); // there is atleast 1 base 16 hex digit
+        str.remove_prefix(sizeof("(enum ") - 1 + type_name_len + sizeof(")0x0") - 1); // there is atleast 1 base 16 hex digit
 
         if (const auto commapos = str.find(","); commapos != str.npos)
           str.remove_prefix(commapos + 1);

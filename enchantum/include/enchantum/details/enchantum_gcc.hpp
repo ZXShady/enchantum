@@ -144,7 +144,7 @@ namespace details {
       constexpr auto Array = details::generate_arrays<E, Min, Max>();
       auto str             = var_name<Array>();
       struct RetVal {
-        std::array<Pair, Array.size()> pairs;
+        std::array<Pair, Array.size()> pairs{};
         std::size_t                    total_string_length = 0;
         std::size_t                    valid_count         = 0;
       } ret;
