@@ -12,6 +12,10 @@ namespace enchantum {
 namespace details {
 
 
+  template<auto Copy>
+  inline constexpr auto static_storage_for = Copy;
+
+
   template<typename _>
   constexpr auto type_name_func() noexcept
   {
@@ -28,10 +32,6 @@ namespace details {
       ret_data[i] = funcname_data[i];
     return ret;
   }
-
-  template<typename T>
-  inline constexpr auto type_name = type_name_func<T>();
-
 
   template<auto Enum>
   constexpr auto enum_in_array_name() noexcept
@@ -72,7 +72,7 @@ namespace details {
     }
     else {
       constexpr auto  s      = enum_in_array_name<Enum{}>().size();
-      constexpr auto& tyname = type_name<Enum>;
+      constexpr auto& tyname = static_storage_for<type_name_func<Enum>()>;
       constexpr auto  str    = string_view(tyname.data(), tyname.size());
       if (constexpr auto pos = str.rfind("::"); pos != str.npos) {
         return s + str.substr(pos).size();
@@ -91,24 +91,24 @@ namespace details {
     using T = typename decltype(Array)::value_type;
 #define SZC(x) (sizeof(x) - 1)
     std::size_t    funcsig_off   = SZC("constexpr auto enchantum::details::var_name() [with auto Array = std::array<");
-    constexpr auto type_name_len = enchantum::details::type_name<T>.size();
+    constexpr auto type_name_len = enchantum::details::type_name_func<T>().size();
     funcsig_off += 2 * (type_name_len + SZC(" ,"));
     funcsig_off += SZC(">{std::__array_traits<");
     funcsig_off += SZC(">::_Type{");
     constexpr auto Size = Array.size();
     // clang-format off
-			funcsig_off += 2 * (Size < 10 ? 1
-				: Size < 100 ? 2
-				: Size < 1000 ? 3
-				: Size < 10000 ? 4
-				: Size < 100000 ? 5
-				: Size < 1000000 ? 6
-				: Size < 10000000 ? 7
-				: Size < 100000000 ? 8
-				: Size < 1000000000 ? 9
-				: 10);
+	funcsig_off += 2 * (Size < 10 ? 1
+			: Size < 100 ? 2
+			: Size < 1000 ? 3
+			: Size < 10000 ? 4
+			: Size < 100000 ? 5
+			: Size < 1000000 ? 6
+			: Size < 10000000 ? 7
+			: Size < 100000000 ? 8
+			: Size < 1000000000 ? 9
+			: 10);
     // clang-format on
-    return std::string_view(__PRETTY_FUNCTION__ + funcsig_off, SZC(__PRETTY_FUNCTION__) - funcsig_off - (sizeof("}}]") - 1));
+    return string_view(__PRETTY_FUNCTION__ + funcsig_off, SZC(__PRETTY_FUNCTION__) - funcsig_off - (sizeof("}}]") - 1));
   }
 
 
@@ -133,23 +133,23 @@ namespace details {
     }
   }
 
-  template<auto Copy>
-  inline constexpr auto static_storage_for = Copy;
 
+  // 10.140
+  //  9.988
   template<typename E, typename Pair, auto Min, auto Max>
   constexpr auto reflect() noexcept
   {
     constexpr auto elements = []() {
-      constexpr auto length_of_enum_in_template_array_casting = length_of_enum_in_template_array_if_casting<E>();
+      constexpr auto length_of_enum_in_template_array_casting = details::length_of_enum_in_template_array_if_casting<E>();
       constexpr auto Array = details::generate_arrays<E, Min, Max>();
-      auto str             = var_name<Array>();
+      auto           str   = var_name<Array>();
       struct RetVal {
         std::array<Pair, Array.size()> pairs{};
         std::size_t                    total_string_length = 0;
         std::size_t                    valid_count         = 0;
       } ret;
       std::size_t    index             = 0;
-      constexpr auto enum_in_array_len = enum_in_array_name<E{}>().size();
+      constexpr auto enum_in_array_len = details::enum_in_array_name<E{}>().size();
       while (index < Array.size()) {
         if (str.front() == '(') {
           str.remove_prefix(sizeof("(") - 1 + length_of_enum_in_template_array_casting + sizeof(")0") -
@@ -163,14 +163,14 @@ namespace details {
           //std::cout << "strsize \"" << str.size() << '"' << '\n';
         }
         else {
-          str.remove_prefix(enum_in_array_len);
-          if constexpr (enum_in_array_len != 0)
-            str.remove_prefix(sizeof("::") - 1);
+          if constexpr (enum_in_array_len != 0) {
+            str.remove_prefix(enum_in_array_len + sizeof("::") - 1);
+          }
           const auto commapos = str.find(",");
 
           const auto name = str.substr(0, commapos);
 
-          ret.pairs[index] = Pair{Array[index], name};
+          ret.pairs[ret.valid_count] = Pair{Array[index], name};
           ret.total_string_length += name.size() + 1;
 
           if (commapos != str.npos)
@@ -185,10 +185,8 @@ namespace details {
     constexpr auto strings = [elements]() {
       std::array<char, elements.total_string_length> strings{};
       std::size_t                                    index = 0;
-      for (const auto& [_, s] : elements.pairs) {
-        if (s.empty())
-          continue;
-
+      for (std::size_t _i = 0; _i < elements.valid_count; ++_i) {
+        const auto& [_, s] = elements.pairs[_i];
         for (std::size_t i = 0; i < s.size(); ++i)
           strings[index++] = s[i];
         ++index;
@@ -202,9 +200,8 @@ namespace details {
 
     std::size_t     index = 0;
     constexpr auto& str   = static_storage_for<strings>;
-    for (auto& [e, s] : elements.pairs) {
-      if (s.empty())
-        continue;
+    for (std::size_t _i = 0; _i < elements.valid_count; ++_i) {
+      auto& [e, s]   = elements.pairs[_i];
       auto& [re, rs] = ret[index++];
       re             = e;
       for (std::size_t i = string_index; i < str.size(); ++i) {
