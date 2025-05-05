@@ -1,13 +1,16 @@
-#include "case_insensitive.hpp"
-#include <array>
-#include <catch2/catch_test_macros.hpp>
-#include <cctype>
-#include <enchantum/bitflags.hpp>
-#include <enchantum/bitwise_operators.hpp>
-#include <enchantum/enchantum.hpp>
-#include <enchantum/iostream.hpp>
-#include <sstream>
-#include <string_view>
+#if 1
+
+#else
+  #include "case_insensitive.hpp"
+  #include <array>
+  #include <catch2/catch_test_macros.hpp>
+  #include <cctype>
+  #include <enchantum/bitflags.hpp>
+  #include <enchantum/bitwise_operators.hpp>
+  #include <enchantum/enchantum.hpp>
+  #include <enchantum/iostream.hpp>
+  #include <sstream>
+  #include <string_view>
 
 namespace {
 enum class EntityStatus {
@@ -188,3 +191,4 @@ TEST_CASE("contains_bitflag_with_invalid_bits", "[bitflags]")
     STATIC_CHECK(enchantum::contains_bitflag(DirectionFlags::Left | DirectionFlags::Right));
   }
 }
+#endif

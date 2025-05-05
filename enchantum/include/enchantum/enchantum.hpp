@@ -10,28 +10,6 @@
 namespace enchantum {
 
 template<typename>
-inline constexpr bool is_contiguous = false;
-
-template<Enum E>
-inline constexpr bool is_contiguous<E> = []() {
-  using T = std::underlying_type_t<E>;
-  if constexpr (std::is_same_v<T, bool>) {
-    return true;
-  }
-  else {
-    constexpr auto& enums = entries<E>;
-    for (std::size_t i = 0; i < enums.size() - 1; ++i)
-      if (T(enums[i].first) + 1 != T(enums[i + 1].first))
-        return false;
-    return true;
-  }
-}();
-
-
-template<typename E>
-concept ContiguousEnum = Enum<E> && is_contiguous<E>;
-
-template<typename>
 inline constexpr bool has_zero_flag = false;
 
 template<BitFlagEnum E>
@@ -44,13 +22,36 @@ inline constexpr bool has_zero_flag<E> = []() {
 
 
 template<typename>
+inline constexpr bool is_contiguous = false;
+
+template<Enum E>
+inline constexpr bool is_contiguous<E> = []() {
+  using T = std::underlying_type_t<E>;
+  if constexpr (std::is_same_v<T, bool>) {
+    return true;
+  }
+  else {
+    constexpr auto& enums = entries<E>;
+    for (auto i = std::size_t{has_zero_flag<E>}; i < enums.size() - 1; ++i)
+      if (T(enums[i].first) + 1 != T(enums[i + 1].first))
+        return false;
+    return true;
+  }
+}();
+
+
+template<typename E>
+concept ContiguousEnum = Enum<E> && is_contiguous<E>;
+
+
+template<typename>
 inline constexpr bool is_contiguous_bitflag = false;
 
 template<BitFlagEnum E>
 inline constexpr bool is_contiguous_bitflag<E> = []() {
   constexpr auto& enums = entries<E>;
   using T               = std::underlying_type_t<E>;
-  for (std::size_t i = 0; i < enums.size() - 1; ++i)
+  for (auto i = std::size_t{has_zero_flag<E>}; i < enums.size() - 1; ++i)
     if (T(enums[i].first) << 1 != T(enums[i + 1].first))
       return false;
   return true;
@@ -134,16 +135,7 @@ template<ContiguousEnum E>
 namespace details {
   struct to_string_functor {
     template<Enum E>
-    [[nodiscard]] constexpr
-#ifdef __cpp_static_call_operator
-      static
-#endif
-      string_view
-      operator()(const E value)
-#ifndef __cpp_static_call_operator
-        const
-#endif
-      noexcept
+    [[nodiscard]] constexpr string_view operator()(const E value) const noexcept
     {
       if (const auto i = enchantum::enum_to_index(value))
         return names<E>[*i];
