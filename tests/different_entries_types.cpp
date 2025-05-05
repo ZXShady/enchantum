@@ -13,6 +13,7 @@ struct ValueAndString {
 TEMPLATE_LIST_TEST_CASE("KV as entries key-value pair", "[entries][override_key_value_pair]", AllEnumsTestTypes)
 {
   for (const auto& kv : enchantum::entries<TestType, ValueAndString<TestType>>) {
+      #if 0
     if (kv.string != enchantum::to_string(kv.value)) {
       INFO(R"(CHECK(string == enchantum::to_string(value))
 with expansion:
@@ -21,5 +22,7 @@ with expansion:
       INFO('"' << kv.string << '"' << " != " << '"' << enchantum::to_string(kv.value) << '"');
       CHECK(false);
     }
+    #endif
+    CHECK(kv.string == enchantum::to_string(kv.value));
   }
 }

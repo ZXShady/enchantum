@@ -1,8 +1,16 @@
 #include "test_utility.hpp"
+#include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <enchantum/bitflags.hpp>
 #include <enchantum/std_format.hpp>
 #include <format>
+
+TEMPLATE_LIST_TEST_CASE("std::format", "[stringify][std_format]", AllEnumsTestTypes)
+{
+  for (const auto& [value, string] : enchantum::entries<TestType>)
+    CHECK(std::format("{}", value) == string);
+}
+
 
 TEST_CASE("Color enum std::format", "[stringify][std_format]")
 {

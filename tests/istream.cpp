@@ -1,25 +1,33 @@
 #include "test_utility.hpp"
+#include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <enchantum/enchantum.hpp>
 #include <enchantum/istream.hpp>
 #include <sstream>
 
+
 using namespace enchantum::istream_operators;
-
-TEST_CASE("istream operator>> parses valid enum name")
+TEMPLATE_LIST_TEST_CASE("istream operator>>", "[istream]", AllEnumsTestTypes)
 {
-  std::istringstream iss("Blue");
-  Color              c{};
-  iss >> c;
-  REQUIRE(c == Color::Blue);
-  REQUIRE(iss);
-}
+  SECTION("Parses correctly")
+  {
+    for (const auto& [value, string] : enchantum::entries<TestType>) {
+      auto     iss = std::istringstream(std::string(string));
+      TestType input{};
+      iss >> input;
+      CHECK(input == value);
+      CHECK(iss);
+    }
+  }
 
-TEST_CASE("istream operator>> fails on invalid enum name")
-{
-  std::istringstream iss("XxZXShadyxX");//so cool 
-  Color              c = Color::Red;
-  iss >> c;
-  REQUIRE(c == Color::Red);
-  REQUIRE(iss.fail());
+  SECTION("Invalid names")
+  {
+    for (const auto& [value, string] : enchantum::entries<TestType>) {
+      auto     iss = std::istringstream("WorldHello" + std::string(string) + "HelloWorld");
+      TestType           input{};
+      iss >> input;
+      CHECK(input == TestType{});
+      CHECK_FALSE(iss);
+    }
+  }
 }

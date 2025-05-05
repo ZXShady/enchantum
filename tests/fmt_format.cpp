@@ -6,6 +6,16 @@
 #include <catch2/catch_test_macros.hpp>
 #include <enchantum/bitflags.hpp>
 #include <enchantum/fmt_format.hpp>
+
+#include <catch2/catch_template_test_macros.hpp>
+
+TEMPLATE_LIST_TEST_CASE("fmt::format", "[stringify][fmt_format]", AllEnumsTestTypes)
+{
+  for (const auto& [value, string] : enchantum::entries<TestType>)
+    CHECK(fmt::format("{}", value) == string);
+}
+
+
 TEST_CASE("Color enum fmt::format", "[stringify][fmt_format]")
 {
   CHECK(fmt::format("{}", Color::Green) == "Green");

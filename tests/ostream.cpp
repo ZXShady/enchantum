@@ -1,4 +1,5 @@
 #include "test_utility.hpp"
+#include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <enchantum/enchantum.hpp>
 #include <enchantum/ostream.hpp>
@@ -6,19 +7,28 @@
 
 using namespace enchantum::ostream_operators;
 
-TEST_CASE("ostream operator<< outputs enum name")
+TEMPLATE_LIST_TEST_CASE("ostream operator<<", "[ostream]", AllEnumsTestTypes)
 {
-  std::ostringstream oss;
-  SECTION("Valid Enum")
-  {
-    oss << Color::Green;
-    REQUIRE(oss.str() == "Green");
+  for (const auto& [value, string] : enchantum::entries<TestType>) {
+    auto oss = std::ostringstream();
+    oss << value;
+    CHECK(oss.str() == string);
+    CHECK(oss);
   }
-
-  SECTION("Invalid Enum")
+  SECTION("Invalid enums return empty string")
   {
-    oss << static_cast<Color>(24);
-    REQUIRE(oss.str().empty());
+    auto       oss                     = std::ostringstream();
+    const auto output_if_not_contained = [&oss](TestType value) {
+      using T = std::underlying_type_t<TestType>;
+      auto v  = static_cast<TestType>(T(value) + 1);
+      if (!enchantum::contains(v))
+        oss << v;
+    };
+    output_if_not_contained(enchantum::max<TestType>);
+    CHECK(oss.str().empty());
+    CHECK(oss);
+    output_if_not_contained(enchantum::min<TestType>);
+    CHECK(oss.str().empty());
+    CHECK(oss);
   }
 }
-

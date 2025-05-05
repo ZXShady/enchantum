@@ -1,10 +1,10 @@
 #pragma once
+#include "case_insensitive.hpp"
 #include <cstdint>
 #include <type_traits>
-#include "case_insensitive.hpp"
 
 // Tests whether string parsing will break if commas occur in typename
-namespace LongNamespaced::Namespace2 {
+namespace LongNamespaced::Namespace2::inline InlineNamespace {
 template<typename... IAmHereForCommasInTypeName>
 struct Really_Unreadable_Class_Name {
 
@@ -113,24 +113,16 @@ struct TypeWithCommas;
 // Clang seems to have weird behavior with enum in templates
 // It does not display them in pretty function names unless atleast 1 member of the enum was
 // used.
+using UglyType = LongNamespaced::Namespace2::Really_Unreadable_Class_Name<int, long, int***, TypeWithCommas<int, long[3], TypeWithCommas<long, int>>>;
 #ifdef __clang__
-using Color         = decltype(LongNamespaced::Namespace2::
-                         Really_Unreadable_Class_Name<int, long, int***, TypeWithCommas<int, long[3], TypeWithCommas<long, int>>>::Color::Aqua);
-using Flags         = decltype(LongNamespaced::Namespace2::
-                         Really_Unreadable_Class_Name<int, long, int***, TypeWithCommas<int, long[3], TypeWithCommas<long, int>>>::Flags::Flag0);
-using UnscopedColor = decltype(LongNamespaced::Namespace2::Really_Unreadable_Class_Name<
-                               int,
-                               long,
-                               int***,
-                               TypeWithCommas<int, long[3], TypeWithCommas<long, int>>>::UnscopedColor::Aqua);
+using Color         = decltype(UglyType::Color::Aqua);
+using Flags         = decltype(UglyType::Flags::Flag0);
+using UnscopedColor = decltype(UglyType::UnscopedColor::Aqua);
 #else
-using Color = LongNamespaced::Namespace2::
-  Really_Unreadable_Class_Name<int, long, int***, TypeWithCommas<int, long[3], TypeWithCommas<long, int>>>::Color;
+using Color = UglyType::Color;
 
-using Flags = LongNamespaced::Namespace2::
-  Really_Unreadable_Class_Name<int, long, int***, TypeWithCommas<int, long[3], TypeWithCommas<long, int>>>::Flags;
-using UnscopedColor = LongNamespaced::Namespace2::
-  Really_Unreadable_Class_Name<int, long, int***, TypeWithCommas<int, long[3], TypeWithCommas<long, int>>>::UnscopedColor;
+using Flags         = UglyType::Flags;
+using UnscopedColor = UglyType::UnscopedColor;
 #endif
 
 
@@ -165,4 +157,4 @@ enum class BoolEnum : bool {
 template<typename...>
 struct type_list; // not wanting to include tuple to detect if I am missing a header in tests
 
-using AllEnumsTestTypes = type_list<Color,UnscopedColor,UnscopedCStyle,BoolEnum,Flags,Direction2D,Direction3D,Letters>;
+using AllEnumsTestTypes = type_list<Color, UnscopedColor, UnscopedCStyle, BoolEnum, Flags, Direction2D, Direction3D, Letters>;
