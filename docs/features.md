@@ -1,5 +1,36 @@
 All the functions/variables are defined in namespace `enchantum`
 
+Quick Reference
+
+**Concepts**:
+- [Enum](#enum)
+- [SignedEnum](#signedenum)
+- [UnsignedEnum](#unsignedenum)
+- [ScopedEnum](#scopedenum)
+- [UnscopedEnum](#unscopedenum)
+- [BitFlagEnum](#bitflagenum)
+- [ContiguousEnum](#contiguousenum)
+
+**Functions**:
+- [to_string](#to_string)
+- [cast](#cast)
+- [index_to_enum](#index_to_enum)
+- [enum_to_index](#enum_to_index)
+- [std::format/fmt::format](#fmtformat--stdformat-support)
+- [operator<<](#operator-stream-output-operator)
+- [operator>>](#operator-stream-input-operator)
+
+**Variables**:
+  - [entries](#entries)
+  - [names](#names)
+  - [values](#values)
+  - [max](#max)
+  - [min](#min)
+  - [count](#count)
+
+**Containers**:
+  - [array](#array)
+
 # Concepts
 ## Enum
 The Enum concept is used to identify types that are valid C++ enums. Any type that is an enum, whether scoped or unscoped, signed or unsigned, will satisfy this concept.
@@ -142,17 +173,24 @@ static_assert(enchantum::ContiguousEnum<Status>);
 ## Function
 
 #### `to_string`
-
 ```cpp
-#include <enchantum/enchantum.hpp>
+// defined in header enchantum.hpp
 
-template<Enum E>
-constexpr std::string_view to_string(E value) noexcept
+namespace details 
+{
+  struct TO_STRING_FUNCTOR {
+    template<Enum E>
+    constexpr std::string_view operator()(E value) const noexcept;
+  };
+}
+
+constexpr inline details::TO_STRING_FUNCTOR to_string;
 ```
 
 **Description**:
   Converts an enum value to its corresponding string representation. 
-  **Note** the `std::string_view` points to null-terminated character array.
+  **Note** the `std::string_view` points to null-terminated character array. 
+  and the "function" is a functor allowing easy passing of higher order functions without manually specifying the enum type could be handy in `ranges`.
 
 **Notes**:
   Additional overloads may be provided to optimize for specific properties (e.g enums with no gaps can use an index lookup)
@@ -175,6 +213,52 @@ constexpr std::string_view to_string(E value) noexcept
   ```
 
 ---
+
+### `cast`
+
+```cpp
+// defined in header `enchantum.hpp`
+template<Enum E>
+constexpr std::optional<E> cast(std::underlying_type_t<E> e) noexcept;
+
+template<Enum E>
+constexpr std::optional<E> cast(std::string_view name) noexcept;
+
+
+template<Enum E, std::predicate<std::string_view, std::string_view> BinaryPred>
+constexpr optional<E> cast(std::string_view name, BinaryPred binary_predicate) noexcept
+
+```
+**Description**:
+
+ 1. Attempts to convert an integral value to the corresponding enum value if it is a valid underlying value (i.e it is one of the elements of `values<E>`).
+ 2. Attempts to convert a `std::string_view` to the corresponding enum value based on its name it is case sensitive.
+ 3. Attempts to convert a `std::string_view` to the corresponding enum value based using a predicate. **note** the first arguement of the predicate is the `cast` `name` arguement while the second arguement of the predicate is the names of the enum of `names<E>`.
+
+Returns:
+1. An `optional<E>` containing the enum value if the integer matches a defined enum value; otherwise, `std::nullopt`.
+2. An `optional<E>` containing the enum value if the `name` matches a defined enum name; otherwise, `std::nullopt`.
+3. Same as 2.
+
+**Examples**:
+```cpp
+#include <enchantum/cast.hpp>
+
+enum class Status { Ok = 0, Error = 1, Unknown = 2 };
+assert(enchantum::cast<Status>(1).has_value());
+assert(!enchantum::cast<Status>(300).has_value());
+
+assert(enchantum::cast<Color>("Unknown").has_value());
+
+assert(!enchantum::cast<Color>("UnKnoWn").has_value());
+
+assert(enchantum::cast<Color>("UnKnOwn",[](std::string_view a,std::string_view b){
+  return std::ranges::equal(a,b,[](unsigned char x,unsigned char y){
+    return std::tolower(x) == std::tolower(y);
+  })
+}).has_value());
+
+```
 
 ### `min`
 
@@ -236,15 +320,44 @@ inline constexpr std::size_t count;
 
 ---
 
+### `entries`
+
+```cpp
+// defined in header entries.hpp
+
+template<Enum E, typename Pair = std::pair<E,std::string_view>>
+inline constexpr std::array<Pair,count<E>> entries;
+```
+
+- **Description**:  
+  Gives an array containing all the string names of the enum and the values, it is sorted in ascending order.
+
+- **Example**:
+
+```cpp
+enum class Color { Red, Green = -2, Blue };
+for (const auto& [value,string]: enchantum::entries<Color>) {
+    std::cout << static_cast<int>(value) << " = " << name << std::endl;
+}
+// Outputs: 
+// -2 = "Green"
+// -1 = "Blue"
+// 0 = "Red"
+```
+
 ### `values`
 
 ```cpp
+// defined in header entries.hpp
+
 template<Enum E>
 constexpr std::array<E,count<E>> values;
+```
 
 **Description**:  
   Gives an array containing all the values of the enum type equalivent to taking the elements of `entries<E>` in sorted order.
 
+> Example
 ```cpp
 enum class Color { Red, Green, Blue };
 
@@ -259,6 +372,8 @@ for (auto value : enchantum::values<Color>) {
 ### `names`
 
 ```cpp
+// defined in header entries.hpp
+
 template<Enum E, typename String = std::string_view>
 inline constexpr std::array<String,count<E>> names;
 ```
@@ -281,6 +396,8 @@ for (auto name : enchantum::names<Color>) {
 ### `contains`
 
 ```cpp
+// defined in header enchantum.hpp
+
 template<Enum E>
 constexpr bool contains(E value) noexcept;
 
@@ -316,11 +433,13 @@ bool containsGreenName = enchantum::contains<Color>("Green");  // true
 
 ---
 
-#### `index_to_enum`
+### `index_to_enum`
 
 ```cpp
+// defined in header enchantum.hpp
+
 template<Enum E>
-constexpr E index_to_enum(std::size_t i) noexcept;
+constexpr std::optional<E> index_to_enum(std::size_t i) noexcept;
 ```
 
 - **Description**:  
@@ -330,7 +449,34 @@ constexpr E index_to_enum(std::size_t i) noexcept;
   - `i`: The index to convert to an enum value.
 
 - **Returns**:  
-  The enum value corresponding to the provided index. if the index is out of bounds an `ENCHANTUM_ASSERT` is called and UB in release mode.
+  The enum value corresponding to the provided index. if the index is out of bounds `std::nullopt` is returned.
+
+- **Example**:
+```cpp
+#include <enchantum/enchantum.hpp>
+enum class Color { Red, Green = 42, Blue };
+
+auto color = enchantum::index_to_enum<Color>(1);
+std::cout << static_cast<int>(color) << std::endl;  // Outputs: 42 (Green)
+```
+
+### `enum_to_index`
+
+```cpp
+// defined in header enchantum.hpp
+
+template<Enum E>
+constexpr std::optional<std::size_t> enum_to_index(E e) noexcept;
+```
+
+- **Description**:  
+  Converts an enum to its corresponding index value.
+
+- **Parameters**:
+  - `e`: The enum to convert to an index value.
+
+- **Returns**:  
+  The index value corresponding to the provided enum. if the enum is not a value in `values<E>` `std::nullopt` is returned.
 
 - **Example**:
 ```cpp
@@ -396,7 +542,7 @@ The `operator<<` and `operator>>` are provided in the `enchantum` library to ena
 
 There is also the convienence header `iostream.hpp` which includes both of them and has a new nested namespace that contains the istream operators and ostream operators
 
-## `operator>>` (Stream Output Operator)
+## `operator<<` (Stream Output Operator)
 
 ```cpp
 namespace ostream_operators {
@@ -438,4 +584,47 @@ There is headers for them. that provide `std::formatter`/`fmt::formatter` for al
 
 enum class Letters {a,b,c,e,d};
 std::cout << std::format("{} then {} then {}",Letters::a,Letters::b,Letters::c); // a then b then c
+```
+
+### array
+
+```cpp
+// defined in header `array.hpp`
+template <Enum E, typename V>
+class array : public std::array<V,count<E>> {
+public:
+  using index_type = E;
+  using typename base::const_iterator;
+  using typename base::const_pointer;
+  using typename base::const_reference;
+  using typename base::const_reverse_iterator;
+  using typename base::difference_type;
+  using typename base::iterator;
+  using typename base::pointer;
+  using typename base::reference;
+  using typename base::reverse_iterator;
+  using typename base::size_type;
+  using typename base::value_type;
+  constexpr reference at(E pos);
+  constexpr const_reference at(E pos) const;
+  constexpr reference operator[](E pos) noexcept;
+  constexpr const_reference operator[](E pos) const noexcept;
+}
+```
+
+> **Examples**
+```cpp
+#include <enchantum/array.hpp>
+#include <enchantum/enchantum.hpp>
+
+enum class Color { Red, Green, Blue };
+enchantum::array<Color, std::uint32_t> values = {
+    0xff'00'00'00,  // Red
+    0x00'ff'00'00,  // Green
+    0x00'00'ff'00   // Blue
+  };
+
+std::cout << values[Color::Green] << '\n';  // Outputs: 16711680
+values[Color::Blue] = 42;
+std::cout << values.at(Color::Blue) << '\n';  // Outputs: 42
 ```
