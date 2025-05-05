@@ -1,51 +1,13 @@
 #pragma once
 
-#include "details/string_view.hpp"
-
-#if defined(__clang__)
-  #include "details/enchantum_clang.hpp"
-#elif defined(__GNUC__) || defined(__GNUG__)
-  #include "details/enchantum_gcc.hpp"
-#elif defined(_MSC_VER)
-  #include "details/enchantum_msvc.hpp"
-#endif
-
 #include "common.hpp"
+#include "details/optional.hpp"
+#include "details/string_view.hpp"
+#include "entries.hpp"
 #include <type_traits>
 #include <utility>
 
 namespace enchantum {
-
-#ifdef __cpp_lib_to_underlying
-using ::std::to_underlying;
-#else
-template<Enum E>
-[[nodiscard]] constexpr auto to_underlying(const E e) noexcept
-{
-  return static_cast<std::underlying_type_t<E>>(e);
-}
-#endif
-
-template<Enum E, typename Pair = std::pair<E, string_view>>
-inline constexpr auto entries = details::reflect<E, Pair, enum_traits<E>::min, enum_traits<E>::max>();
-
-template<Enum E>
-inline constexpr auto values = []() {
-  constexpr auto&             enums = entries<E>;
-  std::array<E, enums.size()> ret;
-  for (std::size_t i = 0; i < ret.size(); ++i)
-    ret[i] = enums[i].first;
-  return ret;
-}();
-
-template<Enum E, typename String = string_view>
-inline constexpr auto names = []() {
-  constexpr auto&                  enums = entries<E, std::pair<E, String>>;
-  std::array<String, enums.size()> ret;
-  for (std::size_t i = 0; i < ret.size(); ++i)
-    ret[i] = enums[i].second;
-  return ret;
-}();
 
 template<typename>
 inline constexpr bool is_contiguous = false;
@@ -97,17 +59,6 @@ inline constexpr bool is_contiguous_bitflag<E> = []() {
 template<typename E>
 concept ContiguousBitFlagEnum = BitFlagEnum<E> && is_contiguous_bitflag<E>;
 
-
-template<Enum E>
-inline constexpr auto min = entries<E>.front().first;
-
-template<Enum E>
-inline constexpr auto max = entries<E>.back().first;
-
-template<Enum E>
-inline constexpr std::size_t count = entries<E>.size();
-
-
 template<Enum E>
 [[nodiscard]] constexpr bool contains(E value) noexcept
 {
@@ -151,31 +102,33 @@ template<ContiguousEnum E>
 }
 
 template<Enum E>
-[[nodiscard]] constexpr E index_to_enum(std::size_t index) noexcept
+[[nodiscard]] constexpr optional<E> index_to_enum(std::size_t index) noexcept
 {
-  ENCHANTUM_ASSERT(index < values<E>.size(), "'index' must be less than the enums size!", index);
-  return values<E>[index];
+  optional<E> ret;
+  if (index < values<E>.size())
+    ret.emplace(values<E>[index]);
+  return ret;
 }
 
 template<Enum E>
-[[nodiscard]] constexpr std::size_t enum_to_index(E e) noexcept
+[[nodiscard]] constexpr optional<std::size_t> enum_to_index(E e) noexcept
 {
   std::size_t i = 0;
   for (const E val : values<E>) {
     if (val == e)
-      return i;
+      return optional<std::size_t>(i);
     ++i;
   }
-  return std::size_t(-1);
+  return optional<std::size_t>();
 }
 
 template<ContiguousEnum E>
-[[nodiscard]] constexpr std::size_t enum_to_index(E e) noexcept
+[[nodiscard]] constexpr optional<std::size_t> enum_to_index(E e) noexcept
 {
   using T = std::underlying_type_t<E>;
   if (enchantum::contains(e))
-    return std::size_t(T(e) + T(min<E>));
-  return std::size_t(-1);
+    return optional<std::size_t>(std::size_t(T(e) + T(min<E>)));
+  return optional<std::size_t>{};
 }
 
 namespace details {
@@ -192,13 +145,49 @@ namespace details {
 #endif
       noexcept
     {
-      if (const auto i = enchantum::enum_to_index(value); i != std::size_t(-1))
-        return names<E>[i];
+      if (const auto i = enchantum::enum_to_index(value))
+        return names<E>[*i];
       return string_view{};
     }
   };
 } // namespace details
 inline constexpr details::to_string_functor to_string;
+
+
+template<Enum E>
+constexpr optional<E> cast(std::underlying_type_t<E> e) noexcept
+{
+  optional<E> a; // rvo not that it really matters
+  if (enchantum::contains<E>(e))
+    a.emplace(E(e));
+  return a;
+}
+
+template<Enum E>
+constexpr optional<E> cast(string_view name) noexcept
+{
+  optional<E> a; // rvo not that it really matters
+  for (const auto& [e, s] : entries<E>) {
+    if (s == name) {
+      a.emplace(e);
+      return a;
+    }
+  }
+  return a; // nullopt
+}
+
+template<Enum E, std::predicate<string_view, string_view> BinaryPred>
+constexpr optional<E> cast(string_view name, BinaryPred binary_predicate) noexcept
+{
+  optional<E> a; // rvo not that it really matters
+  for (const auto& [e, s] : entries<E>) {
+    if (binary_predicate(name, s)) {
+      a.emplace(e);
+      return a;
+    }
+  }
+  return a;
+}
 
 
 } // namespace enchantum

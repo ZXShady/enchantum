@@ -1,7 +1,6 @@
 #include "test_utility.hpp"
 #include <algorithm>
 #include <catch2/catch_test_macros.hpp>
-#include <enchantum/cast.hpp>
 #include <enchantum/enchantum.hpp>
 TEST_CASE("Color enum to_string", "[to_string]")
 {

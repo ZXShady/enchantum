@@ -23,6 +23,6 @@ with expansion:
       CHECK(false);
     }
     #endif
-    CHECK(kv.string == enchantum::to_string(kv.value));
+    CHECK(std::string(kv.string) == enchantum::to_string(kv.value));
   }
 }

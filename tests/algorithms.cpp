@@ -1,7 +1,6 @@
 #include "test_utility.hpp"
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
-#include <catch2/catch_tostring.hpp>
 #include <enchantum/algorithms.hpp>
 
 TEMPLATE_LIST_TEST_CASE("for_each", "[algorithms][for_each]", AllEnumsTestTypes)

@@ -1,5 +1,4 @@
 #pragma once
-#include "cast.hpp"
 #include "common.hpp"
 #include "details/string_view.hpp"
 #include "enchantum.hpp"

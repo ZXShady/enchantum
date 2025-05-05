@@ -28,23 +28,26 @@ public:
 
   constexpr reference at(E index)
   {
-    if (enchantum::contains(index))
-      return operator[](enchantum::enum_to_index(index));
+    if (const auto i = enchantum::enum_to_index(index))
+      return operator[](*i);
     ENCHANTUM_THROW(std::out_of_range("enchantum::array::at index out of range"), index);
   }
 
   constexpr const_reference at(E index) const
   {
-    if (enchantum::contains(index))
-      return operator[](enchantum::enum_to_index(index));
+    if (const auto i = enchantum::enum_to_index(index))
+      return operator[](*i);
     ENCHANTUM_THROW(std::out_of_range("enchantum::array::at: index out of range"), index);
   }
 
-  [[nodiscard]] constexpr reference operator[](E index) noexcept { return operator[](enchantum::enum_to_index(index)); }
+  [[nodiscard]] constexpr reference operator[](E index) noexcept
+  {
+    return operator[](*enchantum::enum_to_index(index));
+  }
 
   [[nodiscard]] constexpr const_reference operator[](E index) const noexcept
   {
-    return operator[](enchantum::enum_to_index(index));
+    return operator[](*enchantum::enum_to_index(index));
   }
 };
 

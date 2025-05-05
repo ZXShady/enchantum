@@ -3,7 +3,6 @@
 #include <iosfwd>
 #include <string>
 #include <concepts>
-#include "cast.hpp"
 
 namespace enchantum::istream_operators {
 template<typename Traits, Enum E>
