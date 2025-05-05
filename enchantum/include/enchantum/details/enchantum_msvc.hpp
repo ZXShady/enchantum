@@ -1,11 +1,12 @@
 #pragma once
 #include "../common.hpp"
+#include "generate_arrays.hpp"
+#include "string_view.hpp"
 #include <array>
 #include <cassert>
 #include <climits>
 #include <type_traits>
 #include <utility>
-#include "string_view.hpp"
 
 namespace enchantum {
 
@@ -41,9 +42,7 @@ namespace details {
         s.remove_suffix(sizeof(")0x0") - 1);
         return s;
       }
-      else {
-        return s.substr(0, s.rfind("::"));
-      }
+      return s.substr(0, s.rfind("::"));
     }
     else {
       if (s.front() == '(') {
@@ -82,29 +81,8 @@ namespace details {
     funcsig_off += SZC(">{enum ") + type_name_len;
     return string_view(__FUNCSIG__ + funcsig_off, SZC(__FUNCSIG__) - funcsig_off - (sizeof("}>(void) noexcept") - 1));
   }
-  #undef SZC
+#undef SZC
 
-
-  template<typename T, bool IsBitFlag, auto Min, decltype(Min) Max>
-  constexpr auto generate_arrays()
-  {
-    using Enum = T;
-    if constexpr (IsBitFlag) {
-      constexpr std::size_t  bits = sizeof(T) * CHAR_BIT;
-      std::array<Enum, bits> a{};
-      for (std::size_t i = 0; i < bits; ++i)
-        a[i] = static_cast<Enum>(static_cast<std::make_unsigned_t<T>>(1) << i);
-      return a;
-    }
-    else {
-      static_assert(Min < Max, "enum_traits::min must be less than enum_traits::max");
-      std::array<Enum, (Max - Min) + 1> array;
-      auto* const                       array_data = array.data();
-      for (std::size_t i = 0; i < array.size(); ++i)
-        array_data[i] = static_cast<Enum>(i + Min);
-      return array;
-    }
-  }
 
   template<auto Copy>
   inline constexpr auto static_storage_for = Copy;
@@ -130,9 +108,8 @@ namespace details {
           str.remove_prefix(commapos + 1);
       }
       else {
-        str.remove_prefix(enum_in_array_len);
         if constexpr (enum_in_array_len != 0)
-          str.remove_prefix(sizeof("::") - 1);
+          str.remove_prefix(enum_in_array_len + sizeof("::") - 1);
         const auto commapos = str.find(",");
 
         const auto name = str.substr(0, commapos);
@@ -152,7 +129,7 @@ namespace details {
   template<typename E, typename Pair, auto Min, auto Max>
   constexpr auto reflect() noexcept
   {
-    constexpr auto elements = get_elements<E, Pair, details::generate_arrays<E, BitFlagEnum<E>, Min, Max>()>();
+    constexpr auto elements = get_elements<E, Pair, details::generate_arrays<E, Min, Max>()>();
 
     constexpr auto strings = [elements]() {
       std::array<char, elements.total_string_length> strings;
@@ -166,30 +143,19 @@ namespace details {
     }();
 
     std::array<Pair, elements.valid_count> ret;
-    std::size_t                            string_index    = 0;
-    std::size_t                            string_index_to = 0;
-
-    constexpr auto& str   = static_storage_for<strings>;
-
-    for (std::size_t _i = 0; _i < elements.valid_count; ++_i) {
-      const auto& [e, s] = elements.pairs[_i];
-      auto& [re, rs]     = ret[_i];
+    constexpr const auto*                  str = static_storage_for<strings>.data();
+    for (std::size_t i = 0, string_index = 0; i < elements.valid_count; ++i) {
+      const auto& [e, s] = elements.pairs[i];
+      auto& [re, rs]     = ret[i];
       re                 = e;
-      {
-        const auto* str_data = str.data();
-        for (std::size_t i = string_index, count = str.size(); i < count; ++i) {
-          string_index_to = i;
-          if (str_data[i] == '\0')
-            break;
-        }
-      }
-      rs           = {&str[string_index], &str[string_index_to]};
-      string_index = string_index_to + 1;
+
+      rs = {str + string_index, str + string_index + s.size()};
+      string_index += s.size() + 1;
     }
+
     return ret;
   }
 } // namespace details
 
 
 } // namespace enchantum
-

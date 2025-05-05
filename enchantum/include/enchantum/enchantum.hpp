@@ -12,76 +12,22 @@
 
 #include "common.hpp"
 #include <type_traits>
-
+#include <utility>
 
 namespace enchantum {
 
+#ifdef __cpp_lib_to_underlying
+using ::std::to_underlying;
+#else
+template<Enum E>
+[[nodiscard]] constexpr auto to_underlying(const E e) noexcept
+{
+  return static_cast<std::underlying_type_t<E>>(e);
+}
+#endif
+
 template<Enum E, typename Pair = std::pair<E, string_view>>
 inline constexpr auto entries = details::reflect<E, Pair, enum_traits<E>::min, enum_traits<E>::max>();
-
-template<Enum E>
-inline constexpr bool is_contiguous = []() {
-  constexpr auto& enums = entries<E>;
-  using T               = std::underlying_type_t<E>;
-  for (std::size_t i = 0; i < enums.size() - 1; ++i)
-    if (T(enums[i].first) + 1 != T(enums[i + 1].first))
-      return false;
-  return true;
-}();
-
-
-template<EnumOfUnderlying<bool> E>
-inline constexpr bool is_contiguous<E> = entries<E>.size() == 2;
-
-template<typename E>
-concept ContiguousEnum = Enum<E> && is_contiguous<E>;
-
-template<Enum E>
-inline constexpr bool is_contiguous_bitflag = []() {
-  if constexpr (!BitFlagEnum<E>) {
-    return false;
-  }
-  else {
-    constexpr auto& enums = entries<E>;
-    using T               = std::underlying_type_t<E>;
-    for (std::size_t i = 0; i < enums.size() - 1; ++i)
-      if (T(enums[i].first) << 1 != T(enums[i + 1].first))
-        return false;
-    return true;
-  }
-}();
-template<typename E>
-concept ContiguousBitFlagEnum = BitFlagEnum<E> && is_contiguous_bitflag<E>;
-
-
-template<Enum E>
-inline constexpr auto min = entries<E>.front().first;
-
-template<Enum E>
-inline constexpr auto max = entries<E>.back().first;
-
-template<Enum E>
-inline constexpr std::size_t count = entries<E>.size();
-
-
-template<typename String = string_view, Enum E>
-[[nodiscard]] constexpr String to_string(E value) noexcept
-{
-  for (const auto& [e, s] : entries<E>)
-    if (value == e)
-      return String(s);
-  return String();
-}
-
-template<typename String = string_view, ContiguousEnum E>
-[[nodiscard]] constexpr String to_string(E value) noexcept
-{
-  using T          = std::underlying_type_t<E>;
-  const auto index = std::size_t(static_cast<T>(value) - static_cast<T>(min<E>));
-  if (index < entries<E>.size())
-    return String(entries<E>[index].second);
-  return String();
-}
 
 template<Enum E>
 inline constexpr auto values = []() {
@@ -100,6 +46,66 @@ inline constexpr auto names = []() {
     ret[i] = enums[i].second;
   return ret;
 }();
+
+template<typename>
+inline constexpr bool is_contiguous = false;
+
+template<Enum E>
+inline constexpr bool is_contiguous<E> = []() {
+  using T = std::underlying_type_t<E>;
+  if constexpr (std::is_same_v<T, bool>) {
+    return true;
+  }
+  else {
+    constexpr auto& enums = entries<E>;
+    for (std::size_t i = 0; i < enums.size() - 1; ++i)
+      if (T(enums[i].first) + 1 != T(enums[i + 1].first))
+        return false;
+    return true;
+  }
+}();
+
+
+template<typename E>
+concept ContiguousEnum = Enum<E> && is_contiguous<E>;
+
+template<typename>
+inline constexpr bool has_zero_flag = false;
+
+template<BitFlagEnum E>
+inline constexpr bool has_zero_flag<E> = []() {
+  for (const auto v : values<E>)
+    if (static_cast<std::underlying_type_t<E>>(v) == 0)
+      return true;
+  return false;
+}();
+
+
+template<typename>
+inline constexpr bool is_contiguous_bitflag = false;
+
+template<BitFlagEnum E>
+inline constexpr bool is_contiguous_bitflag<E> = []() {
+  constexpr auto& enums = entries<E>;
+  using T               = std::underlying_type_t<E>;
+  for (std::size_t i = 0; i < enums.size() - 1; ++i)
+    if (T(enums[i].first) << 1 != T(enums[i + 1].first))
+      return false;
+  return true;
+}();
+
+template<typename E>
+concept ContiguousBitFlagEnum = BitFlagEnum<E> && is_contiguous_bitflag<E>;
+
+
+template<Enum E>
+inline constexpr auto min = entries<E>.front().first;
+
+template<Enum E>
+inline constexpr auto max = entries<E>.back().first;
+
+template<Enum E>
+inline constexpr std::size_t count = entries<E>.size();
 
 
 template<Enum E>
@@ -160,7 +166,6 @@ template<Enum E>
       return i;
     ++i;
   }
-  ENCHANTUM_ASSERT(false, "invalid enum passed to `enum_to_index` ", e);
   return std::size_t(-1);
 }
 
@@ -170,8 +175,30 @@ template<ContiguousEnum E>
   using T = std::underlying_type_t<E>;
   if (enchantum::contains(e))
     return std::size_t(T(e) + T(min<E>));
-  ENCHANTUM_ASSERT(false, "invalid enum passed to `enum_to_index` ", e);
   return std::size_t(-1);
 }
+
+namespace details {
+  struct to_string_functor {
+    template<Enum E>
+    [[nodiscard]] constexpr
+#ifdef __cpp_static_call_operator
+      static
+#endif
+      string_view
+      operator()(const E value)
+#ifndef __cpp_static_call_operator
+        const
+#endif
+      noexcept
+    {
+      if (const auto i = enchantum::enum_to_index(value); i != std::size_t(-1))
+        return names<E>[i];
+      return string_view{};
+    }
+  };
+} // namespace details
+inline constexpr details::to_string_functor to_string;
+
 
 } // namespace enchantum

@@ -31,28 +31,28 @@ inline constexpr E values_ors = [] {
 template<BitFlagEnum E>
 constexpr bool contains_bitflag(E value) noexcept
 {
-  using T = std::underlying_type_t<E>;
-  T check_value{0};
-  for (const auto v : values<E>)
-    if (v == (static_cast<T>(value) & static_cast<T>(v)))
-      check_value |= v;
-  return check_value != 0 && check_value == value;
+  using T               = std::underlying_type_t<E>;
+  const auto raw_value  = static_cast<T>(value);
+  T          valid_bits = 0;
+
+  if (raw_value == 0)
+    return has_zero_flag<E>;
+
+  for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
+    const auto v = static_cast<T>(values<E>[i]);
+    if ((raw_value & v) == v)
+      valid_bits |= v;
+  }
+  return valid_bits == raw_value;
 }
 
-template<ContiguousBitFlagEnum E>
-constexpr bool contains_bitflag(E value) noexcept
+template<typename String = string, BitFlagEnum E>
+[[nodiscard]] constexpr String to_string_bitflag(E value, char sep = '|')
 {
   using T = std::underlying_type_t<E>;
-  return static_cast<T>(value) >= static_cast<T>(min<E>) && static_cast<T>(value) <= static_cast<T>(max<E>);
-}
-
-template<BitFlagEnum E>
-[[nodiscard]] constexpr string to_string_bitflag(E value, char sep = '|')
-{
-  using T = std::underlying_type_t<E>;
-  string name;
+  String name;
   T      check_value = 0;
-  for (const auto& [v, s] : entries<E, std::pair<E, string_view>>) {
+  for (const auto& [v, s] : entries<E>) {
     if (v == (value & v)) {
       if (!name.empty())
         name.append(1, sep);           // append separator if not the first value
@@ -60,11 +60,9 @@ template<BitFlagEnum E>
       check_value |= static_cast<T>(v);
     }
   }
-  // If all bits in the value are accounted for, return the name string
   if (check_value == static_cast<T>(value))
     return name;
-  // Return empty string if invalid or out-of-range bit flags are present
-  return string{};
+  return String{};
 }
 
 template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
@@ -82,31 +80,32 @@ template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
   }
 
   if (const auto v = enchantum::cast<E>(s.substr(pos), binary_pred))
-    check_value |= static_cast<T>(*v); // Combine the last bit flag
-  else
-    return optional<E>{}; // Invalid value, return empty optional
-
-  return optional<E>{static_cast<E>(check_value)};
+    return optional<E>(static_cast<E>(check_value | static_cast<T>(*v)));
+  return optional<E>();
 }
 
 template<BitFlagEnum E>
-[[nodiscard]] constexpr optional<E> cast_bitflag(string_view s, char sep = '|') noexcept
+[[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep = '|') noexcept
 {
   return enchantum::cast_bitflag<E>(s, sep, [](const auto& a, const auto& b) { return a == b; });
 }
 
 template<BitFlagEnum E>
-[[nodiscard]] constexpr optional<E> cast_bitflag(E value) noexcept
+[[nodiscard]] constexpr optional<E> cast_bitflag(const E value) noexcept
 {
-  using T          = std::underlying_type_t<E>;
-  auto check_value = T{0};
-  for (const auto v : values<E>)
-    if (v == (static_cast<T>(value) & static_cast<T>(v)))
-      check_value |= v;
+  using T              = std::underlying_type_t<E>;
+  const auto raw_value = static_cast<T>(value);
+  if (raw_value == 0)
+    return has_zero_flag<E>;
 
-  if (check_value != 0 && check_value == value)
-    return optional<E>(static_cast<T>(value));
-  return optional<E>{}; // Invalid value or out of range.
+  T valid_bits{0};
+  for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
+    auto v = static_cast<T>(values<E>[i]);
+    if ((raw_value & v) == v)
+      valid_bits |= v;
+  }
+  return valid_bits == raw_value ? optional<E>(value) : optional<E>();
 }
+
 
 } // namespace enchantum

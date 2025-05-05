@@ -1,4 +1,5 @@
 #include "../common.hpp"
+#include "generate_arrays.hpp"
 #include <array>
 #include <cassert>
 #include <climits>
@@ -14,7 +15,6 @@ namespace details {
 
   template<auto Copy>
   inline constexpr auto static_storage_for = Copy;
-
 
   template<typename _>
   constexpr auto type_name_func() noexcept
@@ -48,9 +48,7 @@ namespace details {
         s.remove_suffix(sizeof(")0") - 1);
         return s;
       }
-      else {
-        return s.substr(0, s.rfind("::"));
-      }
+      return s.substr(0, s.rfind("::"));
     }
     else {
       if (s.front() == '(') {
@@ -112,28 +110,6 @@ namespace details {
   }
 
 
-  template<typename Enum, auto Min, decltype(Min) Max>
-  constexpr auto generate_arrays()
-  {
-
-    if constexpr (BitFlagEnum<Enum>) {
-      constexpr std::size_t  bits = sizeof(Enum) * CHAR_BIT;
-      std::array<Enum, bits> a{};
-      for (std::size_t i = 0; i < bits; ++i)
-        a[i] = static_cast<Enum>(static_cast<std::make_unsigned_t<std::underlying_type_t<Enum>>>(1) << i);
-      return a;
-    }
-    else {
-      static_assert(Min < Max, "enum_traits::min must be less than enum_traits::max");
-      std::array<Enum, (Max - Min) + 1> array;
-      auto* const                       array_data = array.data();
-      for (std::size_t i = 0; i < array.size(); ++i)
-        array_data[i] = static_cast<Enum>(i + Min);
-      return array;
-    }
-  }
-
-
   // 10.140
   //  9.988
   template<typename E, typename Pair, auto Min, auto Max>
@@ -157,7 +133,7 @@ namespace details {
           //if(!str.empty())
           //	std::cout << "after str \"" << str << '"' << '\n';
 
-          if (const auto commapos = str.find(","); commapos != str.npos)
+          if (const auto commapos = str.find(','); commapos != str.npos)
             str.remove_prefix(commapos + 2);
 
           //std::cout << "strsize \"" << str.size() << '"' << '\n';
@@ -166,7 +142,7 @@ namespace details {
           if constexpr (enum_in_array_len != 0) {
             str.remove_prefix(enum_in_array_len + sizeof("::") - 1);
           }
-          const auto commapos = str.find(",");
+          const auto commapos = str.find(',');
 
           const auto name = str.substr(0, commapos);
 
@@ -195,22 +171,14 @@ namespace details {
     }();
 
     std::array<Pair, elements.valid_count> ret;
-    std::size_t                            string_index    = 0;
-    std::size_t                            string_index_to = 0;
-
-    std::size_t     index = 0;
-    constexpr auto& str   = static_storage_for<strings>;
-    for (std::size_t _i = 0; _i < elements.valid_count; ++_i) {
-      auto& [e, s]   = elements.pairs[_i];
-      auto& [re, rs] = ret[index++];
-      re             = e;
-      for (std::size_t i = string_index; i < str.size(); ++i) {
-        string_index_to = i;
-        if (str[i] == '\0')
-          break;
-      }
-      rs           = {&str[string_index], &str[string_index_to]};
-      string_index = string_index_to + 1;
+    std::size_t                            string_index = 0;
+    constexpr const auto*                  str          = static_storage_for<strings>.data();
+    for (std::size_t i = 0; i < elements.valid_count; ++i) {
+      const auto& [e, s] = elements.pairs[i];
+      auto& [re, rs]     = ret[i];
+      re                 = e;
+      rs                 = {str + string_index, str + string_index + s.size()};
+      string_index += s.size() + 1;
     }
     return ret;
   }

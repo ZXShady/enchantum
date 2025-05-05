@@ -1,7 +1,7 @@
 #pragma once
+#include "details/string_view.hpp"
 #include "enchantum.hpp"
 #include <concepts>
-#include "details/string_view.hpp"
 
 #ifndef ENCHANTUM_ALIAS_OPTIONAL
   #include <optional>
@@ -23,7 +23,7 @@ template<Enum E>
 constexpr optional<E> cast(std::underlying_type_t<E> e) noexcept
 {
   optional<E> a; // rvo not that it really matters
-  if (enchantum::contains(static_cast<E>(e)))
+  if (enchantum::contains<E>(e))
     a.emplace(E(e));
   return a;
 }
@@ -35,10 +35,10 @@ constexpr optional<E> cast(string_view name) noexcept
   for (const auto& [e, s] : entries<E>) {
     if (s == name) {
       a.emplace(e);
-      break;
+      return a;
     }
   }
-  return a;
+  return a; // nullopt
 }
 
 template<Enum E, std::predicate<string_view, string_view> BinaryPred>
@@ -48,7 +48,7 @@ constexpr optional<E> cast(string_view name, BinaryPred binary_predicate) noexce
   for (const auto& [e, s] : entries<E>) {
     if (binary_predicate(name, s)) {
       a.emplace(e);
-      break;
+      return a;
     }
   }
   return a;

@@ -1,11 +1,11 @@
 #include "../common.hpp"
+#include "generate_arrays.hpp"
+#include "string_view.hpp"
 #include <array>
 #include <cassert>
 #include <climits>
 #include <type_traits>
 #include <utility>
-
-#include "string_view.hpp"
 
 #if __clang_major__ < 20
   #pragma clang diagnostic push
@@ -166,27 +166,6 @@ namespace details {
   }
 
 
-  template<typename T, auto Min, decltype(Min) Max>
-  constexpr auto generate_arrays()
-  {
-    using Enum = T;
-    if constexpr (BitFlagEnum<Enum>) {
-      constexpr std::size_t  bits = sizeof(T) * CHAR_BIT;
-      std::array<Enum, bits> a{};
-      for (std::size_t i = 0; i < bits; ++i)
-        a[i] = static_cast<Enum>(static_cast<std::make_unsigned_t<T>>(1) << i);
-      return a;
-    }
-    else {
-      static_assert(Min < Max, "enum_traits::min must be less than enum_traits::max");
-      std::array<Enum, (Max - Min) + 1> array;
-      auto* const                       array_data = array.data();
-      for (std::size_t i = 0; i < array.size(); ++i)
-        array_data[i] = static_cast<Enum>(static_cast<decltype(Min)>(i) + Min);
-      return array;
-    }
-  }
-
   template<auto Copy>
   inline constexpr auto static_storage_for = Copy;
 
@@ -256,26 +235,32 @@ namespace details {
     }();
 
     std::array<Pair, elements.valid_count> ret;
-    std::size_t                            string_index    = 0;
-    std::size_t                            string_index_to = 0;
+    //std::size_t                            string_index_to = 0;
 
-    constexpr auto& str   = static_storage_for<strings>;
-
-    for (std::size_t _i = 0; _i < elements.valid_count; ++_i) {
-      const auto& [e, s] = elements.pairs[_i];
-      auto& [re, rs]     = ret[_i];
+    constexpr const auto* str = static_storage_for<strings>.data();
+    for (std::size_t i = 0, string_index = 0; i < elements.valid_count; ++i) {
+      const auto& [e, s] = elements.pairs[i];
+      auto& [re, rs]     = ret[i];
       re                 = e;
-      {
-        const auto* str_data = str.data(); 
-      for (std::size_t i = string_index,count = str.size(); i < count; ++i) {
-        string_index_to = i;
-        if (str_data[i] == '\0')
-          break;
-      }
-      }
-      rs           = {&str[string_index], &str[string_index_to]};
-      string_index = string_index_to + 1;
+      rs                 = {str + string_index, str + string_index + s.size()};
+      string_index += s.size() + 1;
     }
+    return ret;
+    //for (std::size_t _i = 0; _i < elements.valid_count; ++_i) {
+    //  const auto& [e, s] = elements.pairs[_i];
+    //  auto& [re, rs]     = ret[_i];
+    //  re                 = e;
+    //  {
+    //    const auto* str_data = str.data();
+    //  for (std::size_t i = string_index,count = str.size(); i < count; ++i) {
+    //    string_index_to = i;
+    //    if (str_data[i] == '\0')
+    //      break;
+    //  }
+    //  }
+    //  rs           = {&str[string_index], &str[string_index_to]};
+    //  string_index = string_index_to + 1;
+    //}
     return ret;
   }
 
