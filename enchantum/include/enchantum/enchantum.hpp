@@ -61,7 +61,7 @@ template<typename E>
 concept ContiguousBitFlagEnum = BitFlagEnum<E> && is_contiguous_bitflag<E>;
 
 template<Enum E>
-[[nodiscard]] constexpr bool contains(E value) noexcept
+[[nodiscard]] constexpr bool contains(const E value) noexcept
 {
   for (const auto v : values<E>)
     if (v == value)
@@ -70,14 +70,14 @@ template<Enum E>
 }
 
 template<Enum E>
-[[nodiscard]] constexpr bool contains(std::underlying_type_t<E> value) noexcept
+[[nodiscard]] constexpr bool contains(const std::underlying_type_t<E> value) noexcept
 {
   return enchantum::contains(static_cast<E>(value));
 }
 
 
 template<Enum E>
-[[nodiscard]] constexpr bool contains(string_view name) noexcept
+[[nodiscard]] constexpr bool contains(const string_view name) noexcept
 {
   for (const auto& s : names<E>)
     if (s == name)
@@ -87,7 +87,7 @@ template<Enum E>
 
 
 template<Enum E, std::predicate<string_view, string_view> BinaryPredicate>
-[[nodiscard]] constexpr bool contains(string_view name, BinaryPredicate binary_predicate) noexcept
+[[nodiscard]] constexpr bool contains(const string_view name, const BinaryPredicate binary_predicate) noexcept
 {
   for (const auto& s : names<E>)
     if (binary_predicate(name, s))
@@ -96,14 +96,14 @@ template<Enum E, std::predicate<string_view, string_view> BinaryPredicate>
 }
 
 template<ContiguousEnum E>
-[[nodiscard]] constexpr bool contains(E value) noexcept
+[[nodiscard]] constexpr bool contains(const E value) noexcept
 {
   using T = std::underlying_type_t<E>;
   return T(value) <= T(max<E>) && T(value) >= T(min<E>);
 }
 
 template<Enum E>
-[[nodiscard]] constexpr optional<E> index_to_enum(std::size_t index) noexcept
+[[nodiscard]] constexpr optional<E> index_to_enum(const std::size_t index) noexcept
 {
   optional<E> ret;
   if (index < values<E>.size())
@@ -112,7 +112,7 @@ template<Enum E>
 }
 
 template<Enum E>
-[[nodiscard]] constexpr optional<std::size_t> enum_to_index(E e) noexcept
+[[nodiscard]] constexpr optional<std::size_t> enum_to_index(const E e) noexcept
 {
   std::size_t i = 0;
   for (const E val : values<E>) {
@@ -124,7 +124,7 @@ template<Enum E>
 }
 
 template<ContiguousEnum E>
-[[nodiscard]] constexpr optional<std::size_t> enum_to_index(E e) noexcept
+[[nodiscard]] constexpr optional<std::size_t> enum_to_index(const E e) noexcept
 {
   using T = std::underlying_type_t<E>;
   if (enchantum::contains(e))
@@ -147,7 +147,7 @@ inline constexpr details::to_string_functor to_string;
 
 
 template<Enum E>
-constexpr optional<E> cast(std::underlying_type_t<E> e) noexcept
+constexpr optional<E> cast(const std::underlying_type_t<E> e) noexcept
 {
   optional<E> a; // rvo not that it really matters
   if (enchantum::contains<E>(e))
@@ -156,7 +156,7 @@ constexpr optional<E> cast(std::underlying_type_t<E> e) noexcept
 }
 
 template<Enum E>
-constexpr optional<E> cast(string_view name) noexcept
+constexpr optional<E> cast(const string_view name) noexcept
 {
   optional<E> a; // rvo not that it really matters
   for (const auto& [e, s] : entries<E>) {
@@ -169,7 +169,7 @@ constexpr optional<E> cast(string_view name) noexcept
 }
 
 template<Enum E, std::predicate<string_view, string_view> BinaryPred>
-constexpr optional<E> cast(string_view name, BinaryPred binary_predicate) noexcept
+constexpr optional<E> cast(const string_view name, const BinaryPred binary_predicate) noexcept
 {
   optional<E> a; // rvo not that it really matters
   for (const auto& [e, s] : entries<E>) {

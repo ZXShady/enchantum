@@ -101,7 +101,7 @@ namespace details {
   constexpr auto reflect() noexcept
   {
     constexpr auto elements = []() {
-      constexpr auto length_of_enum_in_template_array_casting = length_of_enum_in_template_array_if_casting<E>();
+      constexpr auto length_of_enum_in_template_array_casting = details::length_of_enum_in_template_array_if_casting<E>();
       constexpr auto Array                                    = details::generate_arrays<E, Min, Max>();
       auto           str = [Array]<std::size_t... Idx>(std::index_sequence<Idx...>) {
         return details::var_name<Array[Idx]...>();
@@ -120,20 +120,19 @@ namespace details {
           //if(!str.empty())
           //	std::cout << "after str \"" << str << '"' << '\n';
 
-          if (const auto commapos = str.find(","); commapos != str.npos)
+          if (const auto commapos = str.find(','); commapos != str.npos)
             str.remove_prefix(commapos + 2);
 
           //std::cout << "strsize \"" << str.size() << '"' << '\n';
         }
         else {
-          str.remove_prefix(enum_in_array_len);
           if constexpr (enum_in_array_len != 0)
-            str.remove_prefix(sizeof("::") - 1);
-          const auto commapos = str.find(",");
+            str.remove_prefix(enum_in_array_len + sizeof("::") - 1);
+          const auto commapos = str.find(',');
 
           const auto name = str.substr(0, commapos);
 
-          ret.pairs[index] = Pair{Array[index], name};
+          ret.pairs[ret.valid_count] = Pair{Array[index], name};
           ret.total_string_length += name.size() + 1;
 
           if (commapos != str.npos)
@@ -146,37 +145,25 @@ namespace details {
     }();
 
     constexpr auto strings = [elements]() {
-      std::array<char, elements.total_string_length> strings{};
-      std::size_t                                    index = 0;
-      for (const auto& [_, s] : elements.pairs) {
-        if (s.empty())
-          continue;
-
+      std::array<char, elements.total_string_length> strings;
+      for (std::size_t _i = 0, index = 0; _i < elements.valid_count; ++_i) {
+        const auto& [_, s] = elements.pairs[_i];
         for (std::size_t i = 0; i < s.size(); ++i)
           strings[index++] = s[i];
-        ++index;
+        strings[index++] = '\0';
       }
       return strings;
     }();
 
     std::array<Pair, elements.valid_count> ret;
-    std::size_t                            string_index    = 0;
-    std::size_t                            string_index_to = 0;
+    constexpr const auto*                  str = static_storage_for<strings>.data();
+    for (std::size_t i = 0, string_index = 0; i < elements.valid_count; ++i) {
+      const auto& [e, s] = elements.pairs[i];
+      auto& [re, rs]     = ret[i];
+      re                 = e;
 
-    std::size_t     index = 0;
-    constexpr auto& str   = static_storage_for<strings>;
-    for (auto& [e, s] : elements.pairs) {
-      if (s.empty())
-        continue;
-      auto& [re, rs] = ret[index++];
-      re             = e;
-      for (std::size_t i = string_index; i < str.size(); ++i) {
-        string_index_to = i;
-        if (str[i] == '\0')
-          break;
-      }
-      rs           = {&str[string_index], &str[string_index_to]};
-      string_index = string_index_to + 1;
+      rs = {str + string_index, str + string_index + s.size()};
+      string_index += s.size() + 1;
     }
     return ret;
   }

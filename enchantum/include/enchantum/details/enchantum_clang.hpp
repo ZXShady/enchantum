@@ -236,25 +236,14 @@ namespace details {
     }();
 
     std::array<Pair, elements.valid_count> ret;
-    std::size_t                            string_index    = 0;
-    std::size_t                            string_index_to = 0;
-
-    constexpr auto& str   = static_storage_for<strings>;
-
-    for (std::size_t _i = 0; _i < elements.valid_count; ++_i) {
-      const auto& [e, s] = elements.pairs[_i];
-      auto& [re, rs]     = ret[_i];
+    constexpr const auto*                  str = static_storage_for<strings>.data();
+    for (std::size_t i = 0, string_index = 0; i < elements.valid_count; ++i) {
+      const auto& [e, s] = elements.pairs[i];
+      auto& [re, rs]     = ret[i];
       re                 = e;
-      {
-        const auto* str_data = str.data(); 
-      for (std::size_t i = string_index,count = str.size(); i < count; ++i) {
-        string_index_to = i;
-        if (str_data[i] == '\0')
-          break;
-      }
-      }
-      rs           = {&str[string_index], &str[string_index_to]};
-      string_index = string_index_to + 1;
+
+      rs = {str + string_index, str + string_index + s.size()};
+      string_index += s.size() + 1;
     }
     return ret;
   }
