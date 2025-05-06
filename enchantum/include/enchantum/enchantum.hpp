@@ -32,7 +32,7 @@ inline constexpr bool is_contiguous<E> = []() {
   }
   else {
     constexpr auto& enums = entries<E>;
-    for (auto i = std::size_t{has_zero_flag<E>}; i < enums.size() - 1; ++i)
+    for (std::size_t i = 0; i < enums.size() - 1; ++i)
       if (T(enums[i].first) + 1 != T(enums[i + 1].first))
         return false;
     return true;

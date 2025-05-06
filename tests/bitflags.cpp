@@ -1,16 +1,15 @@
-#if 1
-
-#else
-  #include "case_insensitive.hpp"
-  #include <array>
-  #include <catch2/catch_test_macros.hpp>
-  #include <cctype>
-  #include <enchantum/bitflags.hpp>
-  #include <enchantum/bitwise_operators.hpp>
-  #include <enchantum/enchantum.hpp>
-  #include <enchantum/iostream.hpp>
-  #include <sstream>
-  #include <string_view>
+#include "case_insensitive.hpp"
+#include "test_utility.hpp"
+#include <array>
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <cctype>
+#include <enchantum/bitflags.hpp>
+#include <enchantum/bitwise_operators.hpp>
+#include <enchantum/enchantum.hpp>
+#include <enchantum/iostream.hpp>
+#include <sstream>
+#include <string_view>
 
 namespace {
 enum class EntityStatus {
@@ -191,4 +190,44 @@ TEST_CASE("contains_bitflag_with_invalid_bits", "[bitflags]")
     STATIC_CHECK(enchantum::contains_bitflag(DirectionFlags::Left | DirectionFlags::Right));
   }
 }
-#endif
+
+TEMPLATE_LIST_TEST_CASE("contains_bitflag returns true for valid combinations", "[bitflags]", AllFlagsTestTypes)
+{
+  constexpr auto  count  = enchantum::count<TestType>;
+  constexpr auto& values = enchantum::values<TestType>;
+
+  std::vector<TestType> combinations;
+
+  for (std::size_t i = 0; i < count; ++i) {
+    for (std::size_t j = i + 1; j < count; ++j) {
+      combinations.push_back(values[i] | values[j]);
+    }
+  }
+
+  for (const auto comb : combinations) {
+    CHECK(enchantum::contains_bitflag(comb));
+  }
+}
+
+TEMPLATE_LIST_TEST_CASE("contains_bitflag returns false for invalid combinations", "[bitflags]", AllFlagsTestTypes)
+{
+  using Underlying = std::underlying_type_t<TestType>;
+
+  std::vector<TestType> invalid_combinations;
+
+  for (std::size_t bit = 0; bit < sizeof(Underlying) * CHAR_BIT; ++bit) {
+    const auto test_bit = static_cast<TestType>(Underlying{1} << bit);
+
+    if (!static_cast<bool>(enchantum::values_ors<TestType> & test_bit)) {
+      // This bit is not part of the valid mask, so it's invalid
+      invalid_combinations.push_back(test_bit);
+    }
+  }
+
+  if constexpr (!enchantum::has_zero_flag<TestType>)
+    CHECK_FALSE(enchantum::contains_bitflag(TestType{}));
+
+  for (const auto comb : invalid_combinations) {
+    CHECK_FALSE(enchantum::contains_bitflag(comb));
+  }
+}

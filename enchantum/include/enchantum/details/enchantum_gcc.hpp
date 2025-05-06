@@ -1,10 +1,10 @@
 #include "../common.hpp"
+#include "generate_arrays.hpp"
 #include <array>
 #include <cassert>
 #include <climits>
 #include <type_traits>
 #include <utility>
-#include "generate_arrays.hpp"
 
 #include "string_view.hpp"
 
@@ -69,7 +69,7 @@ namespace details {
   {
     if constexpr (ScopedEnum<Enum>) {
       constexpr auto s = details::enum_in_array_name<Enum{}>();
-      return s.substr(0, s.rfind("::")).size();
+      return s.size();
     }
     else {
       constexpr auto  s      = enum_in_array_name<Enum{}>().size();
@@ -84,32 +84,13 @@ namespace details {
     }
   }
 
-  template<auto Array>
+  template<auto... Vs>
   constexpr auto var_name() noexcept
   {
     //constexpr auto f() [with auto _ = std::array<E, 6>{std::__array_traits<E, 6>::_Type{a, b, c, e, d, (E)6}}]
-
-    using T = typename decltype(Array)::value_type;
 #define SZC(x) (sizeof(x) - 1)
-    std::size_t    funcsig_off   = SZC("constexpr auto enchantum::details::var_name() [with auto Array = std::array<");
-    constexpr auto type_name_len = enchantum::details::type_name<T>.size();
-    funcsig_off += 2 * (type_name_len + SZC(" ,"));
-    funcsig_off += SZC(">{std::__array_traits<");
-    funcsig_off += SZC(">::_Type{");
-    constexpr auto Size = Array.size();
-    // clang-format off
-			funcsig_off += 2 * (Size < 10 ? 1
-				: Size < 100 ? 2
-				: Size < 1000 ? 3
-				: Size < 10000 ? 4
-				: Size < 100000 ? 5
-				: Size < 1000000 ? 6
-				: Size < 10000000 ? 7
-				: Size < 100000000 ? 8
-				: Size < 1000000000 ? 9
-				: 10);
-    // clang-format on
-    return std::string_view(__PRETTY_FUNCTION__ + funcsig_off, SZC(__PRETTY_FUNCTION__) - funcsig_off - (sizeof("}}]") - 1));
+    constexpr std::size_t funcsig_off = SZC("constexpr auto enchantum::details::var_name() [with auto ...Vs = {");
+    return std::string_view(__PRETTY_FUNCTION__ + funcsig_off, SZC(__PRETTY_FUNCTION__) - funcsig_off - SZC("}]"));
   }
 
 
@@ -122,7 +103,9 @@ namespace details {
     constexpr auto elements = []() {
       constexpr auto length_of_enum_in_template_array_casting = length_of_enum_in_template_array_if_casting<E>();
       constexpr auto Array                                    = details::generate_arrays<E, Min, Max>();
-      auto           str                                      = var_name<Array>();
+      auto           str = [Array]<std::size_t... Idx>(std::index_sequence<Idx...>) {
+        return details::var_name<Array[Idx]...>();
+      }(std::make_index_sequence<Array.size()>());
       struct RetVal {
         std::array<Pair, Array.size()> pairs{};
         std::size_t                    total_string_length = 0;
