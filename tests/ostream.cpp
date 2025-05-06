@@ -9,11 +9,14 @@ using namespace enchantum::ostream_operators;
 
 TEMPLATE_LIST_TEST_CASE("ostream operator<<", "[ostream]", AllEnumsTestTypes)
 {
-  for (const auto& [value, string] : enchantum::entries<TestType>) {
-    auto oss = std::ostringstream();
-    oss << value;
-    CHECK(oss.str() == string);
-    CHECK(oss);
+  SECTION("Valid enums return to_string")
+  {
+    for (const auto& [value, string] : enchantum::entries<TestType>) {
+      auto oss = std::ostringstream();
+      oss << value;
+      CHECK(oss.str() == string);
+      CHECK(oss);
+    }
   }
   SECTION("Invalid enums return empty string")
   {
@@ -23,12 +26,10 @@ TEMPLATE_LIST_TEST_CASE("ostream operator<<", "[ostream]", AllEnumsTestTypes)
       auto v  = static_cast<TestType>(T(value) + 1);
       if (!enchantum::contains(v))
         oss << v;
+      CHECK(oss.str().empty());
+      CHECK(oss);
     };
     output_if_not_contained(enchantum::max<TestType>);
-    CHECK(oss.str().empty());
-    CHECK(oss);
     output_if_not_contained(enchantum::min<TestType>);
-    CHECK(oss.str().empty());
-    CHECK(oss);
   }
 }
