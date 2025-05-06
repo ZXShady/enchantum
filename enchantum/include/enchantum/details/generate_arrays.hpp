@@ -1,6 +1,9 @@
 #pragma once
 #include "../common.hpp"
 #include <type_traits>
+#include <array>
+#include <cstddef>
+#include <climits>
 
 namespace enchantum::details {
 template<typename Enum, auto Min, decltype(Min) Max>
