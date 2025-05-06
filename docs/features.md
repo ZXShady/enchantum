@@ -1,8 +1,10 @@
 All the functions/variables are defined in namespace `enchantum`
 
+**Note**: Documentation Incomplete.
+
 Quick Reference
 
-**Concepts**:
+**Concepts And Traits**:
 - [Enum](#enum)
 - [SignedEnum](#signedenum)
 - [UnsignedEnum](#unsignedenum)
@@ -10,17 +12,23 @@ Quick Reference
 - [UnscopedEnum](#unscopedenum)
 - [BitFlagEnum](#bitflagenum)
 - [ContiguousEnum](#contiguousenum)
+- [EnumOfUnderlying](#enumofunderlying)
+- [has_zero_flag](#has_zero_flag)
 
 **Functions**:
 - [to_string](#to_string)
+- [to_string_bitflag](#to_string_bitflag)
 - [cast](#cast)
+- [cast_bitflag](#cast_bitflag)
+- [contains](#contains)
+- [contains_bitflag](#contains_bitflag)
 - [index_to_enum](#index_to_enum)
 - [enum_to_index](#enum_to_index)
 - [std::format/fmt::format](#fmtformat--stdformat-support)
 - [operator<<](#operator-stream-output-operator)
 - [operator>>](#operator-stream-input-operator)
 
-**Variables**:
+**Constants**:
   - [entries](#entries)
   - [names](#names)
   - [values](#values)
@@ -165,12 +173,66 @@ concept ContiguousEnum = Enum<E> && is_contiguous<E>;
 
 > Example usage:
 ```cpp
-#include <enchantum/enchantum.hpp>
+#include <enchantum/common.hpp>
 
 enum class Status { Ok = 0, Error = 1, Unknown = 2 };
 static_assert(enchantum::ContiguousEnum<Status>);
 ```
-## Function
+
+### EnumOfUnderlying
+
+```cpp
+// defined in header `common.hpp`
+
+template<typename E, typename Underlying>
+concept EnumOfUnderlying = Enum<E> && std::same_as<std::underlying_type_t<E>, Underlying>;
+```
+
+> Example usage:
+```cpp
+#include <enchantum/common.hpp>
+
+enum class Status : char { Ok = 0, Error = 1, Unknown = 2 };
+static_assert(enchantum::EnumOfUnderlying<Status,char>);
+```
+
+### has_zero_flag
+
+```cpp
+// defined in header `enchantum.hpp`
+
+template<typename>
+inline constexpr bool has_zero_flag = false;
+
+template<BitFlagEnum E>
+inline constexpr bool has_zero_flag<E> = /*impl*/;
+
+```
+**Description**:
+  Checks whether a `BitFlagEnum` has a zero flag (i.e `None` value)
+
+> Example usage:
+```cpp
+#include <enchantum/enchantum.hpp>
+#include <enchantum/bitwise_operators.hpp>
+enum class FlagsWithoutNone : std::uint8_t {
+  A = 1 << 0,
+  B = 1 << 1
+};
+ENCHANTUM_DEFINE_BITWISE_FOR(FlagsWithoutNone)
+
+enum class FlagsWithNone : std::uint8_t {
+  Nothing = 0,
+  A = 1 << 0,
+  B = 1 << 1
+};
+ENCHANTUM_DEFINE_BITWISE_FOR(FlagsWithNone)
+
+static_assert(!enchantum::has_zero_flag<FlagsWithoutNone>);
+static_assert(enchantum::has_zero_flag<FlagsWithNone>);
+```
+
+## Functions
 
 #### `to_string`
 ```cpp
@@ -212,7 +274,47 @@ constexpr inline details::TO_STRING_FUNCTOR to_string;
   std::cout << invalidColorName << std::endl;  // Outputs: ""
   ```
 
----
+#### `to_string_bitflag`
+```cpp
+// defined in header bitflags.hpp
+
+template<typename String = std::string, BitFlagEnum E>
+[[nodiscard]] constexpr String to_string_bitflag(E value, char sep = '|');
+
+```
+
+**Description**:
+   Converts a bitflag enum value into a delimited string representation. Each flag set in the input value is converted to its corresponding name and joined by a separator character.
+**Notes**:
+    If the value contains bits that are not part of any valid enum flag (i.e. not in `values<E>`), a default constructed `String` is returned.
+    The separator can be customized (defaults to '|') and the string used.
+    The return type defaults to `std::string` but can be customized via the String template parameter.
+    The string bitflag order is defined by ascending order. 
+
+**Parameters**:  
+  - `value`: The bitflag enum value you want to convert to a string.
+
+**Example**:
+```cpp
+#include <enchantum/bitwise_operators.hpp>
+#include <enchantum/bitflags.hpp>
+#include <enchantum/enchantum.hpp>
+#include <cstddef>
+
+enum class Flags : std::uint8_t {
+    None = 0,
+    A = 1 << 0,
+    B = 1 << 1,
+    C = 1 << 2
+};
+ENCHANTUM_DEFINE_BITWISE_FOR(Flags)
+
+std::cout << enchantum::to_string_bitflag(Flags::C | Flags::A,',');  
+// Outputs: "A,C" since C is greater than A
+
+std::cout << enchantum::to_string_bitflag(static_cast<Flags>(8));  
+// Outputs: "" (invalid combination)
+```
 
 ### `cast`
 
@@ -258,6 +360,73 @@ assert(enchantum::cast<Color>("UnKnOwn",[](std::string_view a,std::string_view b
   })
 }).has_value());
 
+```
+
+### `cast_bitflag`
+
+```cpp
+// defined in header bitflags.hpp
+
+template<BitFlagEnum E, std::predicate<std::string_view, std::string_view> BinaryPred>
+[[nodiscard]] constexpr std::optional<E> cast_bitflag(std::string_view name, char sep, BinaryPred binary_pred) noexcept;
+
+template<BitFlagEnum E>
+[[nodiscard]] constexpr std::optional<E> cast_bitflag(std::string_view name, char sep = '|') noexcept;
+
+template<BitFlagEnum E>
+[[nodiscard]] constexpr std::optional<E> cast_bitflag(E value) noexcept;
+```
+**Description**:
+These functions attempt to convert a delimited string or a raw enum value into a valid BitFlagEnum value.
+
+    1. String to Bitflag (custom comparator)
+    Parses a delimited string of flag names and combines the corresponding enum values. A custom binary predicate is used to compare string segments.
+
+    2. String to Bitflag
+    Same as (1) but uses == for name comparison.
+
+    3. Enum value safe cast
+    Validates whether the given BitFlagEnum value consists only of known valid flag combinations.
+**Parameters**:
+    `name`: The string containing flag names, separated by the sep character.
+    `sep`: A character used to delimit individual flag names (default: '|').
+    `binary_pred`: A predicate to compare the input string segments to the enum names.
+    `value`: An enum value to validate as a valid bitflag combination.
+
+**Returns**:
+An `std::optional<E>` containing the constructed bitflag enum if valid; otherwise, `std::nullopt`.
+
+**Example**:
+```cpp 
+#include <enchantum/enchantum.hpp>
+#include <enchantum/bitflags.hpp>
+#include <enchantum/bitwise_operators.hpp>
+#include <cassert>
+
+enum class Permissions : std::uint8_t {
+  None = 0, // this is reflected
+  Read = 1 << 0,
+  Write = 1 << 1,
+  Execute = 1 << 2
+};
+ENCHANTUM_DEFINE_BITWISE_FOR(Flags)
+
+std::optional<Permissions> p = enchantum::cast_bitflag<Permissions>("Write|Read");
+assert(p.has_value() && (*p == (Permissions::Read | Permissions::Write)));
+
+// Case-insensitive parsing
+std::optional<Permissions> ci = enchantum::cast_bitflag<Permissions>("read|WRITE", '|',
+  [](std::string_view a, std::string_view b) {
+    return std::ranges::equal(a, b, [](unsigned char x, unsigned char y) {
+      return std::tolower(x) == std::tolower(y);
+    });
+  }
+);
+assert(ci.has_value() && (*ci == (Permissions::Read | Permissions::Write)));
+
+assert(enchantum::cast_bitflag(Permissions::Read | Permissions::Execute).has_value());
+
+assert(!enchantum::cast_bitflag(static_cast<Permissions>(1 << 3)).has_value());
 ```
 
 ### `min`
@@ -431,6 +600,54 @@ bool containsBlue = enchantum::contains<Color>(3);  // false, no such value
 bool containsGreenName = enchantum::contains<Color>("Green");  // true
 ```
 
+### `contains_bitflag`
+
+```cpp
+// defined in header bitflags.hpp
+
+template<BitFlagEnum E>
+constexpr bool contains_bitflag(E value) noexcept;
+```
+
+**Description**:
+
+The `contains_bitflag` function checks whether all bits set in a given `BitFlagEnum` value are valid flags in the enumeration. It is typically used to verify that a bitmask is composed only of valid bit flags.
+
+**Parameters**:
+
+value: The value to check. It should be a valid instance of the BitFlagEnum type, representing a bitmask where each bit corresponds to a specific flag.
+
+**Returns**:
+
+true if the value contains only valid flags (i.e., if all set bits are valid bit flags).
+false otherwise.
+
+Template Parameters:
+
+    E: The BitFlagEnum type being checked.
+- **Example**:
+```cpp
+#include <enchantum/enchantum.hpp>
+#include <enchantum/bitwise_operators.hpp>
+#include <enchantum/bitflags.hpp>
+
+enum class Permissions : std::uint8_t {
+  None = 0,
+  Read = 1 << 0,
+  Write = 1 << 1,
+  Execute = 1 << 2
+};
+
+ENCHANTUM_DEFINE_BITWISE_FOR(Permissions)
+
+Permissions value = static_cast<Permissions>(Permissions::Read | Permissions::Write);
+
+// Check if the value contains valid flags
+bool is_valid = contains_bitflag(value);
+// Output: true
+std::cout << "Permissions value is valid: " << std::boolalpha << is_valid << std::endl;
+```
+
 ---
 
 ### `index_to_enum`
@@ -456,8 +673,8 @@ constexpr std::optional<E> index_to_enum(std::size_t i) noexcept;
 #include <enchantum/enchantum.hpp>
 enum class Color { Red, Green = 42, Blue };
 
-auto color = enchantum::index_to_enum<Color>(1);
-std::cout << static_cast<int>(color) << std::endl;  // Outputs: 42 (Green)
+std::optional<Color> color = enchantum::index_to_enum<Color>(1);
+std::cout << static_cast<int>(*color) << std::endl;  // Outputs: 42 (Green)
 ```
 
 ### `enum_to_index`
@@ -483,8 +700,8 @@ constexpr std::optional<std::size_t> enum_to_index(E e) noexcept;
 #include <enchantum/enchantum.hpp>
 enum class Color { Red, Green = 42, Blue };
 
-auto color = enchantum::index_to_enum<Color>(1);
-std::cout << static_cast<int>(color) << std::endl;  // Outputs: 42 (Green)
+std::optional<std::size_t> index = enchantum::enum_to_index(Color::Red);
+std::cout << *index << std::endl;  // Outputs: 1 (Green)
 ```
 
 ---

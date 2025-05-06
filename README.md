@@ -65,25 +65,26 @@ There are several enum reflection libraries out there — so why use **Enchantum
 
 ## Compile-Time Benchmarks
 
-Each benchmark was run 3 times and averaged unless noted otherwise.
+Each benchmark was run 10 times (except MSVC which was ran 3 times) and averaged unless noted otherwise.
 `range` is `ENCHANTUM_MAX_RANGE` and `MAGIC_ENUM_RANGE_MAX`
 ### Small Enums  
 *200 enums, 16 values each, range: -128 to 128*
 
-| Compiler | magic_enum (s) | Enchantum (s) | Time Saved |
-|----------|----------------|----------------|-------------|
-| MSVC     | 80.63          | 22.06          | 58.57       |
-| GCC      | 39.01          | 8.91           | 30.10       |
-| Clang    | 57.92          | 21.23          | 36.69       |
+| Compiler    | `magic_enum` (s) | `enchantum` (s) | Time Saved |
+| ----------- | ---------------- | --------------- | ---------- |
+| MSVC        | 80.63            | 22.06           | 58.57      |
+| GCC         | 47.05            | 7.06            | 40.01      |
+| Clang       | 47.66            | 8.24            | 40.42      |
 
 ### Large Enums  
 *32 enums, 200 values each, range: -256 to 256*
 
-| Compiler | magic_enum (s) | Enchantum (s) | Time Saved |
-|----------|----------------|----------------|-------------|
-| MSVC     | 37.03          | 14.17          | 22.86       |
-| GCC      | 18.40          | 6.78           | 11.62       |
-| Clang    | 23.54          | 6.80           | 16.74       |
+| Compiler    | `magic_enum` (s) | `Enchantum` (s) | Time Saved |
+| ----------- | ---------------- | --------------- | ---------- |
+| MSVC        | 37.03            | 14.17           | 22.86      |
+| Clang       | 18.41            | 4.692           | 13.72      |
+| GCC         | 21.16            | 5.208           | 16.95      |
+
 
 ### Very Large Enum Range  
 *200 enums, 16 values each, range: -1024 to 1024*
