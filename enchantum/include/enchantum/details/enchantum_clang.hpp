@@ -95,18 +95,6 @@ struct enum_traits<E> {
 
 namespace details {
 
-  // string view with the simplest code that does not consume any constexpr steps
-  struct simple_string_view {
-    const char*    data;
-    std::size_t    size;
-    constexpr void remove_prefix(const std::size_t sz) noexcept
-    {
-      data += sz;
-      size -= sz;
-    }
-    constexpr void remove_suffix(const std::size_t sz) noexcept { size -= sz; }
-  };
-
   template<typename _>
   constexpr auto type_name_func() noexcept
   {

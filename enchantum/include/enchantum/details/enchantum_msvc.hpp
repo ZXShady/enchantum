@@ -13,18 +13,13 @@ namespace enchantum {
 namespace details {
 
   template<typename>
-  constexpr auto type_name_func() noexcept
+  constexpr auto type_name_func_size() noexcept
   {
     constexpr auto funcname = string_view(
-      __FUNCSIG__ + (sizeof("auto __cdecl enchantum::details::type_name_func<enum ") - 1));
+      __FUNCSIG__ + (sizeof("auto __cdecl enchantum::details::type_name_func_size<enum ") - 1));
     // (sizeof("auto __cdecl enchantum::details::type_name_func<") - 1)
-    constexpr auto         size = funcname.size() - (sizeof(">(void) noexcept") - 1);
-    std::array<char, size> ret;
-    auto* const            ret_data      = ret.data();
-    const auto* const      funcname_data = funcname.data();
-    for (std::size_t i = 0; i < size; ++i)
-      ret_data[i] = funcname_data[i];
-    return ret;
+    constexpr auto size = funcname.size() - (sizeof(">(void) noexcept") - 1);
+    return size;
   }
 
   template<auto Enum>
@@ -60,7 +55,7 @@ namespace details {
     using T = typename decltype(Array)::value_type;
 #define SZC(x) (sizeof(x) - 1)
     std::size_t    funcsig_off   = SZC("auto __cdecl enchantum::details::var_name<class std::array<enum ");
-    constexpr auto type_name_len = enchantum::details::type_name_func<T>().size();
+    constexpr auto type_name_len = enchantum::details::type_name_func_size<T>();
     funcsig_off += type_name_len + SZC(",");
     constexpr auto Size = Array.size();
     // clang-format off
@@ -87,7 +82,7 @@ namespace details {
   template<typename E, typename Pair, auto Array, bool ShouldNullTerminate>
   constexpr auto get_elements()
   {
-    constexpr auto type_name_len = details::type_name_func<E>().size();
+    constexpr auto type_name_len = details::type_name_func_size<E>();
 
     auto str = var_name<Array>();
     struct RetVal {
@@ -107,9 +102,10 @@ namespace details {
       else {
         if constexpr (enum_in_array_len != 0)
           str.remove_prefix(enum_in_array_len + sizeof("::") - 1);
-        if constexpr (details::prefix_length_or_zero<E> != 0) {
+
+        if constexpr (details::prefix_length_or_zero<E> != 0)
           str.remove_prefix(details::prefix_length_or_zero<E>);
-        }
+
         const auto commapos = str.find(',');
 
         const auto name = str.substr(0, commapos);
