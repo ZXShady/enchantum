@@ -1,7 +1,25 @@
 #include "test_utility.hpp"
 #include <algorithm>
+#include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <enchantum/enchantum.hpp>
+
+TEMPLATE_LIST_TEST_CASE("array size checks", "[constants]", AllEnumsTestTypes)
+{
+  SECTION("count<E>") { STATIC_CHECK(enchantum::count<TestType> == enchantum::entries<TestType>.size()); }
+  SECTION("names<E>") { STATIC_CHECK(enchantum::names<TestType>.size() == enchantum::entries<TestType>.size()); }
+  SECTION("values<E>") { STATIC_CHECK(enchantum::values<TestType>.size() == enchantum::entries<TestType>.size()); }
+
+  SECTION("names<E> and values<E> equal to entries<E>")
+  {
+    for (std::size_t i = 0; i < enchantum::count<TestType>; ++i) {
+      CHECK(enchantum::values<TestType>[i] == enchantum::entries<TestType>[i].first);
+      CHECK(enchantum::names<TestType>[i] == enchantum::entries<TestType>[i].second);
+    }
+  }
+}
+
+
 TEST_CASE("Color enum to_string", "[to_string]")
 {
   STATIC_CHECK(enchantum::to_string(Color::Green) == "Green");
@@ -18,7 +36,7 @@ TEST_CASE("Color enum cast", "[cast]")
   STATIC_CHECK(enchantum::cast<Color>("Blue") == Color::Blue);
   STATIC_CHECK(enchantum::cast<Color>("Purple") == Color::Purple);
   STATIC_CHECK(enchantum::cast<Color>("Aqua") == Color::Aqua);
-  
+
   STATIC_CHECK_FALSE(enchantum::cast<Color>("ZXShady"));
   STATIC_CHECK_FALSE(enchantum::cast<Color>("red"));   // case-sensitive
   STATIC_CHECK_FALSE(enchantum::cast<Color>("GREEN")); // all caps
