@@ -27,8 +27,7 @@ template<Enum E>
 #endif
 
 template<Enum E, typename Pair = std::pair<E, string_view>, bool ShouldNullTerminate = true>
-inline constexpr auto
-  entries = details::reflect<std::remove_cv_t<E>, Pair, ShouldNullTerminate>();
+inline constexpr auto entries = details::reflect<std::remove_cv_t<E>, Pair, ShouldNullTerminate>();
 
 template<Enum E>
 inline constexpr auto values = []() {
@@ -39,9 +38,9 @@ inline constexpr auto values = []() {
   return ret;
 }();
 
-template<Enum E, typename String = string_view>
+template<Enum E, typename String = string_view, bool NullTerminated = true>
 inline constexpr auto names = []() {
-  constexpr auto&                  enums = entries<E, std::pair<E, String>>;
+  constexpr auto&                  enums = entries<E, std::pair<E, String>, NullTerminated>;
   std::array<String, enums.size()> ret;
   for (std::size_t i = 0; i < ret.size(); ++i)
     ret[i] = enums[i].second;
