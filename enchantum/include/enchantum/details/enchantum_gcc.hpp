@@ -68,8 +68,7 @@ namespace details {
   constexpr auto length_of_enum_in_template_array_if_casting() noexcept
   {
     if constexpr (ScopedEnum<Enum>) {
-      constexpr auto s = details::enum_in_array_name<Enum{}>();
-      return s.size();
+      return details::enum_in_array_name<Enum{}>().size();
     }
     else {
       constexpr auto  s      = enum_in_array_name<Enum{}>().size();

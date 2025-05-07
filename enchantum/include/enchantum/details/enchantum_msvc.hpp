@@ -12,14 +12,13 @@ namespace enchantum {
 
 namespace details {
 
+#define SZC(x) (sizeof(x) - 1)
   template<typename>
   constexpr auto type_name_func_size() noexcept
   {
-    constexpr auto funcname = string_view(
-      __FUNCSIG__ + (sizeof("auto __cdecl enchantum::details::type_name_func_size<enum ") - 1));
     // (sizeof("auto __cdecl enchantum::details::type_name_func<") - 1)
-    constexpr auto size = funcname.size() - (sizeof(">(void) noexcept") - 1);
-    return size;
+    return SZC(__FUNCSIG__) - SZC("auto __cdecl enchantum::details::type_name_func_size<enum ") -
+      SZC(">(void) noexcept");
   }
 
   template<auto Enum>
@@ -91,7 +90,7 @@ namespace details {
       std::size_t                    valid_count         = 0;
     } ret;
     std::size_t    index             = 0;
-    constexpr auto enum_in_array_len = enum_in_array_name<E{}>().size();
+    constexpr auto enum_in_array_len = details::enum_in_array_name<E{}>().size();
     while (index < Array.size()) {
       if (str.front() == '(') {
         str.remove_prefix(sizeof("(enum ") - 1 + type_name_len + sizeof(")0x0") - 1); // there is atleast 1 base 16 hex digit
