@@ -6,7 +6,7 @@
 
 namespace enchantum::ostream_operators {
 template<typename Traits, Enum E>
-std::basic_ostream<char, Traits>& operator<<(std::basic_ostream<char, Traits>& os, E value)
+std::basic_ostream<char, Traits>& operator<<(std::basic_ostream<char, Traits>& os, const E value)
 {
   return os << enchantum::to_string(value);
 }

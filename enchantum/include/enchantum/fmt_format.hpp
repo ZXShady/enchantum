@@ -13,7 +13,7 @@ struct fmt::formatter<E> {
   }
 
   template<typename FmtContext>
-  static auto format(E e, FmtContext& ctx)
+  static auto format(const E e, FmtContext& ctx)
   {
     return fmt::format_to(ctx.out(), "{}", enchantum::to_string(e));
   }
