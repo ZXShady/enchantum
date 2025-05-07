@@ -54,9 +54,12 @@ There are several enum reflection libraries out there — so why use **Enchantum
 
 **Pros**
 - Avoids intrusive macros
-- No manual range definitions required  (but supported if desired)
+- Does not sacrifice API ease of use and features for compile time sake (e.g no `ENCHANTUM_ALL_ENUMS_ARE_CONTIGUOUS_OPTIMIZATION` flag which would disable support for sparse enums)
+- No manual range definitions required for each enum  (but supported if desired)
 - Delivers fast compile times
-- Clean and simple API `enchantum::to_string(E)` no `enchantum::to_string<E::V>()` since compile times are fast
+- Clean and Simple API `enchantum::to_string(E)` no `enchantum::to_string<E::V>()` since compile times are fast
+- More features like disabling null termination if not needed
+- Supports all sort of enums (scoped,unscoped,C style unfixed underlying type,anonymous namespaced enums, enums with commas in their typename,etc...);
 
 **Cons**
 - C++20 required
@@ -72,31 +75,30 @@ Each benchmark was run 10 times (except MSVC which was ran 3 times) and averaged
 
 | Compiler    | `magic_enum` (s) | `enchantum` (s) | Time Saved |
 | ----------- | ---------------- | --------------- | ---------- |
-| MSVC        | 80.63            | 22.06           | 58.57      |
-| GCC         | 47.05            | 7.06            | 40.01      |
-| Clang       | 47.66            | 8.24            | 40.42      |
+| MSVC        | 80               | 22              | 58         |
+| GCC         | 47               | 7               | 40         |
+| Clang       | 47               | 8               | 39         |
 
 ### Large Enums  
 *32 enums, 200 values each, range: -256 to 256*
 
 | Compiler    | `magic_enum` (s) | `Enchantum` (s) | Time Saved |
 | ----------- | ---------------- | --------------- | ---------- |
-| MSVC        | 37.03            | 14.17           | 22.86      |
-| Clang       | 18.41            | 4.692           | 13.72      |
-| GCC         | 21.16            | 5.208           | 16.95      |
+| MSVC        | 37               | 15              | 22         |
+| Clang       | 18               | 5               | 13         |
+| GCC         | 21               | 6               | 15         |
 
 
 ### Very Large Enum Range  
 *200 enums, 16 values each, range: -1024 to 1024*
 
-*Only ran once due to extreme compilation times.*
+*Only ran twice due to extreme compilation times.*
 
-| Compiler | magic_enum     | Enchantum     |
-|----------|----------------|---------------|
-| MSVC     | >20 min (killed) | ~120 sec      |
-| GCC      | >15 min (killed) | ~70 sec       |
-| Clang    | >15 min (killed) | ~80 sec       |
-
+| Compiler | magic_enum       | Enchantum     |
+|----------|------------------|---------------|
+| MSVC     | >20 min (killed) | ~107 sec      |
+| GCC      | >15 min (killed) | ~37 sec       |
+| Clang    | >15 min (killed) | ~42 sec       |
 ---
 
 ## Summary

@@ -101,7 +101,7 @@ namespace details {
       if (str.front() == '(') {
         str.remove_prefix(sizeof("(enum ") - 1 + type_name_len + sizeof(")0x0") - 1); // there is atleast 1 base 16 hex digit
 
-        if (const auto commapos = str.find(","); commapos != str.npos)
+        if (const auto commapos = str.find(','); commapos != str.npos)
           str.remove_prefix(commapos + 1);
       }
       else {
@@ -110,7 +110,7 @@ namespace details {
         if constexpr (details::prefix_length_or_zero<E> != 0) {
           str.remove_prefix(details::prefix_length_or_zero<E>);
         }
-        const auto commapos = str.find(",");
+        const auto commapos = str.find(',');
 
         const auto name = str.substr(0, commapos);
 
