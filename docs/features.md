@@ -14,6 +14,7 @@ Quick Reference
 - [ContiguousEnum](#contiguousenum)
 - [EnumOfUnderlying](#enumofunderlying)
 - [has_zero_flag](#has_zero_flag)
+- [enum_traits](#enum_traits)
 
 **Functions**:
 - [to_string](#to_string)
@@ -231,7 +232,50 @@ ENCHANTUM_DEFINE_BITWISE_FOR(FlagsWithNone)
 static_assert(!enchantum::has_zero_flag<FlagsWithoutNone>);
 static_assert(enchantum::has_zero_flag<FlagsWithNone>);
 ```
+---
 
+### enum_traits
+
+```cpp
+// defined in header `common.hpp`
+
+template<typename T>
+struct enum_traits;
+
+template<Enum E>
+struct enum_traits // default
+{
+  constexpr static auto prefix_length = 0;
+  constexpr static auto min = ENCHANTUM_MIN_RANGE;
+  constexpr static auto max = ENCHANTUM_MAX_RANGE;
+};
+```
+**Description**:
+  A customization point for `enum`s by this library like setting `prefix_length`,`min`,`max` instead of using default values.
+
+> Example usage:
+```cpp
+#include <enchantum/enchantum.hpp>
+#include <enchantum/bitwise_operators.hpp>
+// this is bug enum it is outside of default range [-256,256] and it has this annoying prefix
+enum BigEnumOutsideOfDefault : std::uint16_t {
+  BigEnumOutsideOfDefault_A =0,BigEnumOutsideOfDefault_B = 4096 
+};
+
+template<>
+struct enchantum::enum_traits<BigEnumOutsideOfDefault> {
+  constexpr static auto prefix_length = sizeof("BigEnumOutsideOfDefault_")-1;
+  constexpr static auto min = 0;
+  constexpr static auto max = 4096;
+};
+
+
+// prefix removed
+static_assert(enchantum::names<BigEnumOutsideOfDefault>[0] == "A");
+static_assert(enchantum::names<BigEnumOutsideOfDefault>[1] == "B");
+```
+
+--- 
 ## Functions
 
 #### `to_string`
@@ -379,21 +423,27 @@ template<BitFlagEnum E>
 **Description**:
 These functions attempt to convert a delimited string or a raw enum value into a valid BitFlagEnum value.
 
-    1. String to Bitflag (custom comparator)
+1. String to Bitflag (custom comparator)
     Parses a delimited string of flag names and combines the corresponding enum values. A custom binary predicate is used to compare string segments.
 
-    2. String to Bitflag
+2. String to Bitflag
     Same as (1) but uses == for name comparison.
 
-    3. Enum value safe cast
+3. Enum value safe cast
     Validates whether the given BitFlagEnum value consists only of known valid flag combinations.
+
 **Parameters**:
-    `name`: The string containing flag names, separated by the sep character.
-    `sep`: A character used to delimit individual flag names (default: '|').
-    `binary_pred`: A predicate to compare the input string segments to the enum names.
-    `value`: An enum value to validate as a valid bitflag combination.
+
+`name`: The string containing flag names, separated by the sep character.
+
+`sep`: A character used to delimit individual flag names (default: '|').
+
+`binary_pred`: A predicate to compare the input string segments to the enum `names<E>`.
+
+`value`: An enum value to validate as a valid bitflag combination.
 
 **Returns**:
+
 An `std::optional<E>` containing the constructed bitflag enum if valid; otherwise, `std::nullopt`.
 
 **Example**:
@@ -494,18 +544,26 @@ inline constexpr std::size_t count;
 ```cpp
 // defined in header entries.hpp
 
-template<Enum E, typename Pair = std::pair<E,std::string_view>>
+template<Enum E, typename Pair = std::pair<E,std::string_view>,bool NullTerminated = true>
 inline constexpr std::array<Pair,count<E>> entries;
 ```
 
 - **Description**:  
   Gives an array containing all the string names of the enum and the values, it is sorted in ascending order.
 
+- **Parameters**:
+
+  `E`: enum to generate value-string entries for.
+  
+  `Pair`: pair type used default to `std::pair`
+
+  `NullTerminated` determines whether the strings should point to null terminated character arrays `true` by default but can be disabled if not needed (to save static memory) via setting of this flag to `false`.
+
 - **Example**:
 
 ```cpp
 enum class Color { Red, Green = -2, Blue };
-for (const auto& [value,string]: enchantum::entries<Color>) {
+for (const auto& [value,string] : enchantum::entries<Color>) {
     std::cout << static_cast<int>(value) << " = " << name << std::endl;
 }
 // Outputs: 
@@ -543,12 +601,20 @@ for (auto value : enchantum::values<Color>) {
 ```cpp
 // defined in header entries.hpp
 
-template<Enum E, typename String = std::string_view>
+template<Enum E, typename String = std::string_view,bool NullTerminated = true>
 inline constexpr std::array<String,count<E>> names;
 ```
 
 - **Description**:  
   Gives an array containing all the string names of the enum values equalivent to taking all the strings of `entries<E>`.
+
+- **Parameters**:
+
+  `E`: enum to generate value-string entries for.
+  
+  `Pair`: pair type used default to `std::pair`
+
+  `NullTerminated` determines whether the strings should point to null terminated character arrays `true` by default but can be disabled if not needed (to save static memory) via setting of this flag to `false`.
 
 - **Example**:
 
@@ -789,7 +855,7 @@ using ::enchantum::ostream_operators::operator<<;
 } // namespace enchantum::iostream_operators
 ```
 
-## fmt::format / std::format support
+## `fmt::format` / `std::format` support
 
 There is headers for them. that provide `std::formatter`/`fmt::formatter` for all enums.
 
@@ -822,6 +888,9 @@ public:
   using typename base::reverse_iterator;
   using typename base::size_type;
   using typename base::value_type;
+  using std::array<V,count<E>>::at;
+  using std::array<V,count<E>>::operator[];
+
   constexpr reference at(E pos);
   constexpr const_reference at(E pos) const;
   constexpr reference operator[](E pos) noexcept;
