@@ -27,9 +27,6 @@ namespace details {
     return ret;
   }
 
-  template<typename T>
-  inline constexpr auto type_name = type_name_func<T>();
-
   template<auto Enum>
   constexpr auto enum_in_array_name() noexcept
   {
@@ -63,7 +60,7 @@ namespace details {
     using T = typename decltype(Array)::value_type;
 #define SZC(x) (sizeof(x) - 1)
     std::size_t    funcsig_off   = SZC("auto __cdecl enchantum::details::var_name<class std::array<enum ");
-    constexpr auto type_name_len = enchantum::details::type_name<T>.size();
+    constexpr auto type_name_len = enchantum::details::type_name_func<T>().size();
     funcsig_off += type_name_len + SZC(",");
     constexpr auto Size = Array.size();
     // clang-format off
@@ -87,10 +84,10 @@ namespace details {
   template<auto Copy>
   inline constexpr auto static_storage_for = Copy;
 
-  template<typename E, typename Pair, auto Array>
+  template<typename E, typename Pair, auto Array, bool ShouldNullTerminate>
   constexpr auto get_elements()
   {
-    constexpr auto type_name_len = type_name<E>.size();
+    constexpr auto type_name_len = details::type_name_func<E>().size();
 
     auto str = var_name<Array>();
     struct RetVal {
@@ -110,12 +107,15 @@ namespace details {
       else {
         if constexpr (enum_in_array_len != 0)
           str.remove_prefix(enum_in_array_len + sizeof("::") - 1);
+        if constexpr (details::prefix_length_or_zero<E> != 0) {
+          str.remove_prefix(details::prefix_length_or_zero<E>);
+        }
         const auto commapos = str.find(",");
 
         const auto name = str.substr(0, commapos);
 
         ret.pairs[ret.valid_count] = Pair{Array[index], name};
-        ret.total_string_length += name.size() + 1;
+        ret.total_string_length += name.size() + ShouldNullTerminate;
 
         if (commapos != str.npos)
           str.remove_prefix(commapos + 1);
@@ -126,10 +126,13 @@ namespace details {
     return ret;
   }
 
-  template<typename E, typename Pair, auto Min, auto Max>
+  template<typename E, typename Pair, bool ShouldNullTerminate>
   constexpr auto reflect() noexcept
   {
-    constexpr auto elements = get_elements<E, Pair, details::generate_arrays<E, Min, Max>()>();
+    constexpr auto Min = enum_traits<E>::min;
+    constexpr auto Max = enum_traits<E>::max;
+
+    constexpr auto elements = details::get_elements<E, Pair, details::generate_arrays<E, Min, Max>(), ShouldNullTerminate>();
 
     constexpr auto strings = [elements]() {
       std::array<char, elements.total_string_length> strings;
@@ -137,7 +140,9 @@ namespace details {
         const auto& [_, s] = elements.pairs[_i];
         for (std::size_t i = 0; i < s.size(); ++i)
           strings[index++] = s[i];
-        strings[index++] = '\0';
+
+        if constexpr (ShouldNullTerminate)
+          strings[index++] = '\0';
       }
       return strings;
     }();
@@ -150,7 +155,7 @@ namespace details {
       re                 = e;
 
       rs = {str + string_index, str + string_index + s.size()};
-      string_index += s.size() + 1;
+      string_index += s.size() + ShouldNullTerminate;
     }
 
     return ret;

@@ -65,6 +65,8 @@ private:
   using U = std::underlying_type_t<E>;
   using L = std::numeric_limits<U>;
 public:
+  static constexpr std::size_t prefix_length = 0;
+
   static constexpr auto min = (L::min)() > ENCHANTUM_MIN_RANGE ? (L::min)() : ENCHANTUM_MIN_RANGE;
   static constexpr auto max = (L::max)() < ENCHANTUM_MAX_RANGE ? (L::max)() : ENCHANTUM_MAX_RANGE;
 };
@@ -75,6 +77,8 @@ private:
   using T = std::underlying_type_t<E>;
   using L = std::numeric_limits<T>;
 public:
+  static constexpr std::size_t prefix_length = 0;
+
   static constexpr auto min = []() {
     if constexpr (std::is_same_v<T, bool>)
       return false;

@@ -5,18 +5,19 @@
 #endif
 
 #include "../common.hpp"
+#include "generate_arrays.hpp"
+#include "string_view.hpp"
 #include <array>
 #include <cassert>
 #include <climits>
 #include <type_traits>
 #include <utility>
-#include "generate_arrays.hpp"
-#include "string_view.hpp"
 
 namespace enchantum {
 namespace details {
 
 #if __clang_major__ >= 20
+
   template<typename T, auto V, typename = void>
   inline constexpr bool is_valid_cast = false;
 
@@ -170,9 +171,12 @@ namespace details {
   template<auto Copy>
   inline constexpr auto static_storage_for = Copy;
 
-  template<typename E, typename Pair, auto Min, auto Max>
+  template<typename E, typename Pair, bool ShouldNullTerminate>
   constexpr auto reflect() noexcept
   {
+    constexpr auto Min = enum_traits<E>::min;
+    constexpr auto Max = enum_traits<E>::max;
+
     constexpr auto elements = []() {
       constexpr auto Array = details::generate_arrays<E, Min, Max>();
       auto           str   = [Array]<std::size_t... Idx>(std::index_sequence<Idx...>) {
@@ -208,15 +212,18 @@ namespace details {
           if constexpr (enum_in_array_len != 0) {
             str.remove_prefix(enum_in_array_len + (sizeof("::") - 1));
           }
+          if constexpr (details::prefix_length_or_zero<E> != 0) {
+            str.remove_prefix(details::prefix_length_or_zero<E>);
+          }
           const auto commapos = str.find(',');
 
           const auto name = str.substr(0, commapos);
 
           ret.pairs[ret.valid_count] = Pair{Array[index], name};
-          ret.total_string_length += name.size() + 1;
+          ret.total_string_length += name.size() + ShouldNullTerminate;
 
           if (commapos != str.npos)
-            str.remove_prefix(commapos + 2);
+            str.remove_prefix(commapos + 2); // skip comma and space
           ++ret.valid_count;
         }
         ++index;
@@ -230,7 +237,9 @@ namespace details {
         const auto& [_, s] = elements.pairs[_i];
         for (std::size_t i = 0; i < s.size(); ++i)
           strings[index++] = s[i];
-        strings[index++] = '\0';
+
+        if constexpr (ShouldNullTerminate)
+          strings[index++] = '\0';
       }
       return strings;
     }();
@@ -243,7 +252,7 @@ namespace details {
       re                 = e;
 
       rs = {str + string_index, str + string_index + s.size()};
-      string_index += s.size() + 1;
+      string_index += s.size() + ShouldNullTerminate;
     }
     return ret;
   }

@@ -26,8 +26,9 @@ template<Enum E>
 }
 #endif
 
-template<Enum E, typename Pair = std::pair<E, string_view>>
-inline constexpr auto entries = details::reflect<E, Pair, enum_traits<E>::min, enum_traits<E>::max>();
+template<Enum E, typename Pair = std::pair<E, string_view>, bool ShouldNullTerminate = true>
+inline constexpr auto
+  entries = details::reflect<std::remove_cv_t<E>, Pair, ShouldNullTerminate>();
 
 template<Enum E>
 inline constexpr auto values = []() {
