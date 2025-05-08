@@ -209,17 +209,19 @@ static_assert(enchantum::EnumOfUnderlying<Status,char>);
 template<typename T>
 concept EnumFixedUnderlying = Enum<T> && requires { T{0}; };
 ```
+- **Description**:
+  Checks whether the enum has an explicit underlying type specified.
 
 > Example usage:
 ```cpp
 #include <enchantum/common.hpp>
 
-enum class Status : char { Ok = 0, Error = 1, Unknown = 2 };
-enum Status2  { Ok = 0, Error = 1, Unknown = 2 };
+// enum classes default to int
+enum class Status;
+enum Status2; // no fixed underlying
 
-static_assert(enchantum::FixedUnderlying<Status>);
-static_assert(!enchantum::FixedUnderlying<Status2>);
-
+static_assert(enchantum::EnumFixedUnderlying<Status>);
+static_assert(!enchantum::EnumFixedUnderlying<Status2>);
 ```
 
 
