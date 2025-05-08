@@ -185,7 +185,7 @@ TEST_CASE("contains_bitflag_with_invalid_bits", "[bitflags]")
   }
 }
 
-TEMPLATE_LIST_TEST_CASE("to_string_bitflag", "[stringify][bitflags]", AllFlagsTestTypes)
+TEMPLATE_LIST_TEST_CASE("bitflags", "[bitflags]", AllFlagsTestTypes)
 {
   constexpr auto  count  = enchantum::count<TestType>;
   constexpr auto& values = enchantum::values<TestType>;
