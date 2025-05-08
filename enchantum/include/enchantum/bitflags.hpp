@@ -53,7 +53,6 @@ template<BitFlagEnum E>
 template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
 [[nodiscard]] constexpr bool contains_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
 {
-  using T = std::underlying_type_t<E>;
   std::size_t pos = 0;
   for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
     if (!enchantum::contains<E>(s.substr(pos, i - pos)), binary_pred)
@@ -67,7 +66,6 @@ template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
 template<BitFlagEnum E>
 [[nodiscard]] constexpr bool contains_bitflag(const string_view s, const char sep = '|') noexcept
 {
-  using T = std::underlying_type_t<E>;
   std::size_t pos = 0;
   for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
     if (!enchantum::contains<E>(s.substr(pos, i - pos)))
@@ -101,7 +99,7 @@ template<typename String = string, BitFlagEnum E>
     return name;
   return String{};
 }
-
+ 
 template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
 [[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
 {
