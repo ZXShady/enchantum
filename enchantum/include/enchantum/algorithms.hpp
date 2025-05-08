@@ -75,7 +75,7 @@ namespace details {
 } // namespace details
 
 template<Enum E, typename Func>
-constexpr void for_each(Func f)
+constexpr void for_each(Func f) // intentional not const
 {
   details::for_each<E>(f, std::make_index_sequence<count<E>>{});
 }
