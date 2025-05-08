@@ -28,7 +28,7 @@ namespace details {
   constexpr auto valid_cast_range()
   {
     if constexpr (max_range >= 0) {
-      if constexpr (max_range < ENCHANTUM_MAX_RANGE) {
+      if constexpr (max_range <= ENCHANTUM_MAX_RANGE) {
         // this tests whether `static_cast`ing max_range is valid
         // because C style enums stupidly is like a bit field
         // `enum E { a,b,c,d = 3};` is like a bitfield `struct E { int val : 2;}`
@@ -47,7 +47,7 @@ namespace details {
       }
     }
     else {
-      if constexpr (max_range > ENCHANTUM_MIN_RANGE) {
+      if constexpr (max_range >= ENCHANTUM_MIN_RANGE) {
         // this tests whether `static_cast`ing max_range is valid
         // because C style enums stupidly is like a bit field
         // `enum E { a,b,c,d = 3};` is like a bitfield `struct E { int val : 2;}`
@@ -80,14 +80,14 @@ namespace details {
 } // namespace details
 
 template<UnscopedEnum E>
-  requires SignedEnum<E> // for concept subsumption rules
+  requires SignedEnum<E> && (!EnumFixedUnderlying<E>)
 struct enum_traits<E> {
   static constexpr auto          max = details::valid_cast_range<E>();
   static constexpr decltype(max) min = details::valid_cast_range<E, -1>();
 };
 
 template<UnscopedEnum E>
-  requires UnsignedEnum<E> // for concept subsumption rules
+  requires UnsignedEnum<E> && (!EnumFixedUnderlying<E>)
 struct enum_traits<E> {
   static constexpr auto          max = details::valid_cast_range<E>();
   static constexpr decltype(max) min = 0;

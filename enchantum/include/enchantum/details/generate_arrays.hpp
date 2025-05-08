@@ -19,7 +19,7 @@ constexpr auto generate_arrays()
 {
 #if defined __clang__ && __clang_major__ >= 20
   if constexpr (BitFlagEnum<Enum>) {
-    if constexpr (requires { Enum{0}; }) {
+    if constexpr (EnumFixedUnderlying<Enum>) {
       constexpr std::size_t      bits = sizeof(Enum) * CHAR_BIT;
       std::array<Enum, bits + 1> ret{}; // 0 value reflected
       for (std::size_t i = 0; i < bits; ++i)

@@ -55,6 +55,8 @@ inline constexpr bool is_bitflag = requires(E e) {
 template<typename T>
 concept BitFlagEnum = Enum<T> && is_bitflag<T>;
 
+template<typename T>
+concept EnumFixedUnderlying = Enum<T> && requires { T{0}; };
 
 template<typename T>
 struct enum_traits;

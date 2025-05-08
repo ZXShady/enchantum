@@ -13,6 +13,7 @@ Quick Reference
 - [BitFlagEnum](#bitflagenum)
 - [ContiguousEnum](#contiguousenum)
 - [EnumOfUnderlying](#enumofunderlying)
+- [EnumFixedUnderlying](#enumfixedunderlying)
 - [has_zero_flag](#has_zero_flag)
 - [enum_traits](#enum_traits)
 
@@ -199,6 +200,28 @@ concept EnumOfUnderlying = Enum<E> && std::same_as<std::underlying_type_t<E>, Un
 enum class Status : char { Ok = 0, Error = 1, Unknown = 2 };
 static_assert(enchantum::EnumOfUnderlying<Status,char>);
 ```
+
+### EnumFixedUnderlying
+
+```cpp
+// defined in header `common.hpp`
+
+template<typename T>
+concept EnumFixedUnderlying = Enum<T> && requires { T{0}; };
+```
+
+> Example usage:
+```cpp
+#include <enchantum/common.hpp>
+
+enum class Status : char { Ok = 0, Error = 1, Unknown = 2 };
+enum Status2  { Ok = 0, Error = 1, Unknown = 2 };
+
+static_assert(enchantum::FixedUnderlying<Status>);
+static_assert(!enchantum::FixedUnderlying<Status2>);
+
+```
+
 
 ### has_zero_flag
 
