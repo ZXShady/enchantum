@@ -65,7 +65,7 @@ TEST_CASE("cast cast_bitflags", "[casts][bitflags]")
     STATIC_CHECK(enchantum::cast<EntityStatus>("Active") == EntityStatus::Active);
     STATIC_CHECK(enchantum::cast<EntityStatus>("Inactive") == EntityStatus::Inactive);
     STATIC_CHECK(enchantum::cast<EntityStatus>("pending", case_insensitive) == EntityStatus::Pending);
-    STATIC_CHECK_FALSE(enchantum::cast_bitflag<EntityStatus>("peNdIng|Active", '|', case_insensitive).has_value());
+    STATIC_CHECK(enchantum::cast_bitflag<EntityStatus>("peNdIng|Active", '|', case_insensitive).has_value());
   }
 
   STATIC_CHECK(enchantum::cast_bitflag<EntityStatus>("Inactive|Active") == (EntityStatus::Inactive | EntityStatus::Active));
@@ -233,6 +233,23 @@ TEMPLATE_LIST_TEST_CASE("to_string_bitflag", "[stringify][bitflags]", AllFlagsTe
     for (const auto comb : combinations) {
       CHECK(enchantum::contains_bitflag<TestType>(static_cast<T>(comb)));
     }
+  }
+
+  SECTION("Value ORs")
+  {
+    const auto s = []() {
+      std::string ret;
+      for (const auto& [e, s] : enchantum::entries<TestType>) {
+        if (T(e) != 0) {
+          ret += s;
+          if (e != enchantum::max<TestType>)
+            ret += '|';
+        }
+      }
+      return ret;
+    }();
+    CHECK(enchantum::to_string_bitflag(enchantum::values_ors<TestType>) == s);
+
   }
 }
 
