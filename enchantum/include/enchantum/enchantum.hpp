@@ -147,7 +147,7 @@ inline constexpr details::to_string_functor to_string;
 
 
 template<Enum E>
-constexpr optional<E> cast(const std::underlying_type_t<E> e) noexcept
+[[nodiscard]] constexpr optional<E> cast(const std::underlying_type_t<E> e) noexcept
 {
   optional<E> a; // rvo not that it really matters
   if (enchantum::contains<E>(e))
@@ -156,7 +156,7 @@ constexpr optional<E> cast(const std::underlying_type_t<E> e) noexcept
 }
 
 template<Enum E>
-constexpr optional<E> cast(const string_view name) noexcept
+[[nodiscard]] constexpr optional<E> cast(const string_view name) noexcept
 {
   optional<E> a; // rvo not that it really matters
   for (const auto& [e, s] : entries<E>) {
@@ -169,7 +169,7 @@ constexpr optional<E> cast(const string_view name) noexcept
 }
 
 template<Enum E, std::predicate<string_view, string_view> BinaryPred>
-constexpr optional<E> cast(const string_view name, const BinaryPred binary_predicate) noexcept
+[[nodiscard]] constexpr optional<E> cast(const string_view name, const BinaryPred binary_predicate) noexcept
 {
   optional<E> a; // rvo not that it really matters
   for (const auto& [e, s] : entries<E>) {

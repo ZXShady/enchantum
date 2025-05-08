@@ -8,8 +8,10 @@
 #include <enchantum/bitwise_operators.hpp>
 #include <enchantum/enchantum.hpp>
 #include <enchantum/iostream.hpp>
+#include <iostream>
 #include <sstream>
 #include <string_view>
+
 
 namespace {
 enum class EntityStatus {
@@ -55,10 +57,6 @@ enum Level : int {
 ENCHANTUM_DEFINE_BITWISE_FOR(Permission)
 ENCHANTUM_DEFINE_BITWISE_FOR(DirectionFlags)
 ENCHANTUM_DEFINE_BITWISE_FOR(Level)
-
-// ----------------------------------------------------------------------------
-// CASTING TESTS
-// ----------------------------------------------------------------------------
 
 TEST_CASE("cast cast_bitflags", "[casts][bitflags]")
 {
@@ -144,10 +142,6 @@ TEST_CASE("alias_and_zero_behavior", "[bitflags][aliases]")
   }
 }
 
-// ----------------------------------------------------------------------------
-// CONTAINS_BITFLAG TESTS
-// ----------------------------------------------------------------------------
-
 TEST_CASE("contains_bitflag", "[contains][bitflags]")
 {
   {
@@ -191,21 +185,54 @@ TEST_CASE("contains_bitflag_with_invalid_bits", "[bitflags]")
   }
 }
 
-TEMPLATE_LIST_TEST_CASE("contains_bitflag returns true for valid combinations", "[bitflags]", AllFlagsTestTypes)
+TEMPLATE_LIST_TEST_CASE("to_string_bitflag", "[stringify][bitflags]", AllFlagsTestTypes)
 {
   constexpr auto  count  = enchantum::count<TestType>;
   constexpr auto& values = enchantum::values<TestType>;
-
+  using T                = std::underlying_type_t<TestType>;
   std::vector<TestType> combinations;
+  combinations.reserve(1u << count);
+  constexpr auto total = std::uint64_t{1} << (count - enchantum::has_zero_flag<TestType>);
+  for (std::uint64_t mask = 1; mask < total; ++mask) {
+    TestType value{};
+    for (auto bit = std::size_t{enchantum::has_zero_flag<TestType>}; bit < count; ++bit) {
+      if (mask & static_cast<std::uint64_t>(values[bit])) {
+        value |= values[bit];
+      }
+    }
+    if (static_cast<T>(value) != 0)
+      combinations.push_back(value);
+  }
+  // test for 0
+  if (enchantum::has_zero_flag<TestType>)
+    combinations.emplace_back();
 
-  for (std::size_t i = 0; i < count; ++i) {
-    for (std::size_t j = i + 1; j < count; ++j) {
-      combinations.push_back(values[i] | values[j]);
+  SECTION("cast_bitflag(to_string_bitflag(enum)) == enum")
+  {
+    for (const auto comb : combinations) {
+      CHECK(comb == enchantum::cast_bitflag<TestType>(enchantum::to_string_bitflag(comb)));
     }
   }
 
-  for (const auto comb : combinations) {
-    CHECK(enchantum::contains_bitflag(comb));
+  SECTION("contains_bitflag(to_string_bitflag(enum))")
+  {
+    for (const auto comb : combinations) {
+      CHECK(enchantum::contains_bitflag<TestType>(enchantum::to_string_bitflag(comb)));
+    }
+  }
+
+  SECTION("contains_bitflag(enum)")
+  {
+    for (const auto comb : combinations) {
+      CHECK(enchantum::contains_bitflag(comb));
+    }
+  }
+
+  SECTION("contains_bitflag<E>(std::underlying_type_t<E>(enum))")
+  {
+    for (const auto comb : combinations) {
+      CHECK(enchantum::contains_bitflag<TestType>(static_cast<T>(comb)));
+    }
   }
 }
 
@@ -224,8 +251,8 @@ TEMPLATE_LIST_TEST_CASE("contains_bitflag returns false for invalid combinations
     }
   }
 
-  if constexpr (!enchantum::has_zero_flag<TestType>)
-    CHECK_FALSE(enchantum::contains_bitflag(TestType{}));
+  if constexpr (enchantum::has_zero_flag<TestType>)
+    CHECK(enchantum::contains_bitflag(TestType{}));
 
   for (const auto comb : invalid_combinations) {
     CHECK_FALSE(enchantum::contains_bitflag(comb));

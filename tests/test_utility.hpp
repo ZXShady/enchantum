@@ -1,7 +1,10 @@
 #pragma once
 #include "case_insensitive.hpp"
+#include <catch2/catch_tostring.hpp>
 #include <cstdint>
+#include <enchantum/bitflags.hpp>
 #include <enchantum/bitwise_operators.hpp>
+#include <enchantum/enchantum.hpp>
 #include <type_traits>
 
 template<typename... Commas>
@@ -93,6 +96,11 @@ ENCHANTUM_DEFINE_BITWISE_FOR(Flags)
 } // namespace LongNamespaced::Namespace2::inline InlineNamespace
 
 namespace {
+
+enum MinMaxValues {
+  min = ENCHANTUM_MIN_RANGE,
+  max = ENCHANTUM_MAX_RANGE,
+};
 enum class Letters {
   a,
   b,
@@ -122,6 +130,15 @@ enum class Letters {
   z
 };
 } // namespace
+
+enum NonContigFlagsWithNoneCStyle : unsigned char {
+  None  = 0,
+  Flag0 = 1 << 0,
+  Flag1 = 1 << 1,
+  Flag2 = 1 << 2,
+  Flag6 = 1 << 6,
+};
+ENCHANTUM_DEFINE_BITWISE_FOR(NonContigFlagsWithNoneCStyle)
 
 enum class FlagsWithNone : unsigned char {
   None  = 0,
@@ -185,7 +202,7 @@ enum class BoolEnum : bool {
 };
 
 using namespace LongNamespaced::Namespace2;
-  template<typename...>
+template<typename...>
 struct type_list {}; // not wanting to include tuple to detect if I am missing a header in tests
 
 template<typename A, typename B>
@@ -193,6 +210,19 @@ using concat = std::remove_pointer_t<decltype([]<class... Ts, class... Us>(type_
   return type_list<Ts..., Us...>{};
 }(A{}, B{}))>;
 
-using AllFlagsTestTypes = type_list<FlagsWithNone, Flags>;
+using AllFlagsTestTypes = type_list<NonContigFlagsWithNoneCStyle, FlagsWithNone, Flags>;
 using AllEnumsTestTypes = concat<AllFlagsTestTypes,
-                                 type_list<Color, UnscopedColor, UnscopedCStyle, BoolEnum, Direction2D, Direction3D, Letters>>;
+  type_list<MinMaxValues, Color, UnscopedColor, UnscopedCStyle, BoolEnum, Direction2D, Direction3D, Letters>>;
+
+template<enchantum::Enum E>
+struct Catch::StringMaker<E> {
+  static std::string convert(E e)
+  {
+    if constexpr (enchantum::BitFlagEnum<E>)
+      return "\"" + enchantum::to_string_bitflag(e) + "\" (" +
+        std::to_string(static_cast<std::underlying_type_t<E>>(e)) + ")";
+    else
+      return "\"" + std::string(enchantum::to_string(e)) + "\" (" +
+        std::to_string(static_cast<std::underlying_type_t<E>>(e)) + ")";
+  }
+};

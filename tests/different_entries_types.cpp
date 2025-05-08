@@ -13,6 +13,6 @@ struct ValueAndString {
 TEMPLATE_LIST_TEST_CASE("KV as entries key-value pair", "[entries][override_key_value_pair]", AllEnumsTestTypes)
 {
   for (const auto& kv : enchantum::entries<TestType, ValueAndString<TestType>>) {
-    CHECK(std::string(kv.string) == enchantum::to_string(kv.value));
+    CHECK(kv.string == enchantum::to_string(kv.value));
   }
 }

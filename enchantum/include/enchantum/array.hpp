@@ -26,14 +26,14 @@ public:
   using base::at;
   using base::operator[];
 
-  constexpr reference at(const E index)
+  [[nodiscard]] constexpr reference at(const E index)
   {
     if (const auto i = enchantum::enum_to_index(index))
       return operator[](*i);
     ENCHANTUM_THROW(std::out_of_range("enchantum::array::at index out of range"), index);
   }
 
-  constexpr const_reference at(const E index) const
+  [[nodiscard]] constexpr const_reference at(const E index) const
   {
     if (const auto i = enchantum::enum_to_index(index))
       return operator[](*i);

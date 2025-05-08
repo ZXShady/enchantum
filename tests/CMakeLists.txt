@@ -7,11 +7,11 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 target_compile_features(Catch2 PRIVATE cxx_std_20)
-
+target_compile_definitions(Catch2 PUBLIC CATCH_CONFIG_ENABLE_OPTIONAL_STRINGMAKER)
 add_executable(tests)
 target_include_directories(tests PRIVATE "third_party")
 target_compile_features(tests PRIVATE cxx_std_20)
-
+ 
 
 target_link_libraries(tests PRIVATE enchantum::enchantum Catch2::Catch2WithMain)
 

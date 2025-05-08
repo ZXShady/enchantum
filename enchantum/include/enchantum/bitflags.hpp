@@ -27,31 +27,69 @@ inline constexpr E values_ors = [] {
   return ret;
 }();
 
-template<BitFlagEnum E>
-constexpr bool contains_bitflag(E value) noexcept
-{
-  using T               = std::underlying_type_t<E>;
-  const auto raw_value  = static_cast<T>(value);
-  T          valid_bits = 0;
 
-  if (raw_value == 0)
+template<BitFlagEnum E>
+[[nodiscard]] constexpr bool contains_bitflag(const std::underlying_type_t<E> value) noexcept
+{
+  if (value == 0)
     return has_zero_flag<E>;
+  using T      = std::underlying_type_t<E>;
+  T valid_bits = 0;
 
   for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
     const auto v = static_cast<T>(values<E>[i]);
-    if ((raw_value & v) == v)
+    if ((value & v) == v)
       valid_bits |= v;
   }
-  return valid_bits == raw_value;
+  return valid_bits == value;
 }
 
-template<typename String = string, BitFlagEnum E>
-[[nodiscard]] constexpr String to_string_bitflag(E value, char sep = '|')
+template<BitFlagEnum E>
+[[nodiscard]] constexpr bool contains_bitflag(const E value) noexcept
+{
+  return enchantum::contains_bitflag<E>(static_cast<std::underlying_type_t<E>>(value));
+}
+
+template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
+[[nodiscard]] constexpr bool contains_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
 {
   using T = std::underlying_type_t<E>;
+  std::size_t pos = 0;
+  for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
+    if (!enchantum::contains<E>(s.substr(pos, i - pos)), binary_pred)
+      return false;
+    pos = i + 1;
+  }
+  return enchantum::contains<E>(s.substr(pos), binary_pred);
+}
+
+
+template<BitFlagEnum E>
+[[nodiscard]] constexpr bool contains_bitflag(const string_view s, const char sep = '|') noexcept
+{
+  using T = std::underlying_type_t<E>;
+  std::size_t pos = 0;
+  for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
+    if (!enchantum::contains<E>(s.substr(pos, i - pos)))
+      return false;
+    pos = i + 1;
+  }
+  return enchantum::contains<E>(s.substr(pos));
+}
+
+
+template<typename String = string, BitFlagEnum E>
+[[nodiscard]] constexpr String to_string_bitflag(const E value, const char sep = '|')
+{
+  using T = std::underlying_type_t<E>;
+  if constexpr (has_zero_flag<E>)
+    if (static_cast<T>(value) == 0)
+      return String(names<E>[0]);
+
   String name;
   T      check_value = 0;
-  for (const auto& [v, s] : entries<E>) {
+  for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
+    const auto& [v, s] = entries<E>[i];
     if (v == (value & v)) {
       if (!name.empty())
         name.append(1, sep);           // append separator if not the first value
@@ -65,13 +103,13 @@ template<typename String = string, BitFlagEnum E>
 }
 
 template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
-[[nodiscard]] constexpr optional<E> cast_bitflag(string_view s, char sep, BinaryPred binary_pred) noexcept
+[[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
 {
   using T = std::underlying_type_t<E>;
   T           check_value{};
   std::size_t pos = 0;
   for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
-    if (const auto v = enchantum::cast<E>(s.substr(pos, i - pos)))
+    if (const auto v = enchantum::cast<E>(s.substr(pos, i - pos),binary_pred))
       check_value |= static_cast<T>(*v);
     else
       return optional<E>();
@@ -94,8 +132,10 @@ template<BitFlagEnum E>
 {
   using T              = std::underlying_type_t<E>;
   const auto raw_value = static_cast<T>(value);
-  if (raw_value == 0)
-    return has_zero_flag<E>;
+
+  if constexpr (has_zero_flag<E>)
+    if (raw_value == 0)
+      return optional<E>(E{});
 
   T valid_bits{0};
   for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
