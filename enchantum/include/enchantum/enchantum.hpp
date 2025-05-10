@@ -114,12 +114,9 @@ template<Enum E>
 template<Enum E>
 [[nodiscard]] constexpr optional<std::size_t> enum_to_index(const E e) noexcept
 {
-  std::size_t i = 0;
-  for (const E val : values<E>) {
-    if (val == e)
+  for (std::size_t i = 0; i < values<E>.size(); ++i)
+    if (values<E>[i] == e)
       return optional<std::size_t>(i);
-    ++i;
-  }
   return optional<std::size_t>();
 }
 
@@ -128,7 +125,7 @@ template<ContiguousEnum E>
 {
   using T = std::underlying_type_t<E>;
   if (enchantum::contains(e))
-    return optional<std::size_t>(std::size_t(T(e) + T(min<E>)));
+    return optional<std::size_t>(std::size_t(T(e) - T(min<E>)));
   return optional<std::size_t>{};
 }
 

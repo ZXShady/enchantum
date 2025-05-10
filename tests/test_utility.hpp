@@ -8,7 +8,6 @@
 #include <type_traits>
 
 
-
 template<typename... Commas>
 struct TypeWithCommas;
 
@@ -122,10 +121,43 @@ struct enchantum::enum_traits<ImGuiFreeTypeBuilderFlags> {
 };
 namespace {
 
-enum MinMaxValues {
+enum MinMaxValuesCStyle {
+  MinMaxValuesCStyle_min = ENCHANTUM_MIN_RANGE,
+  MinMaxValuesCStyle_max = ENCHANTUM_MAX_RANGE,
+};
+
+enum class MinMaxValues {
   min = ENCHANTUM_MIN_RANGE,
   max = ENCHANTUM_MAX_RANGE,
 };
+
+enum class ContigNonZero {
+  _0 = -10,
+  _1,
+  _2,
+  _3,
+  _4,
+  _5,
+  _6,
+  _7,
+  _8,
+  _9,
+};
+
+enum ContigNonZeroCStyle {
+  ContigNonZeroCStyle_0 = -1,
+  ContigNonZeroCStyle_1,
+  ContigNonZeroCStyle_2,
+  ContigNonZeroCStyle_3,
+  ContigNonZeroCStyle_4,
+  ContigNonZeroCStyle_5,
+  ContigNonZeroCStyle_6,
+  ContigNonZeroCStyle_7,
+  ContigNonZeroCStyle_8,
+  ContigNonZeroCStyle_9,
+};
+
+
 enum class Letters {
   a,
   b,
@@ -235,9 +267,10 @@ using concat = decltype([]<typename... Ts, typename... Us>(type_list<Ts...>, typ
   return type_list<Ts..., Us...>{};
 }(A{}, B{}));
 
-using AllFlagsTestTypes = type_list<ImGuiFreeTypeBuilderFlags,NonContigFlagsWithNoneCStyle, FlagsWithNone, Flags>;
-using AllEnumsTestTypes = concat<AllFlagsTestTypes,
-  type_list<MinMaxValues, Color, UnscopedColor, UnscopedCStyle, BoolEnum, Direction2D, Direction3D, Letters>>;
+using AllFlagsTestTypes = type_list<ImGuiFreeTypeBuilderFlags, NonContigFlagsWithNoneCStyle, FlagsWithNone, Flags>;
+using AllEnumsTestTypes = concat<
+  AllFlagsTestTypes,
+  type_list<MinMaxValuesCStyle, ContigNonZeroCStyle, ContigNonZero, MinMaxValues, Color, UnscopedColor, UnscopedCStyle, BoolEnum, Direction2D, Direction3D, Letters>>;
 
 template<enchantum::Enum E>
 struct Catch::StringMaker<E> {

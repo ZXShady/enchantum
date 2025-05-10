@@ -6,17 +6,48 @@
 
 TEMPLATE_LIST_TEST_CASE("array size checks", "[constants]", AllEnumsTestTypes)
 {
-  SECTION("count<E>") { STATIC_CHECK(enchantum::count<TestType> == enchantum::entries<TestType>.size()); }
-  SECTION("names<E>") { STATIC_CHECK(enchantum::names<TestType>.size() == enchantum::entries<TestType>.size()); }
-  SECTION("values<E>") { STATIC_CHECK(enchantum::values<TestType>.size() == enchantum::entries<TestType>.size()); }
+  constexpr auto  count   = enchantum::count<TestType>;
+  //constexpr auto  min     = enchantum::min<TestType>;
+  //constexpr auto  max     = enchantum::max<TestType>;
+  constexpr auto& names   = enchantum::names<TestType>;
+  constexpr auto& values  = enchantum::values<TestType>;
+  constexpr auto& entries = enchantum::entries<TestType>;
+
+
+  SECTION("count<E>") { STATIC_CHECK(count == entries.size()); }
+  SECTION("names<E>") { STATIC_CHECK(names.size() == entries.size()); }
+  SECTION("values<E>") { STATIC_CHECK(values.size() == entries.size()); }
 
   SECTION("names<E> and values<E> equal to entries<E>")
   {
-    for (std::size_t i = 0; i < enchantum::count<TestType>; ++i) {
-      CHECK(enchantum::values<TestType>[i] == enchantum::entries<TestType>[i].first);
-      CHECK(enchantum::names<TestType>[i] == enchantum::entries<TestType>[i].second);
+    for (std::size_t i = 0; i < count; ++i) {
+      CHECK(values[i] == entries[i].first);
+      CHECK(names[i] == entries[i].second);
     }
   }
+
+  SECTION("enum_to_index identities")
+  {
+    for (std::size_t i = 0; i < count; ++i) {
+      CHECK(i == enchantum::enum_to_index(values[i]));
+    }
+  }
+
+  SECTION("index_to_enum identities")
+  {
+    for (std::size_t i = 0; i < count; ++i) {
+      CHECK(enchantum::index_to_enum<TestType>(i) == values[i]);
+      CHECK_FALSE(enchantum::index_to_enum<TestType>(i + count).has_value());
+    }
+  }
+
+  SECTION("cast(to_string()) identities")
+  {
+    for (std::size_t i = 0; i < count; ++i) {
+      CHECK(values[i] == enchantum::cast<TestType>(enchantum::to_string(values[i])));
+    }
+  }
+
 }
 
 
