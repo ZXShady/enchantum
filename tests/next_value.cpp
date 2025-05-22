@@ -10,6 +10,12 @@ TEMPLATE_LIST_TEST_CASE("next_value identities", "[next_value]", AllEnumsTestTyp
   for (const auto v : enchantum::values<TestType>) {
     CHECK(v == enchantum::next_value_circular(v, count));
     CHECK(v == enchantum::prev_value_circular(v, count));
+
+    std::optional<TestType> value = v;
+    for (std::size_t i = 0; i < count - *enchantum::enum_to_index(v); ++i)
+      value = enchantum::next_value(*value, 1);
+    CHECK_FALSE(value.has_value());
+
     CHECK_FALSE(enchantum::next_value(v, count).has_value());
     CHECK_FALSE(enchantum::prev_value(v, count).has_value());
   }

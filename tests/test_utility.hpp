@@ -42,6 +42,13 @@ struct Really_Unreadable_Class_Name {
     Red    = 213,
     Blue,
   };
+
+  enum BlockType_ {
+    Dirt     = -42,
+    Stone    = 21,
+    Obsidian = 124,
+  };
+  using BlockType = decltype(BlockType_::Dirt);
 };
 
 //template<typename... Ts>
@@ -82,6 +89,12 @@ struct Really_Unreadable_Class_Name {
 //}
 
 using UglyType = Really_Unreadable_Class_Name<int, long, int***, TypeWithCommas<int, long[3], TypeWithCommas<long, int>>>;
+using BlockType = UglyType::BlockType;
+
+
+// Clang seems to have weird behavior with enum in templates
+// It does not display them in pretty function names unless atleast 1 member of the enum was
+// used.
 #ifdef __clang__
 using Color         = decltype(UglyType::Color::Aqua);
 using Flags         = decltype(UglyType::Flags::Flag0);
@@ -157,6 +170,19 @@ enum ContigNonZeroCStyle {
   ContigNonZeroCStyle_9,
 };
 
+
+enum ContigNonZeroStartWith5CStyle {
+  ContigNonZeroStartWith5CStyle_0 = 5,
+  ContigNonZeroStartWith5CStyle_1,
+  ContigNonZeroStartWith5CStyle_2,
+  ContigNonZeroStartWith5CStyle_3,
+  ContigNonZeroStartWith5CStyle_4,
+  ContigNonZeroStartWith5CStyle_5,
+  ContigNonZeroStartWith5CStyle_6,
+  ContigNonZeroStartWith5CStyle_7,
+  ContigNonZeroStartWith5CStyle_8,
+  ContigNonZeroStartWith5CStyle_9,
+};
 
 enum class Letters {
   a,
@@ -248,15 +274,18 @@ enum UnscopedCStyle {
 };
 
 
-// Clang seems to have weird behavior with enum in templates
-// It does not display them in pretty function names unless atleast 1 member of the enum was
-// used.
 
 
 enum class BoolEnum : bool {
   False,
   True
 };
+
+enum BoolEnumCStyle : bool {
+  BoolEnumCStyle_False,
+  BoolEnumCStyle_True
+};
+
 
 using namespace LongNamespaced::Namespace2;
 template<typename...>
@@ -270,7 +299,7 @@ using concat = decltype([]<typename... Ts, typename... Us>(type_list<Ts...>, typ
 using AllFlagsTestTypes = type_list<ImGuiFreeTypeBuilderFlags, NonContigFlagsWithNoneCStyle, FlagsWithNone, Flags>;
 using AllEnumsTestTypes = concat<
   AllFlagsTestTypes,
-  type_list<MinMaxValuesCStyle, ContigNonZeroCStyle, ContigNonZero, MinMaxValues, Color, UnscopedColor, UnscopedCStyle, BoolEnum, Direction2D, Direction3D, Letters>>;
+  type_list<MinMaxValuesCStyle,BlockType, ContigNonZeroStartWith5CStyle, BoolEnumCStyle, ContigNonZeroCStyle, ContigNonZero, MinMaxValues, Color, UnscopedColor, UnscopedCStyle, BoolEnum, Direction2D, Direction3D, Letters>>;
 
 template<enchantum::Enum E>
 struct Catch::StringMaker<E> {

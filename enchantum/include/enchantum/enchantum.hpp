@@ -102,32 +102,84 @@ template<ContiguousEnum E>
   return T(value) <= T(max<E>) && T(value) >= T(min<E>);
 }
 
-template<Enum E>
-[[nodiscard]] constexpr optional<E> index_to_enum(const std::size_t index) noexcept
-{
-  optional<E> ret;
-  if (index < values<E>.size())
-    ret.emplace(values<E>[index]);
-  return ret;
-}
+namespace details {
+  template<typename E>
+  struct index_to_enum_functor {
+    [[nodiscard]] constexpr optional<E> operator()(const std::size_t index) const noexcept
+    {
+      optional<E> ret;
+      if (index < values<E>.size())
+        ret.emplace(values<E>[index]);
+      return ret;
+    }
+  };
+
+  struct enum_to_index_functor {
+    template<Enum E>
+    [[nodiscard]] constexpr optional<std::size_t> operator()(const E e) const noexcept
+    {
+      if constexpr (ContiguousEnum<E>) {
+        using T = std::underlying_type_t<E>;
+        if (enchantum::contains(e))
+          return optional<std::size_t>(std::size_t(T(e) - T(min<E>)));
+      }
+      else {
+        for (std::size_t i = 0; i < values<E>.size(); ++i)
+          if (values<E>[i] == e)
+            return optional<std::size_t>(i);
+      }
+      return optional<std::size_t>();
+    }
+  };
+
+
+  template<Enum E>
+  struct cast_functor {
+    [[nodiscard]] constexpr optional<E> operator()(const std::underlying_type_t<E> value) const noexcept
+    {
+      optional<E> a; // rvo not that it really matters
+      if (!enchantum::contains<E>(value))
+        return a;
+      a.emplace(static_cast<E>(value));
+      return a;
+    }
+
+    [[nodiscard]] constexpr optional<E> operator()(const string_view name) const noexcept
+    {
+      optional<E> a; // rvo not that it really matters
+      for (const auto& [e, s] : entries<E>) {
+        if (s == name) {
+          a.emplace(e);
+          return a;
+        }
+      }
+      return a; // nullopt
+    }
+
+    template<std::predicate<string_view, string_view> BinaryPred>
+    [[nodiscard]] constexpr optional<E> operator()(const string_view name, const BinaryPred binary_predicate) const noexcept
+    {
+      optional<E> a; // rvo not that it really matters
+      for (const auto& [e, s] : entries<E>) {
+        if (binary_predicate(name, s)) {
+          a.emplace(e);
+          return a;
+        }
+      }
+      return a;
+    }
+  };
+
+} // namespace details
 
 template<Enum E>
-[[nodiscard]] constexpr optional<std::size_t> enum_to_index(const E e) noexcept
-{
-  for (std::size_t i = 0; i < values<E>.size(); ++i)
-    if (values<E>[i] == e)
-      return optional<std::size_t>(i);
-  return optional<std::size_t>();
-}
+inline constexpr details::index_to_enum_functor<E> index_to_enum{};
 
-template<ContiguousEnum E>
-[[nodiscard]] constexpr optional<std::size_t> enum_to_index(const E e) noexcept
-{
-  using T = std::underlying_type_t<E>;
-  if (enchantum::contains(e))
-    return optional<std::size_t>(std::size_t(T(e) - T(min<E>)));
-  return optional<std::size_t>{};
-}
+inline constexpr details::enum_to_index_functor enum_to_index{};
+
+template<Enum E>
+inline constexpr details::cast_functor<E> cast{};
+
 
 namespace details {
   struct to_string_functor {
@@ -136,47 +188,12 @@ namespace details {
     {
       if (const auto i = enchantum::enum_to_index(value))
         return names<E>[*i];
-      return string_view{};
+      return string_view();
     }
   };
+
 } // namespace details
-inline constexpr details::to_string_functor to_string;
-
-
-template<Enum E>
-[[nodiscard]] constexpr optional<E> cast(const std::underlying_type_t<E> e) noexcept
-{
-  optional<E> a; // rvo not that it really matters
-  if (enchantum::contains<E>(e))
-    a.emplace(E(e));
-  return a;
-}
-
-template<Enum E>
-[[nodiscard]] constexpr optional<E> cast(const string_view name) noexcept
-{
-  optional<E> a; // rvo not that it really matters
-  for (const auto& [e, s] : entries<E>) {
-    if (s == name) {
-      a.emplace(e);
-      return a;
-    }
-  }
-  return a; // nullopt
-}
-
-template<Enum E, std::predicate<string_view, string_view> BinaryPred>
-[[nodiscard]] constexpr optional<E> cast(const string_view name, const BinaryPred binary_predicate) noexcept
-{
-  optional<E> a; // rvo not that it really matters
-  for (const auto& [e, s] : entries<E>) {
-    if (binary_predicate(name, s)) {
-      a.emplace(e);
-      return a;
-    }
-  }
-  return a;
-}
+inline constexpr details::to_string_functor to_string{};
 
 
 } // namespace enchantum
