@@ -1,5 +1,7 @@
 All the functions/variables are defined in namespace `enchantum`
 
+All functions are `[[nodiscard]]` unless explicitly said otherwise.
+
 **Note**: Documentation Incomplete.
 
 Quick Reference
@@ -39,6 +41,7 @@ Quick Reference
   - [min](#min)
   - [count](#count)
   - [value_ors](#value_ors)
+
 **Containers**:
   - [array](#array)
 
@@ -217,8 +220,8 @@ concept EnumFixedUnderlying = Enum<T> && requires { T{0}; };
 #include <enchantum/common.hpp>
 
 // enum classes default to int
-enum class Status;
-enum Status2; // no fixed underlying
+enum class Status {};
+enum Status2 {}; // no fixed underlying
 
 static_assert(enchantum::EnumFixedUnderlying<Status>);
 static_assert(!enchantum::EnumFixedUnderlying<Status2>);
@@ -354,7 +357,7 @@ constexpr inline details::TO_STRING_FUNCTOR to_string;
 // defined in header bitflags.hpp
 
 template<typename String = std::string, BitFlagEnum E>
-[[nodiscard]] constexpr String to_string_bitflag(E value, char sep = '|');
+constexpr String to_string_bitflag(E value, char sep = '|');
 
 ```
 
@@ -395,27 +398,33 @@ std::cout << enchantum::to_string_bitflag(static_cast<Flags>(8));
 
 ```cpp
 // defined in header `enchantum.hpp`
-template<Enum E>
-constexpr std::optional<E> cast(std::underlying_type_t<E> e) noexcept;
+
+namespace details 
+{
+  struct CAST_FUNCTOR {
+  constexpr std::optional<E> operator()(std::underlying_type_t<E> value) noexcept;
+
+  constexpr std::optional<E> operator()(std::string_view name) noexcept;
+
+  template<std::predicate<std::string_view, std::string_view> BinaryPred>
+  constexpr std::optional<E> operator()(std::string_view name, BinaryPred binary_predicate) const noexcept
+  };
+}
 
 template<Enum E>
-constexpr std::optional<E> cast(std::string_view name) noexcept;
-
-
-template<Enum E, std::predicate<std::string_view, std::string_view> BinaryPred>
-constexpr optional<E> cast(std::string_view name, BinaryPred binary_predicate) noexcept
+constexpr inline details::CAST_FUNCTOR cast;
 
 ```
 **Description**:
 
- 1. Attempts to convert an integral value to the corresponding enum value if it is a valid underlying value (i.e it is one of the elements of `values<E>`).
+ 1. Attempts to convert an integral underlying type value to the corresponding enum value if it is a valid underlying value (i.e it is one of the elements of `values<E>`).
  2. Attempts to convert a `std::string_view` to the corresponding enum value based on its name it is case sensitive.
  3. Attempts to convert a `std::string_view` to the corresponding enum value based using a predicate. **note** the first arguement of the predicate is the `cast` `name` arguement while the second arguement of the predicate is the names of the enum of `names<E>`.
 
 Returns:
 1. An `optional<E>` containing the enum value if the integer matches a defined enum value; otherwise, `std::nullopt`.
 2. An `optional<E>` containing the enum value if the `name` matches a defined enum name; otherwise, `std::nullopt`.
-3. Same as 2.
+3. Same as 2. but if `binary_predicate` returns `true`
 
 **Examples**:
 ```cpp
@@ -443,13 +452,13 @@ assert(enchantum::cast<Color>("UnKnOwn",[](std::string_view a,std::string_view b
 // defined in header bitflags.hpp
 
 template<BitFlagEnum E, std::predicate<std::string_view, std::string_view> BinaryPred>
-[[nodiscard]] constexpr std::optional<E> cast_bitflag(std::string_view name, char sep, BinaryPred binary_pred) noexcept;
+constexpr std::optional<E> cast_bitflag(std::string_view name, char sep, BinaryPred binary_pred) noexcept;
 
 template<BitFlagEnum E>
-[[nodiscard]] constexpr std::optional<E> cast_bitflag(std::string_view name, char sep = '|') noexcept;
+constexpr std::optional<E> cast_bitflag(std::string_view name, char sep = '|') noexcept;
 
 template<BitFlagEnum E>
-[[nodiscard]] constexpr std::optional<E> cast_bitflag(E value) noexcept;
+constexpr std::optional<E> cast_bitflag(E value) noexcept;
 ```
 **Description**:
 These functions attempt to convert a delimited string or a raw enum value into a valid BitFlagEnum value.
@@ -739,16 +748,16 @@ bool containsGreenName = enchantum::contains<Color>("Green");  // true
 // defined in header bitflags.hpp
 
 template<BitFlagEnum E>
-[[nodiscard]] constexpr bool contains_bitflag(E value) noexcept;
+constexpr bool contains_bitflag(E value) noexcept;
 
 template<BitFlagEnum E>
-[[nodiscard]] constexpr bool contains_bitflag(std::underlying_type_t<E> value) noexcept;
+constexpr bool contains_bitflag(std::underlying_type_t<E> value) noexcept;
 
 template<BitFlagEnum E>
-[[nodiscard]] constexpr bool contains_bitflag(std::string_view name,char sep = '|') noexcept;
+constexpr bool contains_bitflag(std::string_view name,char sep = '|') noexcept;
 
 template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
-[[nodiscard]] constexpr bool contains_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept;
+constexpr bool contains_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept;
 
 ```
 
@@ -798,8 +807,16 @@ std::cout << "Permissions value is valid: " << std::boolalpha << is_valid << std
 ```cpp
 // defined in header enchantum.hpp
 
+namespace details 
+{
+  template<Enum E>
+  struct INDEX_TO_ENUM_FUNCTOR {
+    constexpr std::optional<E> operator()(E value) const noexcept;
+  };
+}
+
 template<Enum E>
-constexpr std::optional<E> index_to_enum(std::size_t i) noexcept;
+constexpr inline details::INDEX_TO_ENUM_FUNCTOR index_to_enum;
 ```
 
 - **Description**:  
@@ -825,8 +842,17 @@ std::cout << static_cast<int>(*color) << std::endl;  // Outputs: 42 (Green)
 ```cpp
 // defined in header enchantum.hpp
 
+namespace details 
+{
+  struct ENUM_TO_INDEX_FUNCTOR {
+    template<Enum E>
+    constexpr std::optional<std::size_t> operator()(E value) const noexcept;
+  };
+}
+
 template<Enum E>
-constexpr std::optional<std::size_t> enum_to_index(E e) noexcept;
+constexpr inline details::ENUM_TO_INDEX_FUNCTOR enum_to_index;
+
 ```
 
 - **Description**:  
@@ -843,7 +869,7 @@ constexpr std::optional<std::size_t> enum_to_index(E e) noexcept;
 #include <enchantum/enchantum.hpp>
 enum class Color { Red, Green = 42, Blue };
 
-std::optional<std::size_t> index = enchantum::enum_to_index(Color::Red);
+std::optional<std::size_t> index = enchantum::enum_to_index(Color::Green);
 std::cout << *index << std::endl;  // Outputs: 1 (Green)
 ```
 
@@ -854,22 +880,28 @@ std::cout << *index << std::endl;  // Outputs: 1 (Green)
 ```cpp
 // defined in header next_value.hpp
 
-template<Enum E>
-[[nodiscard]] constexpr std::optional<E> next_value(const E value, const std::ptrdiff_t n = 1) noexcept;
+namespace details {
 
-template<Enum E>
-[[nodiscard]] constexpr E next_value_circular(const E value, const std::ptrdiff_t n = 1) noexcept
+  struct NEXT_VALUE_FUNCTOR {
+    template<Enum E>
+constexpr std::optional<E> operator()(E value, std::ptrdiff_t n = 1) noexcept;
 
-template<Enum E>
-[[nodiscard]] constexpr std::optional<E> prev_value(const E value, const std::ptrdiff_t n = 1) noexcept
+    };
+      struct NEXT_VALUE_CIRCULAR_FUNCTOR {
+    template<Enum E>
+constexpr std::optional<E> operator()(E value, std::ptrdiff_t n = 1) noexcept;
+    };
+}
 
-template<Enum E>
-[[nodiscard]] constexpr E prev_value_circular(const E value, const std::ptrdiff_t n = 1) noexcept
+inline constexpr details::NEXT_VALUE_FUNCTOR next_value;
+inline constexpr details::PREV_VALUE_FUNCTOR prev_value;
+inline constexpr details::NEXT_VALUE_CIRCULAR_FUNCTOR next_value_circular;
+inline constexpr details::PREV_VALUE_CIRCULAR_FUNCTOR prev_value_circular;
 
 ```
 
 - **Description**:
-These functions allow navigation through the enum values either in a linear or circular manner. You can move forward or backward through the enum values by providing an `n` value (steps). If `n` is positive, it moves forward; if `n` is negative, it moves backward.
+These function objects allow navigation through the enum values either in a linear or circular manner. You can move forward or backward through the enum values by providing an `n` value (steps). If `n` is positive, it moves forward; if `n` is negative, it moves backward.
 
   `next_value`: returns the next value in the enum sequence 
 
@@ -881,6 +913,8 @@ These functions allow navigation through the enum values either in a linear or c
 
 - **Notes**:
 The circular variants require `value` to be a valid enum otherwise an assertion is called.
+
+They are functors and not templated functions which allows passing  them to higher order functions.
 
 - **Parameters**:
   - `e`: The enum to convert to an index value.
@@ -1068,17 +1102,17 @@ Overloads the bitwise operators for a given enum.
 ```cpp
 // defined in header `bitwise_operators.hpp`
 #define ENCHANTUM_DEFINE_BITWISE_FOR(Enum)                                                \
-  [[nodiscard]] constexpr Enum operator&(Enum a, Enum b) noexcept                         \
+  constexpr Enum operator&(Enum a, Enum b) noexcept                         \
   {                                                                                       \
     using T = std::underlying_type_t<Enum>;                                               \
     return static_cast<Enum>(static_cast<T>(a) & static_cast<T>(b));                      \
   }                                                                                       \
-  [[nodiscard]] constexpr Enum operator|(Enum a, Enum b) noexcept                         \
+  constexpr Enum operator|(Enum a, Enum b) noexcept                         \
   {                                                                                       \
     using T = std::underlying_type_t<Enum>;                                               \
     return static_cast<Enum>(static_cast<T>(a) | static_cast<T>(b));                      \
   }                                                                                       \
-  [[nodiscard]] constexpr Enum operator^(Enum a, Enum b) noexcept                         \
+  constexpr Enum operator^(Enum a, Enum b) noexcept                         \
   {                                                                                       \
     using T = std::underlying_type_t<Enum>;                                               \
     return static_cast<Enum>(static_cast<T>(a) ^ static_cast<T>(b));                      \
@@ -1086,7 +1120,7 @@ Overloads the bitwise operators for a given enum.
   constexpr Enum&              operator&=(Enum& a, Enum b) noexcept { return a = a & b; } \
   constexpr Enum&              operator|=(Enum& a, Enum b) noexcept { return a = a | b; } \
   constexpr Enum&              operator^=(Enum& a, Enum b) noexcept { return a = a ^ b; } \
-  [[nodiscard]] constexpr Enum operator~(Enum a) noexcept                                 \
+  constexpr Enum operator~(Enum a) noexcept                                 \
   {                                                                                       \
     return static_cast<Enum>(~static_cast<std::underlying_type_t<Enum>>(a));              \
   }

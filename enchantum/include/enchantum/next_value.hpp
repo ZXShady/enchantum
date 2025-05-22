@@ -6,7 +6,6 @@
 #include <cstddef>
 
 namespace enchantum {
-
 namespace details {
   template<std::ptrdiff_t N>
   struct next_value_functor {
