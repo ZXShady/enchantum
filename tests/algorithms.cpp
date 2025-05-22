@@ -8,7 +8,7 @@ TEMPLATE_LIST_TEST_CASE("for_each", "[algorithms][for_each]", AllEnumsTestTypes)
   std::vector<std::string_view> names;
 
   enchantum::for_each<TestType>([&names](const auto c) {
-    if constexpr (enchantum::count<TestType> != 0 && c != enchantum::values<TestType>[0])
+    if constexpr (c != enchantum::values<TestType>[0])
       names.emplace_back(enchantum::to_string(c.value));
   });
   CHECK(names.size() + 1 == enchantum::count<TestType>);
