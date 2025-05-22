@@ -42,9 +42,9 @@ TEST_CASE("Flags enum std::format", "[stringify][std_format]")
   }
   SECTION("std::format with enchantum::to_string_bitflag")
   {
-    CHECK(std::format("{}", enchantum::to_string_bitflag(Flags::Flag0 | Flags::Flag4)) == "Flag0|Flag4");
-    CHECK(std::format("{}", enchantum::to_string_bitflag(Flags::Flag0 | Flags::Flag4 | Flags(200))) == "");
-    CHECK(std::format("{}", enchantum::to_string_bitflag(enchantum::values_ors<Flags>)) ==
+    CHECK(std::format("{}", Flags::Flag0 | Flags::Flag4) == "Flag0|Flag4");
+    CHECK(std::format("{}", Flags::Flag0 | Flags::Flag4 | Flags(200)) == "");
+    CHECK(std::format("{}", enchantum::values_ors<Flags>) ==
           "Flag0|Flag1|Flag2|Flag3|Flag4|Flag5|Flag6");
   }
 }

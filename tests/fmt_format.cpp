@@ -46,9 +46,8 @@ TEST_CASE("Flags enum fmt::format", "[stringify][fmt_format]")
   }
   SECTION("fmt::format with enchantum::to_string_bitflag")
   {
-    CHECK(fmt::format("{}", enchantum::to_string_bitflag(Flags::Flag0 | Flags::Flag4)) == "Flag0|Flag4");
-    CHECK(fmt::format("{}", enchantum::to_string_bitflag(Flags::Flag0 | Flags::Flag4 | Flags(200))) == "");
-    CHECK(fmt::format("{}", enchantum::to_string_bitflag(enchantum::values_ors<Flags>)) ==
-          "Flag0|Flag1|Flag2|Flag3|Flag4|Flag5|Flag6");
+    CHECK(fmt::format("{}", Flags::Flag0 | Flags::Flag4) == "Flag0|Flag4");
+    CHECK(fmt::format("{}", Flags::Flag0 | Flags::Flag4 | Flags(200)) == "");
+    CHECK(fmt::format("{}", enchantum::values_ors<Flags>) == "Flag0|Flag1|Flag2|Flag3|Flag4|Flag5|Flag6");
   }
 }
