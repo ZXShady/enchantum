@@ -100,7 +100,7 @@ namespace details {
   {
     // constexpr auto f() [with _ = Scoped]
     //return __PRETTY_FUNCTION__;
-#if defined(_WIN32) && _WIN32
+#ifdef _MSC_VER
     constexpr auto funcname = string_view(
       __PRETTY_FUNCTION__ + (sizeof("auto __cdecl enchantum::details::type_name_func(void) [_ = ") - 1));
 #else
@@ -126,7 +126,7 @@ namespace details {
   {
     // constexpr auto f() [with auto _ = (
     //constexpr auto f() [Enum = (Scoped)0]
-#if defined(_WIN32) && _WIN32
+#ifdef _MSC_VER
     string_view s = __PRETTY_FUNCTION__ + (sizeof("auto __cdecl enchantum::details::enum_in_array_name(void) [Enum = ") - 1);
 #else
     string_view s = __PRETTY_FUNCTION__ + (sizeof("auto enchantum::details::enum_in_array_name() [Enum = ") - 1);
@@ -159,7 +159,7 @@ namespace details {
   {
     // "auto enchantum::details::var_name() [Vs = <(A)0, a, b, c, e, d, (A)6>]"
 #define SZC(x) (sizeof(x) - 1)
-#if defined(_WIN32) && _WIN32
+#ifdef _MSC_VER
     constexpr auto funcsig_off = SZC("auto __cdecl enchantum::details::var_name(void) [Vs = <");
 #else
     constexpr auto funcsig_off = SZC("auto enchantum::details::var_name() [Vs = <");
