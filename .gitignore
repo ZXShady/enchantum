@@ -31,3 +31,4 @@ buildClang/
 buildGCC/
 CMakeFiles/
 .vs/
+benchmarks/time.py

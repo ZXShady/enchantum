@@ -18,18 +18,19 @@ TEMPLATE_LIST_TEST_CASE("ostream operator<<", "[ostream]", AllEnumsTestTypes)
       CHECK(oss);
     }
   }
-  SECTION("Invalid enums return empty string")
-  {
-    auto       oss                     = std::ostringstream();
-    const auto output_if_not_contained = [&oss](TestType value) {
-      using T = std::underlying_type_t<TestType>;
-      auto v  = static_cast<TestType>(T(value) + 1);
-      if (!enchantum::contains(v))
-        oss << v;
-      CHECK(oss.str().empty());
-      CHECK(oss);
-    };
-    output_if_not_contained(enchantum::max<TestType>);
-    output_if_not_contained(enchantum::min<TestType>);
-  }
+}
+
+TEST_CASE("ostream operator<< return numbers if invalid enum", "[ostream]")
+{
+  const auto tostringoss = [](auto x) {
+  auto oss = std::ostringstream();
+  oss << x;
+    return std::move(oss).str();
+  };
+
+  CHECK(tostringoss(Color::Red) == "Red");
+  CHECK(tostringoss(Color(300)) == "300");
+  CHECK(tostringoss(Color(-300)) == "-300");
+
+
 }

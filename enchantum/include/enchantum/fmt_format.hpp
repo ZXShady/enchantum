@@ -1,24 +1,15 @@
 #pragma once
 
 #include "bitflags.hpp"
+#include "details/format_util.hpp"
 #include "enchantum.hpp"
 #include <fmt/format.h>
-#include <string_view>
 
 template<enchantum::Enum E>
-struct fmt::formatter<E> {
-  template<typename ParseContext>
-  static constexpr auto parse(ParseContext& ctx)
-  {
-    return ctx.begin();
-  }
-
+struct fmt::formatter<E> : fmt::formatter<string_view> {
   template<typename FmtContext>
-  static auto format(const E e, FmtContext& ctx)
+  constexpr auto format(const E e, FmtContext& ctx) const
   {
-    if constexpr (enchantum::BitFlagEnum<E>)
-      return fmt::format_to(ctx.out(), "{}", enchantum::to_string_bitflag(e));
-    else
-      return fmt::format_to(ctx.out(), "{}", enchantum::to_string(e));
+    return fmt::formatter<string_view>::format(enchantum::details::format(e), ctx);
   }
 };

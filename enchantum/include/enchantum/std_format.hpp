@@ -5,21 +5,13 @@
 
 #include <format>
 #include <string_view>
+#include "details/format_util.hpp"
 
 template<enchantum::Enum E>
-struct std::formatter<E> {
-  template<typename ParseContext>
-  static constexpr auto parse(ParseContext& ctx)
-  {
-    return ctx.begin();
-  }
-
+struct std::formatter<E> : std::formatter<string_view> {
   template<typename FmtContext>
-  static auto format(const E e, FmtContext& ctx)
+  constexpr auto format(const E e, FmtContext& ctx) const
   {
-    if constexpr (enchantum::BitFlagEnum<E>)
-      return std::format_to(ctx.out(), "{}", enchantum::to_string_bitflag(e));
-    else
-      return std::format_to(ctx.out(), "{}", enchantum::to_string(e));
+    return std::formatter<string_view>::format(enchantum::details::format(e), ctx);
   }
 };

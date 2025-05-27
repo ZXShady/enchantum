@@ -13,6 +13,10 @@ TEMPLATE_LIST_TEST_CASE("fmt::format", "[stringify][fmt_format]", AllEnumsTestTy
 {
   for (const auto& [value, string] : enchantum::entries<TestType>)
     CHECK(fmt::format("{}", value) == string);
+
+  if constexpr (!enchantum::is_bitflag<TestType> && !std::is_same_v<bool, std::underlying_type_t<TestType>>)
+    if constexpr (!enchantum::contains<TestType>(123))
+      CHECK("123" == fmt::format("{}", TestType(123)));
 }
 
 
@@ -47,7 +51,7 @@ TEST_CASE("Flags enum fmt::format", "[stringify][fmt_format]")
   SECTION("fmt::format with enchantum::to_string_bitflag")
   {
     CHECK(fmt::format("{}", Flags::Flag0 | Flags::Flag4) == "Flag0|Flag4");
-    CHECK(fmt::format("{}", Flags::Flag0 | Flags::Flag4 | Flags(200)) == "");
+    CHECK(fmt::format("{}", Flags::Flag0 | Flags::Flag4 | Flags(200)) == "217");
     CHECK(fmt::format("{}", enchantum::value_ors<Flags>) == "Flag0|Flag1|Flag2|Flag3|Flag4|Flag5|Flag6");
   }
 }
