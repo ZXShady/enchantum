@@ -29,9 +29,11 @@ jobs:
 
           - { name: MacOS Clang Latest, os: macos-latest, compiler: clang, flags: "-DCMAKE_CXX_COMPILER=clang++" }
 
+          - { name: Ubuntu GCC 11,    os: ubuntu-latest, compiler: gcc, version: 11, flags: "-DCMAKE_CXX_COMPILER=g++" }
           - { name: Ubuntu GCC 12,    os: ubuntu-latest, compiler: gcc, version: 12, flags: "-DCMAKE_CXX_COMPILER=g++" }
           - { name: Ubuntu GCC 13,    os: ubuntu-latest, compiler: gcc, version: 13, flags: "-DCMAKE_CXX_COMPILER=g++" }
           - { name: Ubuntu GCC 14,    os: ubuntu-latest, compiler: gcc, version: 14, flags: "-DCMAKE_CXX_COMPILER=g++" }
+          
           - { name: Ubuntu Clang 16,  os: ubuntu-latest, compiler: clang, version: 16, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           - { name: Ubuntu Clang 17,  os: ubuntu-latest, compiler: clang, version: 17, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           - { name: Ubuntu Clang 18,  os: ubuntu-latest, compiler: clang, version: 18, flags: "-DCMAKE_CXX_COMPILER=clang++" }
