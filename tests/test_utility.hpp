@@ -124,7 +124,6 @@ enum ImGuiFreeTypeBuilderFlags {
   ImGuiFreeTypeBuilderFlags_LoadColor     = 1 << 8,
   ImGuiFreeTypeBuilderFlags_Bitmap        = 1 << 9
 };
-ENCHANTUM_DEFINE_BITWISE_FOR(ImGuiFreeTypeBuilderFlags)
 
 template<>
 struct enchantum::enum_traits<ImGuiFreeTypeBuilderFlags> {
@@ -132,6 +131,9 @@ struct enchantum::enum_traits<ImGuiFreeTypeBuilderFlags> {
   static constexpr auto        min           = ENCHANTUM_MIN_RANGE;
   static constexpr auto        max           = ENCHANTUM_MAX_RANGE;
 };
+template<>
+inline constexpr bool enchantum::is_bitflag<ImGuiFreeTypeBuilderFlags> = true;
+
 namespace {
 
 enum MinMaxValuesCStyle {
@@ -274,8 +276,6 @@ enum UnscopedCStyle {
 };
 
 
-
-
 enum class BoolEnum : bool {
   False,
   True
@@ -299,7 +299,7 @@ using concat = decltype([]<typename... Ts, typename... Us>(type_list<Ts...>, typ
 using AllFlagsTestTypes = type_list<ImGuiFreeTypeBuilderFlags, NonContigFlagsWithNoneCStyle, FlagsWithNone, Flags>;
 using AllEnumsTestTypes = concat<
   AllFlagsTestTypes,
-  type_list<MinMaxValuesCStyle,BlockType, ContigNonZeroStartWith5CStyle, BoolEnumCStyle, ContigNonZeroCStyle, ContigNonZero, MinMaxValues, Color, UnscopedColor, UnscopedCStyle, BoolEnum, Direction2D, Direction3D, Letters>>;
+  type_list<MinMaxValuesCStyle, BlockType, ContigNonZeroStartWith5CStyle, BoolEnumCStyle, ContigNonZeroCStyle, ContigNonZero, MinMaxValues, Color, UnscopedColor, UnscopedCStyle, BoolEnum, Direction2D, Direction3D, Letters>>;
 
 template<enchantum::Enum E>
 struct Catch::StringMaker<E> {

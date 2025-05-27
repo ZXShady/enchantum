@@ -194,14 +194,14 @@ TEMPLATE_LIST_TEST_CASE("bitflags", "[bitflags]", AllFlagsTestTypes)
   combinations.reserve(1u << count);
   constexpr auto total = std::uint64_t{1} << (count - enchantum::has_zero_flag<TestType>);
   for (std::uint64_t mask = 1; mask < total; ++mask) {
-    TestType value{};
+    T value{};
     for (auto bit = std::size_t{enchantum::has_zero_flag<TestType>}; bit < count; ++bit) {
       if (mask & static_cast<std::uint64_t>(values[bit])) {
-        value |= values[bit];
+        value |= static_cast<T>(values[bit]);
       }
     }
     if (static_cast<T>(value) != 0)
-      combinations.push_back(value);
+      combinations.push_back(static_cast<TestType>(value));
   }
   // test for 0
   if (enchantum::has_zero_flag<TestType>)
@@ -271,7 +271,6 @@ TEMPLATE_LIST_TEST_CASE("contains_bitflag returns false for invalid combinations
   if constexpr (enchantum::has_zero_flag<TestType>)
     CHECK(enchantum::contains_bitflag(TestType{}));
 
-  for (const auto comb : invalid_combinations) {
+  for (const auto comb : invalid_combinations)
     CHECK_FALSE(enchantum::contains_bitflag(comb));
-  }
 }

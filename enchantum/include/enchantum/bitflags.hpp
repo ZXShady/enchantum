@@ -20,11 +20,12 @@ namespace enchantum {
 
 
 template<BitFlagEnum E>
-inline constexpr E values_ors = [] {
-  E ret{};
+inline constexpr E value_ors = [] {
+  using T = std::underlying_type_t<E>;
+  T ret{};
   for (const auto val : values<E>)
-    ret |= val;
-  return ret;
+    ret |= static_cast<T>(val);
+  return static_cast<E>(ret);
 }();
 
 
@@ -97,9 +98,9 @@ template<typename String = string, BitFlagEnum E>
   }
   if (check_value == static_cast<T>(value))
     return name;
-  return String{};
+  return String();
 }
- 
+
 template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
 [[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
 {
@@ -107,7 +108,7 @@ template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
   T           check_value{};
   std::size_t pos = 0;
   for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
-    if (const auto v = enchantum::cast<E>(s.substr(pos, i - pos),binary_pred))
+    if (const auto v = enchantum::cast<E>(s.substr(pos, i - pos), binary_pred))
       check_value |= static_cast<T>(*v);
     else
       return optional<E>();
@@ -137,7 +138,7 @@ template<BitFlagEnum E>
 
   T valid_bits{0};
   for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
-    auto v = static_cast<T>(values<E>[i]);
+    const auto v = static_cast<T>(values<E>[i]);
     if ((raw_value & v) == v)
       valid_bits |= v;
   }
