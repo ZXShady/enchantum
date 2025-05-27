@@ -7,9 +7,12 @@ This library just like other libraries uses compiler-specific hacks based on `__
 ## Enum Range
 
 Enum values must be in the range [`ENCHANTUM_MIN_RANGE`,`ENCHANTUM_MAX_RANGE`] 
-By default, `ENCHANTUM_MIN_RANGE` = -256, `ENCHANTUM_MAX_RANGE` = 256. which is twice of that of `magic_enum`'s [`-128`,`127`]
+By default, `ENCHANTUM_MIN_RANGE` = -256, `ENCHANTUM_MAX_RANGE` = 256. 
 
-If you need a different range for all enum types by default, redefine the macro `ENCHANTUM_MAX_RANGE` and if you don't explicitly define `ENCHANTUM_MIN_RANGE` it will be `-ENCHANTUM_MAX_RANGE`. Increasing this value can lead to longer compilation times but unlike `magic_enum` it is not massivly increasing [see benchmarks](../README.md#compile-time-benchmarks).
+If you need a different range for all enum types by default, redefine the macro `ENCHANTUM_MAX_RANGE` and if you don't explicitly define `ENCHANTUM_MIN_RANGE` it will be `-ENCHANTUM_MAX_RANGE`. Increasing this value can lead to longer compilation times but unlike other libraries it is not massivly increasing [see benchmarks](../README.md#compile-time-benchmarks).
+
+
+*Note: Defining the macro values project wide is recommended*
 
 ```cpp
 #define ENCHANTUM_MIN_RANGE 0 // if not defined it will be -512
@@ -23,7 +26,6 @@ If you need a different range for a specific enum type, add the specialization `
 #include <enchantum/enchantum.hpp>
 
 enum class wizards { longbeard = 300, midbeard = 400, redbearded = 600 };
-
 
 template <> 
 struct enchantum::enum_traits<wizards> { // defined in enchantum/common.hpp you only need that header
@@ -64,7 +66,7 @@ struct ReallyClang_QuestionMark {
 enchantum::entries<ReallyClang_QuestionMark<int>::Type>; // some long compiler error
 ```
 
-Apparantly Clang optimizes unused  enum names in templates? I don't know really but a workaround is this (you must atleast mentioning the name of an enumarator once)
+Apparantly Clang optimizes unused  enum names in templates? I don't know really but a workaround is this (you must atleast mention the name of an enumarator once)
 
 ```cpp
 template<typename T>

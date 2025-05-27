@@ -1,6 +1,6 @@
 All the functions/variables are defined in namespace `enchantum`
 
-All functions are `[[nodiscard]]` unless explicitly said otherwise.
+All non-`void` functions are `[[nodiscard]]` unless explicitly said otherwise.
 
 **Note**: Documentation Incomplete.
 
@@ -32,6 +32,8 @@ Quick Reference
 - [std::format/fmt::format](#fmtformat--stdformat-support)
 - [operator<<](#operator-stream-output-operator)
 - [operator>>](#operator-stream-input-operator)
+- [for_each](#for_each)
+- [to_underlying](#to_underlying)
 
 **Constants**:
   - [entries](#entries)
@@ -401,6 +403,7 @@ std::cout << enchantum::to_string_bitflag(static_cast<Flags>(8));
 
 namespace details 
 {
+  template<Enum E>
   struct CAST_FUNCTOR {
   constexpr std::optional<E> operator()(std::underlying_type_t<E> value) noexcept;
 
@@ -412,7 +415,7 @@ namespace details
 }
 
 template<Enum E>
-constexpr inline details::CAST_FUNCTOR cast;
+constexpr inline details::CAST_FUNCTOR<E> cast;
 
 ```
 **Description**:
@@ -512,7 +515,7 @@ std::optional<Permissions> ci = enchantum::cast_bitflag<Permissions>("read|WRITE
     });
   }
 );
-assert(ci.has_value() && (*ci == (Permissions::Read | Permissions::Write)));
+assert(ci == (Permissions::Read | Permissions::Write));
 
 assert(enchantum::cast_bitflag(Permissions::Read | Permissions::Execute).has_value());
 
@@ -631,7 +634,7 @@ inline constexpr std::array<Pair,count<E>> entries;
 
   `E`: enum to generate value-string entries for.
   
-  `Pair`: pair type used default to `std::pair`
+  `Pair`: pair type used default to `std::pair<E,std::string_view>`
 
   `NullTerminated` determines whether the strings should point to null terminated character arrays `true` by default but can be disabled if not needed (to save static memory) via setting of this flag to `false`.
 
@@ -664,9 +667,8 @@ constexpr std::array<E,count<E>> values;
 ```cpp
 enum class Color { Red, Green, Blue };
 
-for (auto value : enchantum::values<Color>) {
+for (auto value : enchantum::values<Color>)
     std::cout << static_cast<int>(value) << std::endl;
-}
 // Outputs: 0, 1, 2 (Red, Green, Blue)
 ```
 
@@ -688,17 +690,16 @@ inline constexpr std::array<String,count<E>> names;
 
   `E`: enum to generate value-string entries for.
   
-  `Pair`: pair type used default to `std::pair`
+  `String`: string type used default to `std::string_view` it is required to be constexpr constructible.
 
   `NullTerminated` determines whether the strings should point to null terminated character arrays `true` by default but can be disabled if not needed (to save static memory) via setting of this flag to `false`.
 
-- **Example**:
+**Example**:
 
 ```cpp
 enum class Color { Red, Green, Blue };
-for (auto name : enchantum::names<Color>) {
+for (auto name : enchantum::names<Color>)
     std::cout << name << std::endl;
-}
 // Outputs: "Red", "Green", "Blue"
 ```
 
@@ -756,8 +757,8 @@ constexpr bool contains_bitflag(std::underlying_type_t<E> value) noexcept;
 template<BitFlagEnum E>
 constexpr bool contains_bitflag(std::string_view name,char sep = '|') noexcept;
 
-template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
-constexpr bool contains_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept;
+template<BitFlagEnum E, std::predicate<std::string_view, std::string_view> BinaryPred>
+constexpr bool contains_bitflag(std::string_view s, char sep, BinaryPred binary_pred) noexcept;
 
 ```
 
@@ -774,9 +775,6 @@ value: The value to check. It should be a valid instance of the BitFlagEnum type
 true if the value contains only valid flags (i.e., if all set bits are valid bit flags).
 false otherwise.
 
-Template Parameters:
-
-    E: The BitFlagEnum type being checked.
 - **Example**:
 ```cpp
 #include <enchantum/enchantum.hpp>
@@ -851,7 +849,7 @@ namespace details
 }
 
 template<Enum E>
-constexpr inline details::ENUM_TO_INDEX_FUNCTOR enum_to_index;
+constexpr inline details::ENUM_TO_INDEX_FUNCTOR<E> enum_to_index;
 
 ```
 
@@ -887,9 +885,9 @@ namespace details {
 constexpr std::optional<E> operator()(E value, std::ptrdiff_t n = 1) noexcept;
 
     };
-      struct NEXT_VALUE_CIRCULAR_FUNCTOR {
-    template<Enum E>
-constexpr std::optional<E> operator()(E value, std::ptrdiff_t n = 1) noexcept;
+    struct NEXT_VALUE_CIRCULAR_FUNCTOR {
+       template<Enum E>
+       constexpr std::optional<E> operator()(E value, std::ptrdiff_t n = 1) noexcept;
     };
 }
 
@@ -956,8 +954,8 @@ std::cout << "Circular previous value: " << static_cast<int>(prevCircular) << st
 template<Enum E>
 inline constexpr bool is_bitflag =  
 (
-    requires(E e) { { e & e } -> std::same_as<E>; } ||
-    requires(E e) { { e & e } -> std::same_as<bool>; }
+       requires(E e) { { e & e } -> std::same_as<E>; }
+    || requires(E e) { { e & e } -> std::same_as<bool>; }
 ) &&
 requires(E e) {
     { ~e } -> std::same_as<E>;
@@ -1003,6 +1001,8 @@ The `operator<<` and `operator>>` are provided in the `enchantum` library to ena
 
 There is also the convienence header `iostream.hpp` which includes both of them and has a new nested namespace that contains the istream operators and ostream operators
 
+They are not `[[nodiscard]]`.
+
 ## `operator<<` (Stream Output Operator)
 
 ```cpp
@@ -1040,19 +1040,53 @@ There is headers for them. that provide `std::formatter`/`fmt::formatter` for al
 `fmt_format.hpp`/`std_format.hpp`
 
 ```cpp
-#include <format> // or fmt
-#include <enchantum/std_format.hpp> // or fmt
+#include <format> // or <fmt/format.h>
+#include <enchantum/std_format.hpp> // or fmt_format.hpp
 
 enum class Letters {a,b,c,e,d};
 std::cout << std::format("{} then {} then {}",Letters::a,Letters::b,Letters::c); // a then b then c
 ```
 
+### for_each
+
+```cpp
+template <Enum E, typename Function>
+constexpr void for_each(Function function) /*noexcept when possible*/;
+```
+
+**Example**:
+
+```cpp
+#include <enchantum/algorithms.hpp>
+enum class Numbers {
+  _0,_1,_2,_3,_4,_5
+}
+std::underlying_type_t<Numbers> sum{};
+enchantum::for_each<Color>([&sum](auto constant) {
+  constexpr std::underlying_type_t<Numbers> v = enchantum::to_underlying(constant.value); // constant is `std::integral_constant`
+  sum += v;
+});
+```
+
+### to_underlying
+
+Same as [std::to_underlying](https://en.cppreference.com/w/cpp/utility/to_underlying) just ported to backward versions.
+
+```cpp
+template <Enum E>
+constexpr std::underlying_type_t<E> to_underlying(E e) noexcept;
+```
+
+Defined in header `entries.hpp` which is included everywhere.
+
 ### array
 
 ```cpp
 // defined in header `array.hpp`
-template <Enum E, typename V>
-class array : public std::array<V,count<E>> {
+template <Enum E, typename T>
+class array : public std::array<T,count<E>> {
+private:
+  using base = std::array<T,count<E>>;
 public:
   using index_type = E;
   using typename base::const_iterator;
@@ -1066,8 +1100,8 @@ public:
   using typename base::reverse_iterator;
   using typename base::size_type;
   using typename base::value_type;
-  using std::array<V,count<E>>::at;
-  using std::array<V,count<E>>::operator[];
+  using base::at;
+  using base::operator[];
 
   constexpr reference at(E pos);
   constexpr const_reference at(E pos) const;
@@ -1076,7 +1110,7 @@ public:
 }
 ```
 
-> **Examples**
+**Example**
 ```cpp
 #include <enchantum/array.hpp>
 #include <enchantum/enchantum.hpp>
@@ -1095,24 +1129,24 @@ std::cout << values.at(Color::Blue) << '\n';  // Outputs: 42
 
 ### ENCHANTUM_DEFINE_BITWISE_FOR
 
-
 - **Description**: 
 Overloads the bitwise operators for a given enum.
 
+`~`,`&`,`|`,`^`,`&=`,`|=`,`^=`
 ```cpp
 // defined in header `bitwise_operators.hpp`
 #define ENCHANTUM_DEFINE_BITWISE_FOR(Enum)                                                \
-  constexpr Enum operator&(Enum a, Enum b) noexcept                         \
+  constexpr Enum operator&(Enum a, Enum b) noexcept                                       \
   {                                                                                       \
     using T = std::underlying_type_t<Enum>;                                               \
     return static_cast<Enum>(static_cast<T>(a) & static_cast<T>(b));                      \
   }                                                                                       \
-  constexpr Enum operator|(Enum a, Enum b) noexcept                         \
+  constexpr Enum operator|(Enum a, Enum b) noexcept                                       \
   {                                                                                       \
     using T = std::underlying_type_t<Enum>;                                               \
     return static_cast<Enum>(static_cast<T>(a) | static_cast<T>(b));                      \
   }                                                                                       \
-  constexpr Enum operator^(Enum a, Enum b) noexcept                         \
+  constexpr Enum operator^(Enum a, Enum b) noexcept                                       \
   {                                                                                       \
     using T = std::underlying_type_t<Enum>;                                               \
     return static_cast<Enum>(static_cast<T>(a) ^ static_cast<T>(b));                      \
@@ -1120,7 +1154,7 @@ Overloads the bitwise operators for a given enum.
   constexpr Enum&              operator&=(Enum& a, Enum b) noexcept { return a = a & b; } \
   constexpr Enum&              operator|=(Enum& a, Enum b) noexcept { return a = a | b; } \
   constexpr Enum&              operator^=(Enum& a, Enum b) noexcept { return a = a ^ b; } \
-  constexpr Enum operator~(Enum a) noexcept                                 \
+  constexpr Enum operator~(Enum a) noexcept                                               \
   {                                                                                       \
     return static_cast<Enum>(~static_cast<std::underlying_type_t<Enum>>(a));              \
   }
