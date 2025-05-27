@@ -27,8 +27,22 @@ template<Enum E>
 #endif
 
 template<Enum E, typename Pair = std::pair<E, string_view>, bool ShouldNullTerminate = true>
-inline constexpr auto entries = details::reflect<std::remove_cv_t<E>, Pair, ShouldNullTerminate>();
-
+inline constexpr auto entries = []() {
+  if constexpr (std::is_same_v<Pair, std::pair<E, string_view>>) {
+    return details::reflect<std::remove_cv_t<E>, ShouldNullTerminate>();
+  }
+  else {
+    constexpr auto             s = details::reflect<std::remove_cv_t<E>, ShouldNullTerminate>();
+    std::array<Pair, s.size()> ret;
+    for (std::size_t i = 0; i < ret.size(); ++i) {
+      auto& [e, v]     = ret[i];
+      const auto& sobj = s[i];
+      e                = sobj.first;
+      v                = {sobj.second.data(), sobj.second.size()};
+    }
+    return ret;
+  }
+}();
 template<Enum E>
 inline constexpr auto values = []() {
   constexpr auto&             enums = entries<E>;

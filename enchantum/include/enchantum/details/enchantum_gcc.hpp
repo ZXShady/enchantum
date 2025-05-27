@@ -96,11 +96,13 @@ namespace details {
   template<auto Copy>
   inline constexpr auto static_storage_for = Copy;
 
-  template<typename E, typename Pair, bool ShouldNullTerminate>
+  template<typename E, bool ShouldNullTerminate>
   constexpr auto reflect() noexcept
   {
-    constexpr auto Min      = enum_traits<E>::min;
-    constexpr auto Max      = enum_traits<E>::max;
+    using Pair = std::pair<E, string_view>;
+
+    constexpr auto Min = enum_traits<E>::min;
+    constexpr auto Max = enum_traits<E>::max;
 
     constexpr auto elements = []() {
       constexpr auto length_of_enum_in_template_array_casting = details::length_of_enum_in_template_array_if_casting<E>();
@@ -152,8 +154,9 @@ namespace details {
     constexpr auto strings = [elements]() {
       std::array<char, elements.total_string_length> strings;
       for (std::size_t _i = 0, index = 0; _i < elements.valid_count; ++_i) {
-        const auto& [_, s] = elements.pairs[_i];
-        for (std::size_t i = 0; i < s.size(); ++i)
+        const auto        size = elements.pairs[_i].second.size();
+        const auto* const s    = elements.pairs[_i].second.data();
+        for (std::size_t i = 0; i < size; ++i)
           strings[index++] = s[i];
 
         if constexpr (ShouldNullTerminate)
