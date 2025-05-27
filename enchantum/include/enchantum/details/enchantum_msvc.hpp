@@ -78,10 +78,9 @@ namespace details {
   template<auto Copy>
   inline constexpr auto static_storage_for = Copy;
 
-  template<typename E, auto Array, bool ShouldNullTerminate>
+  template<typename E, typename Pair, auto Array, bool ShouldNullTerminate>
   constexpr auto get_elements()
   {
-    using Pair                   = std::pair<E, std::string_view>;
     constexpr auto type_name_len = details::type_name_func_size<E>();
 
     auto str = var_name<Array>();
@@ -122,23 +121,20 @@ namespace details {
     return ret;
   }
 
-  template<typename E, bool ShouldNullTerminate>
+  template<typename E, typename Pair, bool ShouldNullTerminate>
   constexpr auto reflect() noexcept
   {
-    using Pair         = std::pair<E, string_view>;
     constexpr auto Min = enum_traits<E>::min;
     constexpr auto Max = enum_traits<E>::max;
 
-    constexpr auto elements = details::get_elements<E, details::generate_arrays<E, Min, Max>(), ShouldNullTerminate>();
+    constexpr auto elements = details::get_elements<E, Pair, details::generate_arrays<E, Min, Max>(), ShouldNullTerminate>();
 
     constexpr auto strings = [elements]() {
       std::array<char, elements.total_string_length> strings;
-      for (std::size_t i = 0, index = 0; i < elements.valid_count; ++i) {
-        const auto size = elements.pairs[i].second.size();
-        const auto* const s = elements.pairs[i].second.data();
-
-        for (std::size_t j = 0; j < size; ++j)
-          strings[index++] = s[j];
+      for (std::size_t _i = 0, index = 0; _i < elements.valid_count; ++_i) {
+        const auto& [_, s] = elements.pairs[_i];
+        for (std::size_t i = 0; i < s.size(); ++i)
+          strings[index++] = s[i];
 
         if constexpr (ShouldNullTerminate)
           strings[index++] = '\0';
