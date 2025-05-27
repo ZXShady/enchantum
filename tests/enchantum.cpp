@@ -127,6 +127,10 @@ TEST_CASE("Color enum index_to_enum", "[index_to_enum]")
 }
 TEST_CASE("Color count", "[count]")
 {
+  STATIC_CHECK(enchantum::count<UnderlyingTypeWChar_t> == 10);
+  STATIC_CHECK(enchantum::count<UnderlyingTypeChar16_t> == 10);
+  STATIC_CHECK(enchantum::count<UnderlyingTypeChar32_t> == 10);
+
   STATIC_CHECK(enchantum::count<Color> == 5);
   STATIC_CHECK(enchantum::count<MinMaxValues> == 2);
   STATIC_CHECK(enchantum::count<Letters> == 26);

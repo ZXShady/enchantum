@@ -186,6 +186,56 @@ enum ContigNonZeroStartWith5CStyle {
   ContigNonZeroStartWith5CStyle_9,
 };
 
+enum class UnderlyingTypeWChar_t : wchar_t {
+  _0,
+  _1,
+  _2,
+  _3,
+  _4,
+  _5,
+  _6,
+  _7,
+  _8,
+  _9,
+};
+enum class UnderlyingTypeChar16_t : char16_t {
+  _0,
+  _1,
+  _2,
+  _3,
+  _4,
+  _5,
+  _6,
+  _7,
+  _8,
+  _9,
+};
+enum class UnderlyingTypeChar32_t : char32_t {
+  _0,
+  _1,
+  _2,
+  _3,
+  _4,
+  _5,
+  _6,
+  _7,
+  _8,
+  _9,
+};
+#ifdef __cpp_char8_t
+enum class UnderlyingTypeChar8_t : char8_t {
+  _0,
+  _1,
+  _2,
+  _3,
+  _4,
+  _5,
+  _6,
+  _7,
+  _8,
+  _9,
+};
+#endif
 enum class Letters {
   a,
   b,
@@ -299,7 +349,28 @@ using concat = decltype([]<typename... Ts, typename... Us>(type_list<Ts...>, typ
 using AllFlagsTestTypes = type_list<ImGuiFreeTypeBuilderFlags, NonContigFlagsWithNoneCStyle, FlagsWithNone, Flags>;
 using AllEnumsTestTypes = concat<
   AllFlagsTestTypes,
-  type_list<MinMaxValuesCStyle, BlockType, ContigNonZeroStartWith5CStyle, BoolEnumCStyle, ContigNonZeroCStyle, ContigNonZero, MinMaxValues, Color, UnscopedColor, UnscopedCStyle, BoolEnum, Direction2D, Direction3D, Letters>>;
+  type_list<
+#ifdef __cpp_char8_t
+    UnderlyingTypeChar8_t,
+#endif
+    UnderlyingTypeChar16_t,
+    UnderlyingTypeChar32_t,
+    UnderlyingTypeWChar_t,
+
+    MinMaxValuesCStyle,
+    BlockType,
+    ContigNonZeroStartWith5CStyle,
+    BoolEnumCStyle,
+    ContigNonZeroCStyle,
+    ContigNonZero,
+    MinMaxValues,
+    Color,
+    UnscopedColor,
+    UnscopedCStyle,
+    BoolEnum,
+    Direction2D,
+    Direction3D,
+    Letters>>;
 
 template<enchantum::Enum E>
 struct Catch::StringMaker<E> {
