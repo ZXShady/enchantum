@@ -44,7 +44,7 @@ TEST_CASE("Flags enum std::format", "[stringify][std_format]")
   {
     CHECK(std::format("{}", Flags::Flag0 | Flags::Flag4) == "Flag0|Flag4");
     CHECK(std::format("{}", Flags::Flag0 | Flags::Flag4 | Flags(200)) == "");
-    CHECK(std::format("{}", enchantum::values_ors<Flags>) ==
+    CHECK(std::format("{}", enchantum::value_ors<Flags>) ==
           "Flag0|Flag1|Flag2|Flag3|Flag4|Flag5|Flag6");
   }
 }
