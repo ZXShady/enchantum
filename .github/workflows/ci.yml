@@ -20,12 +20,14 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          - { name: Windows MSVC, os: windows-latest, compiler: msvc, flags: "" }
-          #- { name: Windows Clang 16, os: windows-latest, compiler: clang, version: 16.0.0, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          #- { name: Windows Clang 17, os: windows-latest, compiler: clang, version: 17.0.1, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          #- { name: Windows Clang 18, os: windows-latest, compiler: clang, version: 18, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          #- { name: Windows Clang 19, os: windows-latest, compiler: clang, version: 19, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Windows Clang 20, os: windows-latest, compiler: clang, version: 20.1.2, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          - { name: Windows MSVC 2022, os: windows-2022, compiler: msvc,flags: "" }
+
+          # MSVC STL requires Clang >= 18, I am unsure how to install libc++ without a ton of commands.
+          #- { name: Windows Clang 16, os: windows-latest, compiler: clang, version: 16.0.0, flags: "-DCMAKE_CXX_FLAGS=-stdlib=libc++ -DCMAKE_CXX_COMPILER=clang++" }
+          #- { name: Windows Clang 17, os: windows-latest, compiler: clang, version: 17.0.1, flags: "-DCMAKE_CXX_FLAGS=-stdlib=libc++ -DCMAKE_CXX_COMPILER=clang++" }
+          - { name: Windows Clang 18, os: windows-latest, compiler: clang, version: 18.1.0, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          - { name: Windows Clang 19, os: windows-latest, compiler: clang, version: 19.1.0, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          - { name: Windows Clang 20, os: windows-latest, compiler: clang, version: 20.1.0, flags: "-DCMAKE_CXX_COMPILER=clang++" }
 
           - { name: MacOS Clang Latest, os: macos-latest, compiler: clang, flags: "-DCMAKE_CXX_COMPILER=clang++" }
 
@@ -54,8 +56,14 @@ jobs:
         if: runner.os == 'Windows' && matrix.platform.compiler == 'msvc'
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Setup Clang
-        if: runner.os != 'macos' && matrix.platform.compiler == 'clang'
+      - name: Setup Clang (Windows)
+        if: runner.os == 'Windows' && matrix.platform.compiler == 'clang'
+        run: |
+          choco install -y llvm --version=${{ matrix.platform.version }} --force
+          echo "C:\\Program Files\\LLVM\\bin" >> $GITHUB_PATH
+
+      - name: Setup Clang (Linux)
+        if: runner.os == 'Linux' && matrix.platform.compiler == 'clang'
         uses: egor-tensin/setup-clang@v1
         with:
           version: ${{ matrix.platform.version }}
