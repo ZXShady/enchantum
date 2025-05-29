@@ -46,6 +46,7 @@ Quick Reference
 
 **Containers**:
   - [array](#array)
+  - [bitset](#bitset)
 
 **Macros**:
   - [ENCHANTUM_DEFINE_BITWISE_FOR](#enchantum_define_bitwise_for)
@@ -814,7 +815,7 @@ namespace details
 }
 
 template<Enum E>
-constexpr inline details::INDEX_TO_ENUM_FUNCTOR index_to_enum;
+constexpr inline details::INDEX_TO_ENUM_FUNCTOR<E> index_to_enum;
 ```
 
 - **Description**:  
@@ -848,8 +849,7 @@ namespace details
   };
 }
 
-template<Enum E>
-constexpr inline details::ENUM_TO_INDEX_FUNCTOR<E> enum_to_index;
+constexpr inline details::ENUM_TO_INDEX_FUNCTOR enum_to_index;
 
 ```
 
@@ -882,12 +882,11 @@ namespace details {
 
   struct NEXT_VALUE_FUNCTOR {
     template<Enum E>
-constexpr std::optional<E> operator()(E value, std::ptrdiff_t n = 1) noexcept;
-
+    constexpr std::optional<E> operator()(E value, std::ptrdiff_t n = 1) noexcept;
     };
     struct NEXT_VALUE_CIRCULAR_FUNCTOR {
        template<Enum E>
-       constexpr std::optional<E> operator()(E value, std::ptrdiff_t n = 1) noexcept;
+       constexpr E operator()(E value, std::ptrdiff_t n = 1) noexcept;
     };
 }
 
@@ -1127,12 +1126,69 @@ values[Color::Blue] = 42;
 std::cout << values.at(Color::Blue) << '\n';  // Outputs: 42
 ```
 
+
+### bitset
+
+```cpp
+// defined in header `bitset.hpp`
+template<Enum E>
+class bitset : public std::bitset<count<E>> {
+private:
+  using base = std::bitset<count<E>>;
+public:
+  using typename base::reference;
+
+  using base::operator[];
+  using base::flip;
+  using base::reset;
+  using base::set;
+  using base::test;
+
+  using base::base;
+  using base::operator=;
+
+  [[nodiscard]] constexpr string to_string(const char sep = '|') const;
+
+  [[nodiscard]] constexpr auto to_string(const char zero,const char one) const;
+
+  constexpr bitset(const std::initializer_list<E> values) noexcept;
+
+  [[nodiscard]] constexpr reference operator[](const E index) noexcept;
+  [[nodiscard]] constexpr bool operator[](const E index) const noexcept;
+  constexpr bool test(const E pos);
+  constexpr bitset& set(const E pos, bool value = true);
+  constexpr bitset& reset(const E pos);
+  constexpr bitset& flip(const E pos);
+};
+
+} // namespace enchantum
+
+
+template<typename E>
+struct std::hash<enchantum::bitset<E>> : std::hash<std::bitset<enchantum::count<E>>> {
+  using std::hash<std::bitset<enchantum::count<E>>>::operator();
+};
+```
+
+**Example**
+```cpp
+#include <enchantum/enchantum.hpp>
+#include <enchantum/bitset.hpp>
+
+enum class Color { Red, Green, Blue };
+enchantum::bitset<Color> bitset{Color::Red,Color::Green}
+
+std::cout << bitset[Color::Green] << '\n';  // Outputs: 1 
+values[Color::Green] = false;
+std::cout << values.test(Color::Green) << '\n';  // Outputs: 0
+std::cout << values.count() << '\n';  // Outputs: 2 (2 bits are set)
+
+```
+
 ### ENCHANTUM_DEFINE_BITWISE_FOR
 
 - **Description**: 
-Overloads the bitwise operators for a given enum.
-
-`~`,`&`,`|`,`^`,`&=`,`|=`,`^=`
+Overloads the bitwise operators for a given enum. `~`,`&`,`|`,`^`,`&=`,`|=`,`^=`
 ```cpp
 // defined in header `bitwise_operators.hpp`
 #define ENCHANTUM_DEFINE_BITWISE_FOR(Enum)                                                \
