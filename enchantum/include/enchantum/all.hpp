@@ -11,6 +11,7 @@
 #include "entries.hpp"
 #include "iostream.hpp"
 #include "next_value.hpp"
+#include "bitset.hpp"
 
 #if __has_include(<fmt/format.h>)
   #include "fmt_format.hpp"

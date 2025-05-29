@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef ENCHANTUM_CONFIG_FILE
+  #include ENCHANTUM_CONFIG_FILE
+#endif
+
 #ifndef ENCHANTUM_ALIAS_OPTIONAL
   #include <optional>
 #endif
@@ -12,6 +16,10 @@ using ::std::optional;
 #endif
 
 } // namespace enchantum
+
+#ifdef ENCHANTUM_CONFIG_FILE
+  #include ENCHANTUM_CONFIG_FILE
+#endif
 
 #ifndef ENCHANTUM_ALIAS_STRING_VIEW
   #include <string_view>
@@ -1155,11 +1163,12 @@ using ::std::string;
 namespace enchantum {
 
 template<BitFlagEnum E>
-inline constexpr E values_ors = [] {
-  E ret{};
+inline constexpr E value_ors = [] {
+  using T = std::underlying_type_t<E>;
+  T ret{};
   for (const auto val : values<E>)
-    ret |= val;
-  return ret;
+    ret |= static_cast<T>(val);
+  return static_cast<E>(ret);
 }();
 
 template<BitFlagEnum E>
@@ -1229,9 +1238,9 @@ template<typename String = string, BitFlagEnum E>
   }
   if (check_value == static_cast<T>(value))
     return name;
-  return String{};
+  return String();
 }
- 
+
 template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
 [[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
 {
@@ -1239,7 +1248,7 @@ template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
   T           check_value{};
   std::size_t pos = 0;
   for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
-    if (const auto v = enchantum::cast<E>(s.substr(pos, i - pos),binary_pred))
+    if (const auto v = enchantum::cast<E>(s.substr(pos, i - pos), binary_pred))
       check_value |= static_cast<T>(*v);
     else
       return optional<E>();
@@ -1269,7 +1278,7 @@ template<BitFlagEnum E>
 
   T valid_bits{0};
   for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
-    auto v = static_cast<T>(values<E>[i]);
+    const auto v = static_cast<T>(values<E>[i]);
     if ((raw_value & v) == v)
       valid_bits |= v;
   }
@@ -1368,13 +1377,13 @@ constexpr E& operator^=(E& a, E b) noexcept
     return static_cast<Enum>(~static_cast<std::underlying_type_t<Enum>>(a));              \
   }
 
+#include <concepts>
 #include <iosfwd>
 #include <string>
-#include <concepts>
 
 namespace enchantum::istream_operators {
 template<typename Traits, Enum E>
-  requires std::assignable_from<E&,E>
+  requires std::assignable_from<E&, E>
 std::basic_istream<char, Traits>& operator>>(std::basic_istream<char, Traits>& is, E& value)
 {
   std::basic_string<char, Traits> s;
@@ -1382,10 +1391,18 @@ std::basic_istream<char, Traits>& operator>>(std::basic_istream<char, Traits>& i
   if (!is)
     return is;
 
-  if (const auto v = enchantum::cast<E>(s))
-    value = *v;
-  else
-    is.setstate(std::ios_base::failbit);
+  if constexpr (is_bitflag<E>) {
+    if (const auto v = enchantum::cast_bitflag<E>(s))
+      value = *v;
+    else
+      is.setstate(std::ios_base::failbit);
+  }
+  else {
+    if (const auto v = enchantum::cast<E>(s))
+      value = *v;
+    else
+      is.setstate(std::ios_base::failbit);
+  }
   return is;
 }
 
@@ -1394,11 +1411,31 @@ std::basic_istream<char, Traits>& operator>>(std::basic_istream<char, Traits>& i
 #include <iosfwd>
 #include <string_view>
 
+#include <string>
+
+namespace enchantum {
+namespace details {
+  template<Enum E>
+  std::string format(E e) noexcept
+  {
+    if constexpr (is_bitflag<E>) {
+      if (const auto name = enchantum::to_string_bitflag(e); !name.empty())
+        return std::string(name.data(), name.size());
+    }
+    else {
+      if (const auto name = enchantum::to_string(e); !name.empty())
+        return std::string(name.data(), name.size());
+    }
+    return std::to_string(+enchantum::to_underlying(e)); // promote using + to select int overload if to underlying returns char
+  }
+} // namespace details
+} // namespace enchantum
+
 namespace enchantum::ostream_operators {
 template<typename Traits, Enum E>
-std::basic_ostream<char, Traits>& operator<<(std::basic_ostream<char, Traits>& os, const E value)
+std::basic_ostream<char, Traits>& operator<<(std::basic_ostream<char, Traits>& os, const E e)
 {
-  return os << enchantum::to_string(value);
+  return os << details::format(e);
 }
 } // namespace enchantum::ostream_operators
 
@@ -1446,27 +1483,143 @@ inline constexpr details::next_value_circular_functor<-1> prev_value_circular{};
 
 } // namespace enchantum
 
+#ifndef ENCHANTUM_ALIAS_BITSET
+  #include <bitset>
+#endif
+
+#include <stdexcept>
+
+namespace enchantum {
+
+namespace details {
+#ifndef ENCHANTUM_ALIAS_BITSET
+  using ::std::bitset;
+#else
+  ENCHANTUM_ALIAS_BITSET;
+#endif
+} // namespace details
+
+template<Enum E>
+class bitset : public details::bitset<count<E>> {
+private:
+  using base = details::bitset<count<E>>;
+public:
+  using typename base::reference;
+
+  using base::operator[];
+  using base::flip;
+  using base::reset;
+  using base::set;
+  using base::test;
+
+  using base::base;
+  using base::operator=;
+
+  [[nodiscard]] constexpr string to_string(const char sep = '|') const
+  {
+    string name;
+    for (std::size_t i = 0; i < enchantum::count<E>; ++i) {
+      if (test(i)) {
+        const auto s = enchantum::names<E>[i];
+        if (!name.empty())
+          name += sep;
+        name.append(s.data(), s.size()); // not using operator += since this may not be std::string_view always
+      }
+    }
+    return name;
+  }
+
+  [[nodiscard]] constexpr auto to_string(const char zero,const char one) const
+  {
+    return base::to_string(zero,one);
+  }
+
+  constexpr bitset(const std::initializer_list<E> values) noexcept
+  {
+    for (auto value : values) {
+      set(value, true);
+    }
+  }
+
+  [[nodiscard]] constexpr reference operator[](const E index) noexcept
+  {
+    return operator[](*enchantum::enum_to_index(index));
+  }
+
+  [[nodiscard]] constexpr bool operator[](const E index) const noexcept
+  {
+    return operator[](*enchantum::enum_to_index(index));
+  }
+
+  constexpr bool test(const E pos)
+  {
+
+    if (const auto i = enchantum::enum_to_index(pos))
+      return test(*i);
+    ENCHANTUM_THROW(std::out_of_range("enchantum::bitset::test(E pos,bool value) out of range exception"), pos);
+  }
+
+  constexpr bitset& set(const E pos, bool value = true)
+  {
+
+    if (const auto i = enchantum::enum_to_index(pos))
+      return static_cast<bitset&>(set(*i, value));
+    ENCHANTUM_THROW(std::out_of_range("enchantum::bitset::set(E pos,bool value) out of range exception"), pos);
+  }
+
+  constexpr bitset& reset(const E pos)
+  {
+    if (const auto i = enchantum::enum_to_index(pos))
+      return static_cast<bitset&>(reset(*i));
+    ENCHANTUM_THROW(std::out_of_range("enchantum::bitset::reset(E pos) out of range exception"), pos);
+  }
+
+  constexpr bitset& flip(const E pos)
+  {
+    if (const auto i = enchantum::enum_to_index(pos))
+      return static_cast<bitset&>(flip(*i));
+    ENCHANTUM_THROW(std::out_of_range("enchantum::bitset::flip(E pos) out of range exception"), pos);
+  }
+};
+
+} // namespace enchantum
+
+template<typename E>
+struct std::hash<enchantum::bitset<E>> : std::hash<enchantum::details::bitset<enchantum::count<E>>> {
+  using std::hash<enchantum::details::bitset<enchantum::count<E>>>::operator();
+};
+
 #if __has_include(<fmt/format.h>)
   
 
+#include <string>
+
+namespace enchantum {
+namespace details {
+  template<Enum E>
+  std::string format(E e) noexcept
+  {
+    if constexpr (is_bitflag<E>) {
+      if (const auto name = enchantum::to_string_bitflag(e); !name.empty())
+        return std::string(name.data(), name.size());
+    }
+    else {
+      if (const auto name = enchantum::to_string(e); !name.empty())
+        return std::string(name.data(), name.size());
+    }
+    return std::to_string(+enchantum::to_underlying(e)); // promote using + to select int overload if to underlying returns char
+  }
+} // namespace details
+} // namespace enchantum
+
 #include <fmt/format.h>
-#include <string_view>
 
 template<enchantum::Enum E>
-struct fmt::formatter<E> {
-  template<typename ParseContext>
-  static constexpr auto parse(ParseContext& ctx)
-  {
-    return ctx.begin();
-  }
-
+struct fmt::formatter<E> : fmt::formatter<string_view> {
   template<typename FmtContext>
-  static auto format(const E e, FmtContext& ctx)
+  constexpr auto format(const E e, FmtContext& ctx) const
   {
-    if constexpr (enchantum::BitFlagEnum<E>)
-      return fmt::format_to(ctx.out(), "{}", enchantum::to_string_bitflag(e));
-    else
-      return fmt::format_to(ctx.out(), "{}", enchantum::to_string(e));
+    return fmt::formatter<string_view>::format(enchantum::details::format(e), ctx);
   }
 };
 #elif __has_include(<format>)
@@ -1475,21 +1628,32 @@ struct fmt::formatter<E> {
 #include <format>
 #include <string_view>
 
-template<enchantum::Enum E>
-struct std::formatter<E> {
-  template<typename ParseContext>
-  static constexpr auto parse(ParseContext& ctx)
-  {
-    return ctx.begin();
-  }
+#include <string>
 
-  template<typename FmtContext>
-  static auto format(const E e, FmtContext& ctx)
+namespace enchantum {
+namespace details {
+  template<Enum E>
+  std::string format(E e) noexcept
   {
-    if constexpr (enchantum::BitFlagEnum<E>)
-      return std::format_to(ctx.out(), "{}", enchantum::to_string_bitflag(e));
-    else
-      return std::format_to(ctx.out(), "{}", enchantum::to_string(e));
+    if constexpr (is_bitflag<E>) {
+      if (const auto name = enchantum::to_string_bitflag(e); !name.empty())
+        return std::string(name.data(), name.size());
+    }
+    else {
+      if (const auto name = enchantum::to_string(e); !name.empty())
+        return std::string(name.data(), name.size());
+    }
+    return std::to_string(+enchantum::to_underlying(e)); // promote using + to select int overload if to underlying returns char
+  }
+} // namespace details
+} // namespace enchantum
+
+template<enchantum::Enum E>
+struct std::formatter<E> : std::formatter<string_view> {
+  template<typename FmtContext>
+  constexpr auto format(const E e, FmtContext& ctx) const
+  {
+    return std::formatter<string_view>::format(enchantum::details::format(e), ctx);
   }
 };
 #endif
