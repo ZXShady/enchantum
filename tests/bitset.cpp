@@ -1,21 +1,46 @@
 #include "test_utility.hpp"
+#include <algorithm>
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <enchantum/bitset.hpp>
-#include <algorithm>
 
 TEMPLATE_LIST_TEST_CASE("bitset identities", "[bitset]", AllEnumsTestTypes)
 {
   enchantum::bitset<TestType> bitset;
 
-  SECTION("set reset test")
+  SECTION("set and reset")
   {
     for (const auto value : enchantum::values<TestType>) {
+      REQUIRE_FALSE(bitset.test(value));
       bitset.set(value);
       REQUIRE(bitset.test(value));
       bitset.reset(value);
       REQUIRE_FALSE(bitset.test(value));
     }
+  }
+
+  SECTION("flip")
+  {
+    for (const auto value : enchantum::values<TestType>) {
+      bitset.flip(value);
+      REQUIRE(bitset.test(value));
+      bitset.flip(value);
+      REQUIRE_FALSE(bitset.test(value));
+    }
+  }
+
+  SECTION("operator[]")
+  {
+    for (const auto value : enchantum::values<TestType>) {
+      bitset[value] = true;
+      REQUIRE(bitset.test(value));
+      bitset[value] = false;
+      REQUIRE_FALSE(bitset.test(value));
+    }
+
+    const auto& cbitset = bitset;
+    for (std::size_t i = 0; i < cbitset.size(); ++i)
+      REQUIRE_FALSE(cbitset[i]);
   }
 
   SECTION("count")
@@ -24,7 +49,6 @@ TEMPLATE_LIST_TEST_CASE("bitset identities", "[bitset]", AllEnumsTestTypes)
       bitset.set(value);
     REQUIRE(bitset.count() == bitset.size());
   }
-
 }
 
 TEST_CASE("bitset: default construction", "[bitset]")
