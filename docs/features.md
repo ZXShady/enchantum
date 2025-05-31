@@ -6,9 +6,6 @@ All non-`void` functions are `[[nodiscard]]` unless explicitly said otherwise.
 
 Quick Reference
 
-**How to Include**:
-- [Including Headers](#how-to-include)
-
 **Concepts And Traits**:
 - [Enum](#enum)
 - [SignedEnum](#signedenum)
@@ -60,9 +57,6 @@ Quick Reference
 Details about specific customization macros like `ENCHANTUM_ASSERT`, `ENCHANTUM_THROW`, etc. will be listed here.
  - [ENCHANTUM_ASSERT](#enchantum_assert)
  - [ENCHANTUM_THROW](#enchantum_throw)
- - [ENCHANTUM_ALIAS_STRING](#enchantum_alias_string)
- - [ENCHANTUM_ALIAS_BITSET](#enchantum_alias_bitset)
- - [ENCHANTUM_ALIAS_STRING_VIEW](#enchantum_alias_string_view)
 
 # Concepts
 ## Enum
@@ -346,15 +340,15 @@ struct enum_traits // default
   A customization point for `enum`s used by this library, allowing users to set `prefix_length`, `min`, and `max` values instead of relying on defaults.
 
 - **Notes**:
-  Defining `prefix_length` is optional; if not defined, it defaults to `0`.
+  defining `prefix_length` is not required not defining it defaults to `0`.
 
 > Example usage:
 ```cpp
 #include <enchantum/enchantum.hpp>
 #include <enchantum/bitwise_operators.hpp>
-// Consider an enum that is outside the default range [-256,256] and has a common prefix:
+// this is a bug enum it is outside of default range [-256,256] and it has this annoying prefix
 enum BigEnumOutsideOfDefault : std::uint16_t {
-  BigEnumOutsideOfDefault_A = 0, BigEnumOutsideOfDefault_B = 4096
+  BigEnumOutsideOfDefault_A =0,BigEnumOutsideOfDefault_B = 4096
 };
 
 template<>
@@ -390,11 +384,11 @@ constexpr inline details::TO_STRING_FUNCTOR to_string;
 
 **Description**:
   Converts an enum value to its corresponding string representation.
-  The returned `std::string_view` points to a null-terminated character array.
-  `to_string` is a functor, which allows it to be passed to higher-order functions without requiring manual template argument specification (e.g., for use with algorithms that operate on ranges).
+  **Note** the `std::string_view` points to null-terminated character array.
+  and the "function" is a functor allowing easy passing of higher order functions without manually specifying the enum type could be handy in `ranges`.
 
 **Notes**:
-  The library may provide additional internal overloads to optimize for specific enum properties (e.g., enums with no gaps in their underlying values might allow for an index-based lookup).
+  Additional overloads may be provided to optimize for specific properties (e.g enums with no gaps can use an index lookup)
 
 **Parameters**:  
   - `value`: The enum value you want to convert to a string.
@@ -970,15 +964,15 @@ These function objects allow navigation through the enum values either in a line
 
   `prev_value`: Returns the previous value in the enum sequence, equivalent to `next_value(value, -n)`.
 
-  `prev_value_circular`: Returns the previous value in the enum sequence, wrapping around to the last value if the beginning is reached, equivalent to `next_value_circular(value, -n)`.
+  `prev_value_circular`: returns the previous value in the enum sequence, wrapping around if the start is reached equal to `next_value_circular(value,-n)`.
 
 - **Notes**:
-  The circular variants require `value` to be a valid enum member; otherwise, an assertion may be triggered (depending on `ENCHANTUM_ASSERT` customization).
+The circular variants require `value` to be a valid enum otherwise an assertion is called.
 
-  These are implemented as functors, allowing them to be passed to higher-order functions without requiring manual template argument specification.
+They are functors and not templated functions which allows passing  them to higher order functions.
 
 - **Parameters**:
-  - `value`: The starting enum value.
+  - `e`: The enum to convert to an index value.
   - `n`: The number of steps to advance (positive for next, negative for previous). Defaults to 1.
 
 - **Returns**:  
@@ -1314,77 +1308,3 @@ The Enchantum library provides several macros that can be (re)defined by the use
 
     #include <enchantum/array.hpp> // Or any other Enchantum header that might throw
     ```
-
-## `ENCHANTUM_ALIAS_STRING`
-
--   **Description**: If this macro is defined to a `using` declaration *before* including `enchantum/bitflags.hpp` (or `enchantum/all.hpp`), the specified string type will be used by `enchantum::to_string_bitflag` as its default return type and for internal string manipulations, instead of `std::string`.
--   **Requirements for Custom String Type**: The custom string type must support:
-    -   `append(const char* str, size_t count)`
-    -   `append(size_t count, char ch)`
-    -   Be default constructible.
-    -   Be movable and/or copyable as appropriate for return values.
--   **Usage**:
-    ```cpp
-    // Example: Using a custom string type MyProjectString
-    #define ENCHANTUM_ALIAS_STRING using string = MyProjectString;
-
-    #include <enchantum/bitflags.hpp>
-    // Now enchantum::to_string_bitflag will return MyProjectString by default
-    ```
-
-## `ENCHANTUM_ALIAS_BITSET`
-
--   **Description**: If this macro is defined to a `using` declaration *before* including `enchantum/bitset.hpp` (or `enchantum/all.hpp`), the specified bitset type will be used as the underlying base for `enchantum::bitset<E>` instead of `std::bitset<count<E>>`.
--   **Requirements for Custom Bitset Type**: The custom bitset type must conform to the `std::bitset` interface. This means it should provide a similar set of member functions (`operator[]`, `test`, `set`, `reset`, `flip`, `count`, `size`, `to_string`, etc.) and be constructible in ways compatible with how `enchantum::bitset` uses it.
--   **Usage**:
-    ```cpp
-    // Example: Using a custom bitset type MyProjectBitset
-    // MyProjectBitset must be a template class taking size as a template parameter.
-    #define ENCHANTUM_ALIAS_BITSET template<std::size_t N> using bitset = MyProjectBitset<N>;
-
-    #include <enchantum/bitset.hpp>
-    // Now enchantum::bitset<MyEnum> will use MyProjectBitset<enchantum::count<MyEnum>> internally.
-    ```
-
-## `ENCHANTUM_ALIAS_STRING_VIEW`
-
--   **Description**: This macro allows users to define a custom string_view-like type to be used by Enchantum internally for non-owning string representations. This can be useful for integrating with custom string libraries or types that are API-compatible with `std::string_view`. When this macro is defined, `enchantum::string_view` will be an alias to the custom type.
--   **How to use**: Define `ENCHANTUM_ALIAS_STRING_VIEW` to a `using` declaration (e.g., `using string_view = MyCustomStringView;`) *before* including any Enchantum headers, particularly headers that might themselves include `enchantum/details/string_view.hpp` (which is where `enchantum::string_view` is typically defined based on this macro or defaults to `std::string_view`). Including `enchantum/all.hpp` would also trigger this.
--   **Requirements for Custom String View Type**: The custom type must provide an interface compatible with `std::string_view`. This includes constructors, member functions like `data()`, `size()`, `empty()`, comparison operators, etc.
--   **Usage**:
-    ```cpp
-    // In your build configuration or a global header before including Enchantum:
-    // #define ENCHANTUM_ALIAS_STRING_VIEW using string_view = MyNamespace::MyStringView;
-
-    #include <enchantum/all.hpp> // Or other Enchantum headers like enchantum/common.hpp
-
-    // Now, enchantum::string_view is an alias for MyNamespace::MyStringView.
-    // Functions like enchantum::to_string(...) which return a string_view,
-    // and enchantum::names<MyEnum> (which is an array of string_views),
-    // will use MyNamespace::MyStringView.
-
-    enum class MyEnum { ValA, ValB };
-    // enchantum::string_view name = enchantum::to_string(MyEnum::ValA);
-    // Here, 'name' would be of type MyNamespace::MyStringView.
-    ```
-
----
-# How to Include
-
-The Enchantum library is header-only. Most features are available by including specific headers like `enchantum/common.hpp`, `enchantum/enchantum.hpp`, `enchantum/bitflags.hpp`, etc.
-
-For convenience, the header `enchantum/all.hpp` can be included to bring in all core features of the Enchantum library. This is a simple way to get started or if you anticipate using a wide range of functionalities.
-
-```cpp
-#include <enchantum/all.hpp>
-
-// You can now use concepts, functions, containers, etc. from Enchantum.
-enum class MyEnum { Val1, Val2 };
-static_assert(enchantum::Enum<MyEnum>);
-
-void example() {
-    auto name = enchantum::to_string(MyEnum::Val1);
-    // ... and so on.
-}
-```
-Individual headers are still available if you prefer to include only the specific parts of the library you need, potentially reducing compilation times.
