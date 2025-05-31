@@ -132,12 +132,12 @@ There are several enum reflection libraries out there — so why choose **enchan
 
 **Pros**
 - Macro-free (non intrusive)
-- Does not sacrifice API ease of use and features for compile time sake (e.g no `ENCHANTUM_ALL_ENUMS_ARE_CONTIGUOUS_OPTIMIZATION` flag which would disable support for sparse enums)
-- Allows specifying ranges for specific enums when needed
-- Compiles fast.
-- Clean and Simple Functor based API `enchantum::to_string(E)` no `enchantum::to_string<E::V>()` since compile times are fast.
-- Features like disabling null termination if not needed and specifying common enum prefix for C style enums, and reflect '0' values for bit flag enums.
-- Supports all sort of enums (scoped,unscoped,C style unfixed underlying type,anonymous namespaced enums, enums with commas in their typename,etc...);
+- Aims to provide a balance of features and API usability without overly compromising compile-time performance (e.g., supports sparse enums without requiring optimization flags that disable such support).
+- Allows specifying ranges for specific enums when needed via `enum_traits`.
+- Designed for fast compile times (see Benchmarks section).
+- Offers a functor-based API (e.g., `enchantum::to_string(E)`).
+- Provides features such as optional null termination for string views and reflection of '0' values for bitflag enums.
+- Supports a wide variety of enum types (scoped, unscoped, C-style with unfixed underlying types, anonymous namespaced enums, etc.).
 
 **Cons**
 - C++20 required
@@ -182,7 +182,7 @@ Each benchmark was run 10 times (except MSVC which was ran 3 times) and averaged
 
 ## Key Performance Considerations
 
-Enchantum's primary advantage lies in its **significantly faster compile times** compared to libraries like `magic_enum`. While runtime performance is generally comparable, achieving optimal compile times and ensuring correct reflection with Enchantum hinges on accurately configuring the search range for enum values.
+Enchantum is designed with a strong focus on **compile-time performance**. Achieving optimal compile times and ensuring correct reflection with Enchantum hinges on accurately configuring the search range for enum values. Runtime performance for reflected operations is generally efficient.
 
 **Optimizing Compile Times and Ensuring Correctness:**
 
@@ -231,9 +231,9 @@ For more details, see the documentation on [`enum_traits`](docs/features.md#enum
 
 ## Summary
 
-**enchantum** significantly reduces compile times in enum reflection projects. In my own project (which uses [libassert](https://github.com/jeremy-rifkin/libassert) and enum reflection for configuration), switching from `magic_enum` reduced full rebuild times from about 2 minutes to 1 minute and 30 seconds. I was surprised that `magic_enum` alone took 30 seconds.
+**enchantum** is designed to reduce compile times in projects utilizing enum reflection. For example, in one project using enum reflection for configuration, incorporating Enchantum helped lower full rebuild times.
 
-The trade-off is that `enchantum` requires C++20, while `magic_enum` supports C++17.
+The trade-off is that `enchantum` requires C++20.
 But this requirement can be lifted if there is enough demand for a C++17 version of `enchantum`.
 
 ---

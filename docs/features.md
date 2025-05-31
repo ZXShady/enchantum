@@ -56,9 +56,6 @@ Quick Reference
   - [ENCHANTUM_DEFINE_BITWISE_FOR](#enchantum_define_bitwise_for)
   - [Customization Macros](#customization-macros)
 
-**Namespaces**:
-  - [enchantum::bitwise_operators](#enchantumbitwise_operators-namespace)
-
 # Customization Macros
 Details about specific customization macros like `ENCHANTUM_ASSERT`, `ENCHANTUM_THROW`, etc. will be listed here.
  - [ENCHANTUM_ASSERT](#enchantum_assert)
@@ -346,18 +343,18 @@ struct enum_traits // default
 };
 ```
 - **Description**:
-  A customization point for `enum`s by this library like setting `prefix_length`,`min`,`max` instead of using default values.
+  A customization point for `enum`s used by this library, allowing users to set `prefix_length`, `min`, and `max` values instead of relying on defaults.
 
 - **Notes**:
-  defining `prefix_length` is not required not defining it defaults to `0`.
+  Defining `prefix_length` is optional; if not defined, it defaults to `0`.
 
 > Example usage:
 ```cpp
 #include <enchantum/enchantum.hpp>
 #include <enchantum/bitwise_operators.hpp>
-// this is a bug enum it is outside of default range [-256,256] and it has this annoying prefix
+// Consider an enum that is outside the default range [-256,256] and has a common prefix:
 enum BigEnumOutsideOfDefault : std::uint16_t {
-  BigEnumOutsideOfDefault_A =0,BigEnumOutsideOfDefault_B = 4096 
+  BigEnumOutsideOfDefault_A = 0, BigEnumOutsideOfDefault_B = 4096
 };
 
 template<>
@@ -392,12 +389,12 @@ constexpr inline details::TO_STRING_FUNCTOR to_string;
 ```
 
 **Description**:
-  Converts an enum value to its corresponding string representation. 
-  **Note** the `std::string_view` points to null-terminated character array. 
-  and the "function" is a functor allowing easy passing of higher order functions without manually specifying the enum type could be handy in `ranges`.
+  Converts an enum value to its corresponding string representation.
+  The returned `std::string_view` points to a null-terminated character array.
+  `to_string` is a functor, which allows it to be passed to higher-order functions without requiring manual template argument specification (e.g., for use with algorithms that operate on ranges).
 
 **Notes**:
-  Additional overloads may be provided to optimize for specific properties (e.g enums with no gaps can use an index lookup)
+  The library may provide additional internal overloads to optimize for specific enum properties (e.g., enums with no gaps in their underlying values might allow for an index-based lookup).
 
 **Parameters**:  
   - `value`: The enum value you want to convert to a string.
@@ -967,21 +964,22 @@ inline constexpr details::PREV_VALUE_CIRCULAR_FUNCTOR prev_value_circular;
 - **Description**:
 These function objects allow navigation through the enum values either in a linear or circular manner. You can move forward or backward through the enum values by providing an `n` value (steps). If `n` is positive, it moves forward; if `n` is negative, it moves backward.
 
-  `next_value`: returns the next value in the enum sequence 
+  `next_value`: Returns the next value in the enum sequence based on the sorted order of enum values.
 
-  `next_value_circular`: returns the next value in the enum sequence, wrapping around if the end is reached.
+  `next_value_circular`: Returns the next value in the enum sequence, wrapping around to the first value if the end is reached.
 
-  `prev_value`: returns the previous value in the enum sequence equal to `next_value(value,-n)`.
+  `prev_value`: Returns the previous value in the enum sequence, equivalent to `next_value(value, -n)`.
 
-  `prev_value_circular`: returns the previous value in the enum sequence, wrapping around if the start is reached equal to `next_value_circular(value,-n)`.
+  `prev_value_circular`: Returns the previous value in the enum sequence, wrapping around to the last value if the beginning is reached, equivalent to `next_value_circular(value, -n)`.
 
 - **Notes**:
-The circular variants require `value` to be a valid enum otherwise an assertion is called.
+  The circular variants require `value` to be a valid enum member; otherwise, an assertion may be triggered (depending on `ENCHANTUM_ASSERT` customization).
 
-They are functors and not templated functions which allows passing  them to higher order functions.
+  These are implemented as functors, allowing them to be passed to higher-order functions without requiring manual template argument specification.
 
 - **Parameters**:
-  - `e`: The enum to convert to an index value.
+  - `value`: The starting enum value.
+  - `n`: The number of steps to advance (positive for next, negative for previous). Defaults to 1.
 
 - **Returns**:  
 `next_value` and `prev_value` return a std::optional<E> representing the next or previous enum value, or std::nullopt if the value is out of range or invalid.
@@ -1136,7 +1134,7 @@ enchantum::for_each<Color>([&sum](auto constant) {
 
 ### to_underlying
 
-Same as [std::to_underlying](https://en.cppreference.com/w/cpp/utility/to_underlying) just ported to backward versions.
+Provides functionality equivalent to `std::to_underlying` (available in C++23), enabling conversion of an enum value to its underlying integral type. This version is provided for compatibility with C++20.
 
 ```cpp
 template <Enum E>
@@ -1281,68 +1279,6 @@ Overloads the bitwise operators for a given enum. `~`,`&`,`|`,`^`,`&=`,`|=`,`^=`
   {                                                                                       \
     return static_cast<Enum>(~static_cast<std::underlying_type_t<Enum>>(a));              \
   }
-```
-
----
-# Namespaces
-
-## `enchantum::bitwise_operators` Namespace
-
-The header `enchantum/bitwise_operators.hpp` provides a special namespace `enchantum::bitwise_operators`. This namespace contains templated global operator overloads for bitwise operations.
-
-These operators are defined for any type `E` that satisfies the `enchantum::Enum` concept. Here's an example of the `operator~` signature, with other operators following a similar pattern:
-
-```cpp
-#include <enchantum/common.hpp> // For enchantum::Enum
-#include <type_traits> // For std::underlying_type_t
-
-namespace enchantum::bitwise_operators {
-  template<enchantum::Enum E>
-  [[nodiscard]] constexpr E operator~(E e) noexcept {
-    using Underlying = std::underlying_type_t<E>;
-    return static_cast<E>(~static_cast<Underlying>(e));
-  }
-
-  // Similar templated overloads for:
-  // template<enchantum::Enum E> [[nodiscard]] constexpr E operator|(E lhs, E rhs) noexcept;
-  // template<enchantum::Enum E> [[nodiscard]] constexpr E operator&(E lhs, E rhs) noexcept;
-  // template<enchantum::Enum E> [[nodiscard]] constexpr E operator^(E lhs, E rhs) noexcept;
-  // template<enchantum::Enum E> constexpr E& operator|=(E& lhs, E rhs) noexcept;
-  // template<enchantum::Enum E> constexpr E& operator&=(E& lhs, E rhs) noexcept;
-  // template<enchantum::Enum E> constexpr E& operator^=(E& lhs, E rhs) noexcept;
-}
-```
-
-If this namespace is brought into the current scope (e.g., via `using namespace enchantum::bitwise_operators;`), it effectively defines these global bitwise operators (`operator~`, `operator|`, `operator&`, `operator^`, `operator|=`, `operator&=`, `operator^=`) for *all* types `E` that satisfy `enchantum::Enum`.
-
-**ODR Warning**:
-Using this namespace can potentially lead to One Definition Rule (ODR) issues. If `enchantum` functions (like `is_bitflag` or other utilities that depend on bitwise operations) are instantiated with a particular enum type *before* this namespace is used, and then instantiated again with the same enum type *after* this namespace is used, the program might behave inconsistently or violate ODR. This is because the availability of global bitwise operators can change how `is_bitflag<E>` evaluates for an enum `E` if `E` did not previously have such operators defined.
-
-**Recommendation**:
-For enabling bitwise operations on specific enums, it is generally safer to use the `ENCHANTUM_DEFINE_BITWISE_FOR(MyEnum)` macro for each enum type that requires these operations. This approach avoids the global scope alteration and potential ODR conflicts.
-
-> Example of potential issue:
-```cpp
-#include <enchantum/common.hpp> // For is_bitflag
-#include <enchantum/bitwise_operators.hpp>
-
-enum class MyFlags { F1 = 1, F2 = 2 };
-
-// Stage 1: MyFlags might not be detected as a BitFlagEnum
-// bool is_flag_before = enchantum::is_bitflag<MyFlags>;
-// This might be false if operators are not yet defined.
-
-// Stage 2: Introduce global bitwise operators
-// using namespace enchantum::bitwise_operators;
-// Now MyFlags will likely be seen as a BitFlagEnum by is_bitflag.
-// bool is_flag_after = enchantum::is_bitflag<MyFlags>; // Likely true
-
-// If is_bitflag<MyFlags> is instantiated in different translation units
-// with and without the namespace in scope, it can lead to ODR violations.
-
-// Safer alternative:
-// ENCHANTUM_DEFINE_BITWISE_FOR(MyFlags);
-// This ensures MyFlags is consistently a BitFlagEnum.
 ```
 
 ---
