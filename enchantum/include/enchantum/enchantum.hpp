@@ -25,19 +25,8 @@ template<typename>
 inline constexpr bool is_contiguous = false;
 
 template<Enum E>
-inline constexpr bool is_contiguous<E> = []() {
-  using T = std::underlying_type_t<E>;
-  if constexpr (std::is_same_v<T, bool>) {
-    return true;
-  }
-  else {
-    constexpr auto& enums = entries<E>;
-    for (std::size_t i = 0; i < enums.size() - 1; ++i)
-      if (T(enums[i].first) + 1 != T(enums[i + 1].first))
-        return false;
-    return true;
-  }
-}();
+inline constexpr bool is_contiguous<E> = static_cast<std::size_t>(to_underlying(max<E>) - to_underlying(min<E>)) + 1 ==
+  count<E>;
 
 
 template<typename E>
