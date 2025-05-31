@@ -1,18 +1,18 @@
 # Limitations
 
-This library requires C++20. but I can make a C++17 version if really wanted the clang implementation is actually almost C++17 except for some things.
+Enchantum requires C++20. While some internal mechanisms might resemble C++17 approaches, the library relies on C++20 features for its public API and full functionality. Support for earlier C++ standards is not currently planned.
 
-This library just like other libraries uses compiler-specific hacks based on `__FUNCSIG__` / `__PRETTY_FUNCTION__`.
+This library, similar to some other reflection utilities, utilizes compiler-specific predefined identifiers (such as `__FUNCSIG__` or `__PRETTY_FUNCTION__`) as part of its mechanism to obtain type name information.
 
 ## Enum Range
 
 Enum values must be in the range [`ENCHANTUM_MIN_RANGE`,`ENCHANTUM_MAX_RANGE`] 
 By default, `ENCHANTUM_MIN_RANGE` = -256, `ENCHANTUM_MAX_RANGE` = 256. 
 
-If you need a different range for all enum types by default, redefine the macro `ENCHANTUM_MAX_RANGE` and if you don't explicitly define `ENCHANTUM_MIN_RANGE` it will be `-ENCHANTUM_MAX_RANGE`. Increasing this value can lead to longer compilation times but unlike other libraries it is not massivly increasing [see benchmarks](../README.md#compile-time-benchmarks).
+If you need a different range for all enum types by default, redefine the macro `ENCHANTUM_MAX_RANGE` and if you don't explicitly define `ENCHANTUM_MIN_RANGE` it will be `-ENCHANTUM_MAX_RANGE`. Increasing this range can lead to longer compilation times. For more details on performance characteristics, refer to the [Compile-Time Benchmarks](../README.md#compile-time-benchmarks) section in the README.
 
 
-*Note: Defining the macro values project wide is recommended*
+*Note: These macros can be defined project-wide to adjust the default range for all enums.*
 
 ```cpp
 #define ENCHANTUM_MIN_RANGE 0 // if not defined it will be -512
@@ -91,15 +91,15 @@ enum {
 };
 
 using Type = decltype(SomeConstant);
-enchantum::entries<Type>; // won't work and won't be officially supported
+enchantum::entries<Type>; // This is not officially supported and may not work.
 ```
 
-this works
-
+A workaround for C-style anonymous enums is to provide a name for the enum using `typedef`:
 ```cpp
 typedef enum {
     SomeConstant = 10;
-} Type;
-```
+} MyNamedType;
 
-just give it a name.
+// enchantum::entries<MyNamedType>; // This would then be the type to reflect
+```
+It is generally recommended to use named enums, whether scoped or unscoped.

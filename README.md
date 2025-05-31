@@ -42,7 +42,7 @@ enum class Enemy {
     Melee = 1 << 1,
     Ranged = 1 << 2
 };
-ENCHANTUM_DEFINE_BITWISE_FOR(Enemy) // defines ~,^,&,|,^=,&=,|=
+ENCHANTUM_DEFINE_BITWISE_FOR(Enemy) // Defines bitwise operators (~, &, |, ^, &=, |=, ^=) for the Enemy enum. See docs/features.md#enchantum_define_bitwise_for for details.
 
 int main() {
   auto music = Music::Rock;
@@ -66,7 +66,7 @@ int main() {
 
   static_assert(enchantum::count<Music> == 3);
   for(Music types : enchantum::values<Music>) { // variable based API
-    using namespace enchantum::iostream_operators;
+    using namespace enchantum::iostream_operators; // Provides std::ostream operator<< and std::istream operator>> for enums. See docs/features.md#stream-operators.
     std::cout << types << '\n'; // calls enchantum::to_string
   }
   for(std::string_view names : enchantum::names<Music>) // variable based API
@@ -132,16 +132,16 @@ There are several enum reflection libraries out there — so why choose **enchan
 
 **Pros**
 - Macro-free (non intrusive)
-- Does not sacrifice API ease of use and features for compile time sake (e.g no `ENCHANTUM_ALL_ENUMS_ARE_CONTIGUOUS_OPTIMIZATION` flag which would disable support for sparse enums)
-- Allows specifying ranges for specific enums when needed
-- Compiles fast.
-- Clean and Simple Functor based API `enchantum::to_string(E)` no `enchantum::to_string<E::V>()` since compile times are fast.
-- Features like disabling null termination if not needed and specifying common enum prefix for C style enums, and reflect '0' values for bit flag enums.
-- Supports all sort of enums (scoped,unscoped,C style unfixed underlying type,anonymous namespaced enums, enums with commas in their typename,etc...);
+- Aims to provide a balance of features and API usability without overly compromising compile-time performance (e.g., supports sparse enums without requiring optimization flags that disable such support).
+- Allows specifying ranges for specific enums when needed via `enum_traits`.
+- A design goal is efficient compile times (see Benchmarks section for observed performance).
+- Offers a functor-based API (e.g., `enchantum::to_string(E)`).
+- Provides features such as optional null termination for string views and reflection of '0' values for bitflag enums.
+- Supports a wide variety of enum types (scoped, unscoped, C-style with unfixed underlying types, anonymous namespaced enums, etc.).
 
 **Cons**
 - C++20 required
-- Compiler errors are incomprehensable if something goes wrong, needs a level 10 wizard to read them.
+- Compiler errors are incomprehensible if something goes wrong, needs a level 10 wizard to read them (though see `docs/limitations.md#other-compiler-issues` for common issues and solutions).
 - No support for wide strings (yet)
 ---
 
@@ -180,11 +180,60 @@ Each benchmark was run 10 times (except MSVC which was ran 3 times) and averaged
 | Clang    | >15 min (killed) | ~42 sec       |
 ---
 
+## Key Performance Considerations
+
+Enchantum's compile-time reflection process involves scanning a range of potential underlying integer values for enum members. Accurately configuring this search range is important for ensuring all members are correctly discovered and can also influence compile times. Runtime performance for reflected operations is generally efficient.
+
+**Configuring Enum Reflection Scope and Correctness:**
+
+Enchantum determines enum members at compile time by scanning a range of underlying integer values. This range is defined by `ENCHANTUM_MIN_RANGE` (default -256) and `ENCHANTUM_MAX_RANGE` (default 256).
+
+-   **Impact of Value Range**:
+    -   If an enum's actual values fall outside this default range, its members may not be fully discovered, leading to incorrect reflection.
+    -   If the actual range of values for most of your enums is much smaller than the default (or a globally overridden large range), compile times can be unnecessarily increased as the library scans a wider-than-needed spectrum.
+
+-   **Strong Recommendation: Specialize `enchantum::enum_traits`**:
+    To ensure all enum members are found and to manage the scope of the reflection process effectively, it is **strongly recommended** to specialize `enchantum::enum_traits<MyEnum>` for your enums. This is particularly crucial for enums that:
+    1.  **Have values outside the default `-256` to `256` range**: Defining `min` and `max` in the traits is necessary to encompass all actual values of your enum.
+        ```cpp
+        // Example: Enum with values outside the default range
+        enum class MyCustomRangeEnum { Val1 = -500, Val2 = 1000 };
+        template<> struct enchantum::enum_traits<MyCustomRangeEnum> {
+            static constexpr auto min = -500; // Or static_cast<int>(MyCustomRangeEnum::Val1)
+            static constexpr auto max = 1000; // Or static_cast<int>(MyCustomRangeEnum::Val2)
+        };
+        ```
+    2.  **Have a known, much smaller range than the default**: Specifying a tight `min` and `max` will reduce the compile-time search space.
+        ```cpp
+        // Example: Enum with a small, positive range
+        enum class MySmallEnum { A = 1, B = 2, C = 3 };
+        template<> struct enchantum::enum_traits<MySmallEnum> {
+            static constexpr auto min = 1;
+            static constexpr auto max = 3;
+        };
+        ```
+-   **Additional Trait: `prefix_length`**:
+    `enum_traits` can also be used to specify a `prefix_length` to automatically trim common prefixes from reflected enum names, enhancing the usability of `to_string` and related functions.
+    ```cpp
+    enum class MyPrefixedEnum { EnumPrefix_OptionA, EnumPrefix_OptionB };
+    template<> struct enchantum::enum_traits<MyPrefixedEnum> {
+        static constexpr auto prefix_length = sizeof("EnumPrefix_") - 1;
+        // If min/max are not specified, they default to ENCHANTUM_MIN_RANGE/MAX_RANGE
+    };
+    // enchantum::to_string(MyPrefixedEnum::EnumPrefix_OptionA) will yield "OptionA"
+    ```
+
+By carefully defining `enum_traits` where appropriate, you provide Enchantum with precise information about your enums. This allows the library to define the correct search space for reflection, which is essential for correctness and can contribute to more efficient compile times.
+
+For more details, see the documentation on [`enum_traits`](docs/features.md#enum_traits) and the discussion on [enum value ranges](docs/limitations.md#enum-range).
+
+---
+
 ## Summary
 
-**enchantum** significantly reduces compile times in enum reflection projects. In my own project (which uses [libassert](https://github.com/jeremy-rifkin/libassert) and enum reflection for configuration), switching from `magic_enum` reduced full rebuild times from about 2 minutes to 1 minute and 30 seconds. I was surprised that `magic_enum` alone took 30 seconds.
+One of the design aims for **enchantum** is to help manage compile times in projects utilizing enum reflection. For example, in one project using enum reflection for configuration, incorporating Enchantum helped lower full rebuild times.
 
-The trade-off is that `enchantum` requires C++20, while `magic_enum` supports C++17.
+Enchantum requires C++20.
 But this requirement can be lifted if there is enough demand for a C++17 version of `enchantum`.
 
 ---
