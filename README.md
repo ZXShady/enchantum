@@ -182,36 +182,50 @@ Each benchmark was run 10 times (except MSVC which was ran 3 times) and averaged
 
 ## Key Performance Considerations
 
-While Enchantum is designed for speed, its compile-time performance for enum reflection is inherently tied to the range of underlying integer values it needs to scan for potential enum members. By default, Enchantum checks the range defined by `ENCHANTUM_MIN_RANGE` (-256) and `ENCHANTUM_MAX_RANGE` (256).
+Enchantum's primary advantage lies in its **significantly faster compile times** compared to libraries like `magic_enum`. While runtime performance is generally comparable, achieving optimal compile times and ensuring correct reflection with Enchantum hinges on accurately configuring the search range for enum values.
 
-**Impact of Value Range:**
-- If your enums generally fall within this default range, performance is typically excellent.
-- However, if you have enums with values far outside this range (e.g., `enum MyFarEnum { Val = 10000 };`), or if you globally override `ENCHANTUM_MIN_RANGE`/`ENCHANTUM_MAX_RANGE` to be excessively large (e.g., to cover `INT_MIN` to `INT_MAX` for all enums), compile times can increase noticeably. This is because the library will iterate through a much larger set of potential values during its compile-time analysis.
+**Optimizing Compile Times and Ensuring Correctness:**
 
-**Recommendations for Optimal Compile Times:**
+Enchantum determines enum members at compile time by scanning a range of underlying integer values. This range is defined by `ENCHANTUM_MIN_RANGE` (default -256) and `ENCHANTUM_MAX_RANGE` (default 256).
 
-To ensure the best compile-time performance, it is **strongly recommended** to specialize `enchantum::enum_traits<MyEnum>` for specific enums, particularly if they:
-1.  **Are outside the default `-256` to `256` range**: Define `min` and `max` in the traits to tightly bound the actual values of your enum.
+-   **Impact of Value Range**:
+    -   If an enum's actual values fall outside this default range, its members may not be fully discovered, leading to incorrect reflection.
+    -   If the actual range of values for most of your enums is much smaller than the default (or a globally overridden large range), compile times can be unnecessarily increased as the library scans a wider-than-needed spectrum.
+
+-   **Strong Recommendation: Specialize `enchantum::enum_traits`**:
+    To guarantee both correctness and the best possible compile times, it is **strongly recommended** to specialize `enchantum::enum_traits<MyEnum>` for your enums. This is particularly crucial for enums that:
+    1.  **Have values outside the default `-256` to `256` range**: You *must* define `min` and `max` in the traits to encompass all actual values of your enum.
+        ```cpp
+        // Example: Enum with values outside the default range
+        enum class MyCustomRangeEnum { Val1 = -500, Val2 = 1000 };
+        template<> struct enchantum::enum_traits<MyCustomRangeEnum> {
+            static constexpr auto min = -500; // Or static_cast<int>(MyCustomRangeEnum::Val1)
+            static constexpr auto max = 1000; // Or static_cast<int>(MyCustomRangeEnum::Val2)
+        };
+        ```
+    2.  **Have a known, much smaller range than the default**: Specifying a tight `min` and `max` will reduce the compile-time search space.
+        ```cpp
+        // Example: Enum with a small, positive range
+        enum class MySmallEnum { A = 1, B = 2, C = 3 };
+        template<> struct enchantum::enum_traits<MySmallEnum> {
+            static constexpr auto min = 1;
+            static constexpr auto max = 3;
+        };
+        ```
+-   **Additional Trait: `prefix_length`**:
+    `enum_traits` can also be used to specify a `prefix_length` to automatically trim common prefixes from reflected enum names, enhancing the usability of `to_string` and related functions.
     ```cpp
-    enum class MyLargeValueEnum { Val1 = 500, Val2 = 501 };
-    template<> struct enchantum::enum_traits<MyLargeValueEnum> {
-        static constexpr auto min = 500;
-        static constexpr auto max = 501;
-    };
-    ```
-2.  **Have a known, smaller range than the default**: Even if within the default range, specifying a tighter bound can yield minor improvements.
-3.  **Have common prefixes in their names**: Use `prefix_length` in the traits to tell Enchantum to automatically strip these prefixes from the reflected names.
-    ```cpp
-    enum class MyPrefixedEnum { MyPrefix_A, MyPrefix_B };
+    enum class MyPrefixedEnum { EnumPrefix_OptionA, EnumPrefix_OptionB };
     template<> struct enchantum::enum_traits<MyPrefixedEnum> {
-        static constexpr auto prefix_length = sizeof("MyPrefix_") - 1;
+        static constexpr auto prefix_length = sizeof("EnumPrefix_") - 1;
+        // If min/max are not specified, they default to ENCHANTUM_MIN_RANGE/MAX_RANGE
     };
-    // enchantum::to_string(MyPrefixedEnum::MyPrefix_A) will be "A"
+    // enchantum::to_string(MyPrefixedEnum::EnumPrefix_OptionA) will yield "OptionA"
     ```
 
-By specializing `enum_traits`, you provide the library with precise information, allowing it to minimize its search space and reduce compile times.
+By carefully defining `enum_traits` where appropriate, you instruct Enchantum to work efficiently and accurately, leading to faster builds and reliable reflection.
 
-For more details, see the documentation on [`enum_traits`](docs/features.md#enum_traits) and the discussion on [ranges and compile times](docs/limitations.md#range-and-compile-times).
+For more details, see the documentation on [`enum_traits`](docs/features.md#enum_traits) and the discussion on [enum value ranges](docs/limitations.md#enum-range).
 
 ---
 

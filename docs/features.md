@@ -65,6 +65,7 @@ Details about specific customization macros like `ENCHANTUM_ASSERT`, `ENCHANTUM_
  - [ENCHANTUM_THROW](#enchantum_throw)
  - [ENCHANTUM_ALIAS_STRING](#enchantum_alias_string)
  - [ENCHANTUM_ALIAS_BITSET](#enchantum_alias_bitset)
+ - [ENCHANTUM_ALIAS_STRING_VIEW](#enchantum_alias_string_view)
 
 # Concepts
 ## Enum
@@ -1287,17 +1288,32 @@ Overloads the bitwise operators for a given enum. `~`,`&`,`|`,`^`,`&=`,`|=`,`^=`
 
 ## `enchantum::bitwise_operators` Namespace
 
-The header `enchantum/bitwise_operators.hpp` provides a special namespace `enchantum::bitwise_operators`.
+The header `enchantum/bitwise_operators.hpp` provides a special namespace `enchantum::bitwise_operators`. This namespace contains templated global operator overloads for bitwise operations.
+
+These operators are defined for any type `E` that satisfies the `enchantum::Enum` concept. Here's an example of the `operator~` signature, with other operators following a similar pattern:
 
 ```cpp
-// enchantum/bitwise_operators.hpp excerpt
+#include <enchantum/common.hpp> // For enchantum::Enum
+#include <type_traits> // For std::underlying_type_t
+
 namespace enchantum::bitwise_operators {
-  // Global operator overloads for ~, |, &, ^, |=, &=, ^= for any enum type E
-  // template<typename E> requires std::is_enum_v<E> ...
+  template<enchantum::Enum E>
+  [[nodiscard]] constexpr E operator~(E e) noexcept {
+    using Underlying = std::underlying_type_t<E>;
+    return static_cast<E>(~static_cast<Underlying>(e));
+  }
+
+  // Similar templated overloads for:
+  // template<enchantum::Enum E> [[nodiscard]] constexpr E operator|(E lhs, E rhs) noexcept;
+  // template<enchantum::Enum E> [[nodiscard]] constexpr E operator&(E lhs, E rhs) noexcept;
+  // template<enchantum::Enum E> [[nodiscard]] constexpr E operator^(E lhs, E rhs) noexcept;
+  // template<enchantum::Enum E> constexpr E& operator|=(E& lhs, E rhs) noexcept;
+  // template<enchantum::Enum E> constexpr E& operator&=(E& lhs, E rhs) noexcept;
+  // template<enchantum::Enum E> constexpr E& operator^=(E& lhs, E rhs) noexcept;
 }
 ```
 
-If this namespace is brought into the current scope (e.g., via `using namespace enchantum::bitwise_operators;`), it defines global bitwise operators (`operator~`, `operator|`, `operator&`, `operator^`, `operator|=`, `operator&=`, `operator^=`) that work for *all* enum types.
+If this namespace is brought into the current scope (e.g., via `using namespace enchantum::bitwise_operators;`), it effectively defines these global bitwise operators (`operator~`, `operator|`, `operator&`, `operator^`, `operator|=`, `operator&=`, `operator^=`) for *all* types `E` that satisfy `enchantum::Enum`.
 
 **ODR Warning**:
 Using this namespace can potentially lead to One Definition Rule (ODR) issues. If `enchantum` functions (like `is_bitflag` or other utilities that depend on bitwise operations) are instantiated with a particular enum type *before* this namespace is used, and then instantiated again with the same enum type *after* this namespace is used, the program might behave inconsistently or violate ODR. This is because the availability of global bitwise operators can change how `is_bitflag<E>` evaluates for an enum `E` if `E` did not previously have such operators defined.
@@ -1392,6 +1408,28 @@ The Enchantum library provides several macros that can be (re)defined by the use
 
     #include <enchantum/bitset.hpp>
     // Now enchantum::bitset<MyEnum> will use MyProjectBitset<enchantum::count<MyEnum>> internally.
+    ```
+
+## `ENCHANTUM_ALIAS_STRING_VIEW`
+
+-   **Description**: This macro allows users to define a custom string_view-like type to be used by Enchantum internally for non-owning string representations. This can be useful for integrating with custom string libraries or types that are API-compatible with `std::string_view`. When this macro is defined, `enchantum::string_view` will be an alias to the custom type.
+-   **How to use**: Define `ENCHANTUM_ALIAS_STRING_VIEW` to a `using` declaration (e.g., `using string_view = MyCustomStringView;`) *before* including any Enchantum headers, particularly headers that might themselves include `enchantum/details/string_view.hpp` (which is where `enchantum::string_view` is typically defined based on this macro or defaults to `std::string_view`). Including `enchantum/all.hpp` would also trigger this.
+-   **Requirements for Custom String View Type**: The custom type must provide an interface compatible with `std::string_view`. This includes constructors, member functions like `data()`, `size()`, `empty()`, comparison operators, etc.
+-   **Usage**:
+    ```cpp
+    // In your build configuration or a global header before including Enchantum:
+    // #define ENCHANTUM_ALIAS_STRING_VIEW using string_view = MyNamespace::MyStringView;
+
+    #include <enchantum/all.hpp> // Or other Enchantum headers like enchantum/common.hpp
+
+    // Now, enchantum::string_view is an alias for MyNamespace::MyStringView.
+    // Functions like enchantum::to_string(...) which return a string_view,
+    // and enchantum::names<MyEnum> (which is an array of string_views),
+    // will use MyNamespace::MyStringView.
+
+    enum class MyEnum { ValA, ValB };
+    // enchantum::string_view name = enchantum::to_string(MyEnum::ValA);
+    // Here, 'name' would be of type MyNamespace::MyStringView.
     ```
 
 ---
