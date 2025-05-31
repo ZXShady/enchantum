@@ -65,7 +65,7 @@ TEST_CASE("cast cast_bitflags", "[casts][bitflags]")
     STATIC_CHECK(enchantum::cast<EntityStatus>("Active") == EntityStatus::Active);
     STATIC_CHECK(enchantum::cast<EntityStatus>("Inactive") == EntityStatus::Inactive);
     STATIC_CHECK(enchantum::cast<EntityStatus>("pending", case_insensitive) == EntityStatus::Pending);
-    STATIC_CHECK(enchantum::cast_bitflag<EntityStatus>("peNdIng|Active", '|', case_insensitive).has_value());
+    STATIC_CHECK(enchantum::cast_bitflag<EntityStatus>("peNdIng|AcTive", '|', case_insensitive).has_value());
   }
 
   STATIC_CHECK(enchantum::cast_bitflag<EntityStatus>("Inactive|Active") == (EntityStatus::Inactive | EntityStatus::Active));
@@ -119,7 +119,7 @@ TEST_CASE("invalid_casts", "[cast][bitflags]")
 
   SECTION("Empty input returns none") { STATIC_CHECK_FALSE(enchantum::cast_bitflag<Permission>("").has_value()); }
 }
-
+ 
 TEST_CASE("complex_bitflag_combinations", "[bitflags]")
 {
   SECTION("Mixed ordering")
@@ -168,6 +168,38 @@ TEST_CASE("contains_bitflag", "[contains][bitflags]")
   {
     STATIC_CHECK(enchantum::contains_bitflag(Level::NoLevel));
     STATIC_CHECK(enchantum::contains_bitflag(Level::Level1 | Level::Level3));
+  }
+
+  SECTION("contains_bitflag string")
+  {
+    STATIC_CHECK(enchantum::contains_bitflag<EntityStatus>("Active"));
+    STATIC_CHECK(enchantum::contains_bitflag<EntityStatus>("Inactive"));
+    STATIC_CHECK(enchantum::contains_bitflag<EntityStatus>("pendinG",'|', case_insensitive));
+    STATIC_CHECK(enchantum::contains_bitflag<EntityStatus>("peNdIng|AcTive", '|', case_insensitive));
+    STATIC_CHECK(enchantum::contains_bitflag<EntityStatus>("Inactive.Active",'.'));
+
+    STATIC_CHECK_FALSE(enchantum::contains_bitflag<EntityStatus>("Hello.Active", '.'));
+    STATIC_CHECK_FALSE(enchantum::contains_bitflag<EntityStatus>("Hello|Active"));
+    STATIC_CHECK_FALSE(enchantum::contains_bitflag<EntityStatus>("hello.active",'.',case_insensitive));
+
+
+    STATIC_CHECK(enchantum::contains_bitflag<Permission>("Read"));
+    STATIC_CHECK(enchantum::contains_bitflag<Permission>("Write"));
+    STATIC_CHECK(enchantum::contains_bitflag<Permission>("Execute"));
+    STATIC_CHECK(enchantum::contains_bitflag<Permission>("None"));
+
+    STATIC_CHECK(enchantum::contains_bitflag<DirectionFlags>("Up"));
+    STATIC_CHECK(enchantum::contains_bitflag<DirectionFlags>("Down"));
+    STATIC_CHECK(enchantum::contains_bitflag<DirectionFlags>("Right"));
+    STATIC_CHECK(enchantum::contains_bitflag<DirectionFlags>("Left"));
+    STATIC_CHECK(enchantum::contains_bitflag<DirectionFlags>("NoDirection"));
+
+    STATIC_CHECK(enchantum::contains_bitflag<Level>("Level1"));
+    STATIC_CHECK(enchantum::contains_bitflag<Level>("Level2"));
+    STATIC_CHECK(enchantum::contains_bitflag<Level>("Level3"));
+    STATIC_CHECK(enchantum::contains_bitflag<Level>("Level4"));
+    STATIC_CHECK(enchantum::contains_bitflag<Level>("Level3|Level1"));
+    STATIC_CHECK(enchantum::contains_bitflag<Level>("NoLevel"));
   }
 }
 
@@ -249,7 +281,6 @@ TEMPLATE_LIST_TEST_CASE("bitflags", "[bitflags]", AllFlagsTestTypes)
       return ret;
     }();
     CHECK(enchantum::to_string_bitflag(enchantum::value_ors<TestType>) == s);
-
   }
 }
 

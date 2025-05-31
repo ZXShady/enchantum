@@ -56,7 +56,7 @@ template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
 {
   std::size_t pos = 0;
   for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
-    if (!enchantum::contains<E>(s.substr(pos, i - pos)), binary_pred)
+    if (!enchantum::contains<E>(s.substr(pos, i - pos),binary_pred))
       return false;
     pos = i + 1;
   }
