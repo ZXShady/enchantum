@@ -422,7 +422,7 @@ constexpr inline details::CAST_FUNCTOR<E> cast;
 **Description**:
 
  1. Attempts to convert an integral underlying type value to the corresponding enum value if it is a valid underlying value (i.e it is one of the elements of `values<E>`).
- 2. Attempts to convert a `std::string_view` to the corresponding enum value based on its name it is case sensitive.
+ 2. Attempts to convert a `std::string_view` to the corresponding enum value based on its name it is case sensitive. This lookup is case-sensitive and operates in O(log N * M) time (where N is the number of enum entries and M is average string length) due to binary search on name-sorted entries.
  3. Attempts to convert a `std::string_view` to the corresponding enum value based using a predicate. **note** the first arguement of the predicate is the `cast` `name` arguement while the second arguement of the predicate is the names of the enum of `names<E>`.
 
 Returns:
@@ -727,6 +727,7 @@ constexpr bool contains(std::string_view name) noexcept;
 
 **Notes**:
   Additional overloads may be provided to optimize for specific properties (e.g enums with no gaps can compare against `min<E>` and `max<E>`)
+  **Performance Note**: For enums that are not `ContiguousEnum`, `contains(E value)` and `contains(std::underlying_type_t<E> value)` operate in O(log N) time due to binary search on value-sorted entries. For `contains(std::string_view name)`, lookup is O(log N * M) (where N is the number of enum entries and M is average string length) due to binary search on name-sorted entries.
 
 - **Parameters**:
   - `value`: The enum value or underlying integer value to check.
@@ -855,6 +856,7 @@ constexpr inline details::ENUM_TO_INDEX_FUNCTOR enum_to_index;
 
 - **Description**:  
   Converts an enum to its corresponding index value.
+  **Performance Note**: For `ContiguousEnum`, this operation is O(1). For other enums, it operates in O(log N) time due to binary search on value-sorted entries.
 
 - **Parameters**:
   - `e`: The enum to convert to an index value.

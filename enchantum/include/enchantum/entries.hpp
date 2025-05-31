@@ -11,10 +11,19 @@
 #endif
 
 #include "common.hpp"
+#include <algorithm> // For std::sort
+#include <array>     // For std::array
 #include <type_traits>
 #include <utility>
 
 namespace enchantum {
+
+// New struct for storing name-value pairs
+template <typename E, typename String = string_view>
+struct NameValueEntry {
+    String name;
+    E value;
+};
 
 #ifdef __cpp_lib_to_underlying
 using ::std::to_underlying;
@@ -55,5 +64,22 @@ inline constexpr auto max = entries<E>.back().first;
 
 template<Enum E>
 inline constexpr std::size_t count = entries<E>.size();
+
+template<Enum E>
+inline constexpr auto sorted_names_entries = []() {
+  constexpr auto original_entries = entries<E>; // Capture by value for constexpr context
+  std::array<NameValueEntry<E, string_view>, count<E>> sorted_array{};
+
+  for (std::size_t i = 0; i < count<E>; ++i) {
+    sorted_array[i] = {original_entries[i].second, original_entries[i].first};
+  }
+
+  // Use std::sort, assuming it's constexpr in C++20 for std::array
+  std::sort(sorted_array.begin(), sorted_array.end(), [](const auto& a, const auto& b) {
+    return a.name < b.name;
+  });
+
+  return sorted_array;
+}();
 
 } // namespace enchantum
