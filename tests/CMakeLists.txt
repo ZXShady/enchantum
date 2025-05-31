@@ -22,9 +22,9 @@ endif()
 
 if(MSVC)
   target_compile_options(tests PRIVATE /Za /permissive-)
-  target_compile_options(tests PRIVATE /W4)
+  target_compile_options(tests PRIVATE /Wx /W4)
 else()
-  target_compile_options(tests PRIVATE -Wall -Wextra -Wconversion -Wpedantic)
+  target_compile_options(tests PRIVATE -Werror -Wall -Wextra -Wshadow -Wconversion -Wpedantic)
 endif()
 
 file(GLOB_RECURSE SRCS "*.cpp" "*.hpp")
