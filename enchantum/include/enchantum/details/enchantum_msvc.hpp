@@ -1,5 +1,6 @@
 #pragma once
 #include "../common.hpp"
+#include "../type_name.hpp"
 #include "generate_arrays.hpp"
 #include "string_view.hpp"
 #include <array>
@@ -10,35 +11,26 @@
 
 namespace enchantum {
 
-namespace details {
-
 #define SZC(x) (sizeof(x) - 1)
-  template<typename>
-  constexpr auto type_name_func_size() noexcept
-  {
-    // (sizeof("auto __cdecl enchantum::details::type_name_func<") - 1)
-    return SZC(__FUNCSIG__) - SZC("auto __cdecl enchantum::details::type_name_func_size<enum ") -
-      SZC(">(void) noexcept");
-  }
-
+namespace details {
   template<auto Enum>
   constexpr auto enum_in_array_name() noexcept
   {
-    string_view s = __FUNCSIG__ + sizeof("auto __cdecl enchantum::details::enum_in_array_name<") - 1;
-    s.remove_suffix(sizeof(">(void) noexcept") - 1);
+    string_view s = __FUNCSIG__ + SZC("auto __cdecl enchantum::details::enum_in_array_name<");
+    s.remove_suffix(SZC(">(void) noexcept"));
 
     if constexpr (ScopedEnum<decltype(Enum)>) {
       if (s.front() == '(') {
-        s.remove_prefix(sizeof("(enum ") - 1);
-        s.remove_suffix(sizeof(")0x0") - 1);
+        s.remove_prefix(SZC("(enum "));
+        s.remove_suffix(SZC(")0x0"));
         return s;
       }
       return s.substr(0, s.rfind("::"));
     }
     else {
       if (s.front() == '(') {
-        s.remove_prefix(sizeof("(enum ") - 1);
-        s.remove_suffix(sizeof(")0x0") - 1);
+        s.remove_prefix(SZC("(enum "));
+        s.remove_suffix(SZC(")0x0"));
       }
       if (const auto pos = s.rfind("::"); pos != s.npos)
         return s.substr(0, pos);
@@ -52,9 +44,8 @@ namespace details {
     //auto __cdecl f<class std::array<enum `anonymous namespace'::UnscopedAnon,32>{enum `anonymous-namespace'::UnscopedAnon
 
     using T = typename decltype(Array)::value_type;
-#define SZC(x) (sizeof(x) - 1)
     std::size_t    funcsig_off   = SZC("auto __cdecl enchantum::details::var_name<class std::array<enum ");
-    constexpr auto type_name_len = enchantum::details::type_name_func_size<T>();
+    constexpr auto type_name_len = type_name<T>.size();
     funcsig_off += type_name_len + SZC(",");
     constexpr auto Size = Array.size();
     // clang-format off
@@ -70,10 +61,8 @@ namespace details {
     : 10;
     // clang-format on
     funcsig_off += SZC(">{enum ") + type_name_len;
-    return string_view(__FUNCSIG__ + funcsig_off, SZC(__FUNCSIG__) - funcsig_off - (sizeof("}>(void) noexcept") - 1));
+    return string_view(__FUNCSIG__ + funcsig_off, SZC(__FUNCSIG__) - funcsig_off - SZC("}>(void) noexcept"));
   }
-#undef SZC
-
 
   template<auto Copy>
   inline constexpr auto static_storage_for = Copy;
@@ -81,7 +70,7 @@ namespace details {
   template<typename E, typename Pair, auto Array, bool ShouldNullTerminate>
   constexpr auto get_elements()
   {
-    constexpr auto type_name_len = details::type_name_func_size<E>();
+    constexpr auto type_name_len = type_name<E>.size();
 
     auto str = var_name<Array>();
     struct RetVal {
@@ -93,14 +82,14 @@ namespace details {
     constexpr auto enum_in_array_len = details::enum_in_array_name<E{}>().size();
     while (index < Array.size()) {
       if (str.front() == '(') {
-        str.remove_prefix(sizeof("(enum ") - 1 + type_name_len + sizeof(")0x0") - 1); // there is atleast 1 base 16 hex digit
+        str.remove_prefix(SZC("(enum ") + type_name_len + SZC(")0x0")); // there is atleast 1 base 16 hex digit
 
         if (const auto commapos = str.find(','); commapos != str.npos)
           str.remove_prefix(commapos + 1);
       }
       else {
         if constexpr (enum_in_array_len != 0)
-          str.remove_prefix(enum_in_array_len + sizeof("::") - 1);
+          str.remove_prefix(enum_in_array_len + SZC("::"));
 
         if constexpr (details::prefix_length_or_zero<E> != 0)
           str.remove_prefix(details::prefix_length_or_zero<E>);
@@ -159,3 +148,5 @@ namespace details {
 
 
 } // namespace enchantum
+
+#undef SZC

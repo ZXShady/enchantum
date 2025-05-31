@@ -93,41 +93,21 @@ struct enum_traits<E> {
   static constexpr decltype(max) min = 0;
 };
 
+
 namespace details {
-
-  template<typename _>
-  constexpr auto type_name_func() noexcept
-  {
-    // constexpr auto f() [with _ = Scoped]
-    //return __PRETTY_FUNCTION__;
-    constexpr auto funcname = string_view(
-      __PRETTY_FUNCTION__ + (sizeof("auto enchantum::details::type_name_func() [_ = ") - 1));
-    // (sizeof("auto __cdecl enchantum::details::type_name_func<") - 1)
-    constexpr auto         size = funcname.size() - (sizeof("]") - 1);
-    std::array<char, size> ret;
-    auto* const            ret_data      = ret.data();
-    const auto* const      funcname_data = funcname.data();
-    for (std::size_t i = 0; i < size; ++i)
-      ret_data[i] = funcname_data[i];
-    return ret;
-  }
-
-  template<typename T>
-  inline constexpr auto type_name = type_name_func<T>();
-
-
+#define SZC(x) (sizeof(x) - 1)  
   template<auto Enum>
   constexpr auto enum_in_array_name() noexcept
   {
     // constexpr auto f() [with auto _ = (
     //constexpr auto f() [Enum = (Scoped)0]
     string_view s = __PRETTY_FUNCTION__ + (sizeof("auto enchantum::details::enum_in_array_name() [Enum = ") - 1);
-    s.remove_suffix(sizeof("]") - 1);
+    s.remove_suffix(SZC("]"));
 
     if constexpr (ScopedEnum<decltype(Enum)>) {
       if (s[s.size() - 2] == ')') {
-        s.remove_prefix(sizeof("(") - 1);
-        s.remove_suffix(sizeof(")0") - 1);
+        s.remove_prefix(SZC("("));
+        s.remove_suffix(SZC(")0"));
         return s;
       }
       else {
@@ -136,8 +116,8 @@ namespace details {
     }
     else {
       if (s[s.size() - 2] == ')') {
-        s.remove_prefix(sizeof("(") - 1);
-        s.remove_suffix(sizeof(")0") - 1);
+        s.remove_prefix(SZC("("));
+        s.remove_suffix(SZC(")0"));
       }
       if (const auto pos = s.rfind("::"); pos != s.npos)
         return s.substr(0, pos);
@@ -149,7 +129,6 @@ namespace details {
   constexpr auto var_name() noexcept
   {
     // "auto enchantum::details::var_name() [Vs = <(A)0, a, b, c, e, d, (A)6>]"
-#define SZC(x) (sizeof(x) - 1)
     constexpr auto funcsig_off = SZC("auto enchantum::details::var_name() [Vs = <");
     return string_view(__PRETTY_FUNCTION__ + funcsig_off, SZC(__PRETTY_FUNCTION__) - funcsig_off - SZC(">]"));
 #undef SZC

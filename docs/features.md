@@ -47,6 +47,7 @@ Quick Reference
   - [min](#min)
   - [count](#count)
   - [value_ors](#value_ors)
+  - [type_name](#type_name)
 
 **Containers**:
   - [array](#array)
@@ -642,6 +643,36 @@ int main() {
   // Outputs: 15 (1 | 2 | 4 | 8)
   return 0;
 }
+```
+
+### `type_name`
+
+```cpp
+// defined in header `type_name.hpp`
+
+template<typename T>
+constexpr inline std::string_view type_name = /*implementation detail";
+```
+
+**Description**:  
+  Gives an implementation defined null-terminated string representing the type name.
+
+  
+
+**Example**:
+```cpp
+#include <enchantum/type_name.hpp>
+
+enum class Enum : std::uint8_t;
+
+namespace NS { struct Type; }
+
+enchantum::type_name<Enum>;
+enchantum::type_name<NS::Type>;
+// Gives on ALL compilers:
+// "Enum"
+// "NS::Type"
+// Other output may be compiler dependant
 ```
 
 ---
