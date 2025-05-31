@@ -141,7 +141,7 @@ There are several enum reflection libraries out there — so why choose **enchan
 
 **Cons**
 - C++20 required
-- Compiler errors are incomprehensable if something goes wrong, needs a level 10 wizard to read them.
+- Compiler errors are incomprehensible if something goes wrong, needs a level 10 wizard to read them.
 - No support for wide strings (yet)
 ---
 

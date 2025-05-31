@@ -12,11 +12,15 @@ Quick Reference
 - [UnsignedEnum](#unsignedenum)
 - [ScopedEnum](#scopedenum)
 - [UnscopedEnum](#unscopedenum)
-- [BitFlagEnum](#bitflagenum)
 - [ContiguousEnum](#contiguousenum)
+- [BitFlagEnum](#bitflagenum)
+- [ContiguousBitFlagEnum](#contiguousbitflagenum)
 - [EnumOfUnderlying](#enumofunderlying)
 - [EnumFixedUnderlying](#enumfixedunderlying)
 - [has_zero_flag](#has_zero_flag)
+- [is_contiguous](#is_contiguous)
+- [is_bitflag](#is_bitflag)
+- [is_contiguous_bitflag](#is_contiguous_bitflag)
 - [enum_traits](#enum_traits)
 
 **Functions**:
@@ -50,6 +54,9 @@ Quick Reference
 
 **Macros**:
   - [ENCHANTUM_DEFINE_BITWISE_FOR](#enchantum_define_bitwise_for)
+  - [ENCHANTUM_ASSERT](#enchantum_assert)
+
+
 # Concepts
 ## Enum
 The Enum concept is used to identify types that are valid C++ enums. Any type that is an enum, whether scoped or unscoped, signed or unsigned, will satisfy this concept.
@@ -143,7 +150,7 @@ static_assert(enchantum::UnscopedEnum<UnscopedColor>);
 ```
 
 ## BitFlagEnum
-The BitFlagEnum concept is used for enums that support bitwise operations, such as &, |, and ~. This concept can be used to check if an enum is intended for bitflag operations, where each enum value represents a distinct bit.
+The `BitFlagEnum` concept is used for enums that support main bitwise operations, such as `&`, `|` , `~` , `&=` and `|=` . This concept can be used to check if an enum is intended for bitflag operations, where each enum value represents a distinct bit.
 
 ```cpp
 #include <enchantum/common.hpp>
@@ -173,7 +180,43 @@ Flags& operator|=(Flags a,Flags b);
 static_assert(enchantum::BitFlagEnum<Flags>);
 ```
 
-## ContiguousEnum
+### ContiguousBitFlagEnum
+The `ContiguousBitFlagEnum` concept subsumes `BitFlagEnum` and checks whether the flag values are contiguous.
+
+```cpp
+template<typename E>
+concept ContiguousBitFlagEnum = BitFlagEnum<E> && is_contiguous_bitflag<E>;
+```
+
+> Example:
+
+```cpp
+#include <enchantum/enchantum.hpp>
+#include <enchantum/bitwise_operators.hpp>
+
+enum class ContiguousFlags : unsigned int {
+    None = 0,
+    OptA = 1 << 0,
+    OptB = 1 << 1,
+    OptC = 1 << 2 
+};
+ENCHANTUM_DEFINE_BITWISE_FOR(ContiguousFlags) 
+
+static_assert(enchantum::ContiguousBitFlagEnum<ContiguousFlags>);
+
+enum class NonContiguousFlags : unsigned int {
+    None = 0,
+    OptA = 1 << 0,
+    OptB = 1 << 2, // skipped  1 << 1
+    OptC = 1 << 3 
+};
+ENCHANTUM_DEFINE_BITWISE_FOR(NonContiguousFlags)
+
+static_assert(!enchantum::ContiguousBitFlagEnum<NonContiguousFlags>);
+
+```
+
+### ContiguousEnum
 
 The ContiguousEnum concept is used for enums where the underlying values are contiguous. For example, `enum { A = 0, B, C }` is a contiguous enum because the underlying values are 0, 1, and 2, respectively.
 
@@ -294,22 +337,24 @@ struct enum_traits // default
 ```cpp
 #include <enchantum/enchantum.hpp>
 #include <enchantum/bitwise_operators.hpp>
-// this is a bug enum it is outside of default range [-256,256] and it has this annoying prefix
+// this is a big enum it is outside of default range [-256,256] and it has this annoying prefix
 enum BigEnumOutsideOfDefault : std::uint16_t {
-  BigEnumOutsideOfDefault_A =0,BigEnumOutsideOfDefault_B = 4096 
+  BigEnumOutsideOfDefault_A = 0,
+  BigEnumOutsideOfDefault_B = 4096 
 };
 
 template<>
 struct enchantum::enum_traits<BigEnumOutsideOfDefault> {
-  constexpr static auto prefix_length = sizeof("BigEnumOutsideOfDefault_")-1;
-  constexpr static auto min = 0;
-  constexpr static auto max = 4096;
+  constexpr static auto prefix_length = sizeof("BigEnumOutsideOfDefault_")-1; // sizeof includes null terminator!
+  constexpr static auto min = 0;    // inclusive
+  constexpr static auto max = 4096; // inclusive
 };
 
 
 // prefix removed
-static_assert(enchantum::names<BigEnumOutsideOfDefault>[0] == "A");
-static_assert(enchantum::names<BigEnumOutsideOfDefault>[1] == "B");
+constexpr auto& names = enchantum::names<BigEnumOutsideOfDefault>;
+static_assert(names[0] == "A");
+static_assert(names[1] == "B");
 ```
 
 --- 
@@ -333,7 +378,7 @@ constexpr inline details::TO_STRING_FUNCTOR to_string;
 **Description**:
   Converts an enum value to its corresponding string representation. 
   **Note** the `std::string_view` points to null-terminated character array. 
-  and the "function" is a functor allowing easy passing of higher order functions without manually specifying the enum type could be handy in `ranges`.
+  and the "function" is a functor allowing easy passing of higher order functions without manually specifying the enum type could be handy in `std::ranges`.
 
 **Notes**:
   Additional overloads may be provided to optimize for specific properties (e.g enums with no gaps can use an index lookup)
@@ -503,10 +548,10 @@ enum class Permissions : std::uint8_t {
   Write = 1 << 1,
   Execute = 1 << 2
 };
-ENCHANTUM_DEFINE_BITWISE_FOR(Flags)
+ENCHANTUM_DEFINE_BITWISE_FOR(Permissions)
 
 std::optional<Permissions> p = enchantum::cast_bitflag<Permissions>("Write|Read");
-assert(p.has_value() && (*p == (Permissions::Read | Permissions::Write)));
+assert(p == (Permissions::Read | Permissions::Write));
 
 // Case-insensitive parsing
 std::optional<Permissions> ci = enchantum::cast_bitflag<Permissions>("read|WRITE", '|',
@@ -631,6 +676,8 @@ inline constexpr std::array<Pair,count<E>> entries;
 - **Description**:  
   Gives an array containing all the string names of the enum and the values, it is sorted in ascending order.
 
+  **Notes**: This variable is overridable if needed for compile time performance, all other enchantum varaibles synthesize from `entries<E>`.
+
 - **Parameters**:
 
   `E`: enum to generate value-string entries for.
@@ -720,6 +767,9 @@ constexpr bool contains(std::underlying_type_t<E> value) noexcept;
 template<Enum E>
 constexpr bool contains(std::string_view name) noexcept;
 
+template<Enum E, std::predicate<std::string_view, std::string_view> BinaryPredicate>
+constexpr bool contains(std::string_view name, BinaryPredicate binary_predicate) noexcept;
+
 ```
 
 - **Description**:  
@@ -731,7 +781,7 @@ constexpr bool contains(std::string_view name) noexcept;
 - **Parameters**:
   - `value`: The enum value or underlying integer value to check.
   - `name`: A string view representing the name of the enum to check.
-
+  - `binary_predicate`: comparator for checking whether 2 `std::string_view`s are equal
 - **Returns**:  
   `true` if the value or name is present in the enum, `false` otherwise.
 
@@ -739,9 +789,11 @@ constexpr bool contains(std::string_view name) noexcept;
 ```cpp
 enum class Color { Red, Green, Blue };
 
-bool containsRed = enchantum::contains(Color::Red);  // true
-bool containsBlue = enchantum::contains<Color>(3);  // false, no such value
-bool containsGreenName = enchantum::contains<Color>("Green");  // true
+enchantum::contains(Color::Red);  // true
+enchantum::contains<Color>(3);    // false, no such value
+enchantum::contains<Color>("Green"); // true
+enchantum::contains<Color>("GreEn"); // false case sensitive
+
 ```
 
 ### `contains_bitflag`
@@ -765,16 +817,34 @@ constexpr bool contains_bitflag(std::string_view s, char sep, BinaryPred binary_
 
 **Description**:
 
-The `contains_bitflag` function checks whether all bits set in a given `BitFlagEnum` value are valid flags in the enumeration. It is typically used to verify that a bitmask is composed only of valid bit flags.
+The `contains_bitflag` function checks whether a given value, underlying value, or string representation corresponds to a valid bitflag combination for the bitflag enum `E`.
+
+1. Checks enum values, it checks if all set bits in the value are a valid bitwise `or` combination of `values<E>`
+
+2. Same as `1` but uses underlying type.
+
+3. For strings, it parses the string (like `cast_bitflag`)
+
+4. same as `3` but with custom comparator.
+
+It is typically used to verify that a bitmask is composed only of valid bit flags or that a string correctly represents a valid combination.
 
 **Parameters**:
-
-value: The value to check. It should be a valid instance of the BitFlagEnum type, representing a bitmask where each bit corresponds to a specific flag.
+- `value`: The enum value or underlying type to check.
+- `name`: The string containing flag names, separated by the `sep` character.
+- `sep`: A character used to delimit individual flag names (default: '|').
+- `binary_pred`: A predicate to compare the input string segments to the enum `names<E>` the first arguement of the predicate is always the input `name` and the second arguement is the segment being compared.
 
 **Returns**:
 
-true if the value contains only valid flags (i.e., if all set bits are valid bit flags).
-false otherwise.
+1. `true` if the value contains only valid flags (i.e., if all set bits are valid bit flags).
+`false` otherwise.
+
+2. same as `1`
+
+3. if string is a valid bitflag return `true` otherwise `false`
+
+4. same as 4 but with custom comparator.
 
 - **Example**:
 ```cpp
@@ -791,12 +861,14 @@ enum class Permissions : std::uint8_t {
 
 ENCHANTUM_DEFINE_BITWISE_FOR(Permissions)
 
-Permissions value = static_cast<Permissions>(Permissions::Read | Permissions::Write);
+Permissions value = Permissions::Read | Permissions::Write;
 
-// Check if the value contains valid flags
-bool is_valid = contains_bitflag(value);
-// Output: true
-std::cout << "Permissions value is valid: " << std::boolalpha << is_valid << std::endl;
+// Output: 
+// true 
+// false
+std::cout << contains_bitflag(value) << '\n';
+std::cout << contains_bitflag(value | Permissions(1<<3)) << '\n';
+
 ```
 
 ---
@@ -992,6 +1064,36 @@ Flags& operator&=(Flags&, Flags);
 static_assert(enchantum::is_bitflag<Flags>);  // true
 ```
 
+### is_contiguous
+
+```cpp
+template<typename>
+constexpr inline bool is_contiguous = false;
+
+template<Enum E>
+constexpr inline bool is_contiguous<E> = /*implementation details*/;
+
+```
+
+Checks whether an enum is contiguous. All members are sequential.
+
+Defined in header `enchantum.hpp`
+
+### is_contiguous_bitflag
+
+```cpp
+template<typename>
+constexpr inline bool is_contiguous_bitflag = false;
+
+template<BitFlagEnum E>
+constexpr inline bool is_contiguous_bitflag<E> = /*implementation details*/;
+
+```
+
+Checks whether a bitflag enum is contiguous. All members are sequentially powers of 2 (excluding `0` value).
+
+Defined in header `enchantum.hpp`
+
 ---
 
 # Stream Operators
@@ -1147,22 +1249,19 @@ public:
   using base::base;
   using base::operator=;
 
-  [[nodiscard]] constexpr string to_string(const char sep = '|') const;
+  [[nodiscard]] constexpr string to_string(char sep = '|') const;
 
-  [[nodiscard]] constexpr auto to_string(const char zero,const char one) const;
+  [[nodiscard]] constexpr auto to_string(char zero,char one) const;
 
-  constexpr bitset(const std::initializer_list<E> values) noexcept;
+  constexpr bitset(std::initializer_list<E> values) noexcept;
 
-  [[nodiscard]] constexpr reference operator[](const E index) noexcept;
-  [[nodiscard]] constexpr bool operator[](const E index) const noexcept;
-  constexpr bool test(const E pos);
-  constexpr bitset& set(const E pos, bool value = true);
-  constexpr bitset& reset(const E pos);
-  constexpr bitset& flip(const E pos);
+  [[nodiscard]] constexpr reference operator[](E pos) noexcept;
+  [[nodiscard]] constexpr bool operator[](E pos) const noexcept;
+  constexpr bool test(E pos);
+  constexpr bitset& set(E pos, bool value = true);
+  constexpr bitset& reset(E pos);
+  constexpr bitset& flip(E pos);
 };
-
-} // namespace enchantum
-
 
 template<typename E>
 struct std::hash<enchantum::bitset<E>> : std::hash<std::bitset<enchantum::count<E>>> {
@@ -1179,9 +1278,9 @@ enum class Color { Red, Green, Blue };
 enchantum::bitset<Color> bitset{Color::Red,Color::Green}
 
 std::cout << bitset[Color::Green] << '\n';  // Outputs: 1 
-values[Color::Green] = false;
-std::cout << values.test(Color::Green) << '\n';  // Outputs: 0
-std::cout << values.count() << '\n';  // Outputs: 2 (2 bits are set)
+bitset[Color::Green] = false;
+std::cout << bitset.test(Color::Green) << '\n';  // Outputs: 0
+std::cout << bitset.count() << '\n';  // Outputs: 2 (2 bits are set)
 
 ```
 
@@ -1189,6 +1288,8 @@ std::cout << values.count() << '\n';  // Outputs: 2 (2 bits are set)
 
 - **Description**: 
 Overloads the bitwise operators for a given enum. `~`,`&`,`|`,`^`,`&=`,`|=`,`^=`
+
+**Notes**: the macro does not require a semicolon at the end.
 ```cpp
 // defined in header `bitwise_operators.hpp`
 #define ENCHANTUM_DEFINE_BITWISE_FOR(Enum)                                                \
@@ -1216,3 +1317,17 @@ Overloads the bitwise operators for a given enum. `~`,`&`,`|`,`^`,`&=`,`|=`,`^=`
   }
 ```
 
+
+### ENCHANTUM_ASSERT
+
+- **Description**: 
+A customizable macro for assertions in the library.
+
+The `__VA_ARGS__` at the end is more info in the macro for example local variables are put there so if you have a macro that can display more stuff you can override this macro by defining `#define ENCHANTUM_ASSERT(cond,msg,...) MY_COOL_ASSERT(cond,msg,__VA_ARGS__)` before including `common.hpp`
+
+```cpp
+// defined in header `common.hpp`
+#ifndef ENCHANTUM_ASSERT
+#define ENCHANTUM_ASSERT(cond,msg,...) assert(cond && msg)
+#endif
+```
