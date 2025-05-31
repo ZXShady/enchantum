@@ -6,6 +6,9 @@ All non-`void` functions are `[[nodiscard]]` unless explicitly said otherwise.
 
 Quick Reference
 
+**How to Include**:
+- [Including Headers](#how-to-include)
+
 **Concepts And Traits**:
 - [Enum](#enum)
 - [SignedEnum](#signedenum)
@@ -13,6 +16,7 @@ Quick Reference
 - [ScopedEnum](#scopedenum)
 - [UnscopedEnum](#unscopedenum)
 - [BitFlagEnum](#bitflagenum)
+- [ContiguousBitFlagEnum](#contiguousbitflagenum)
 - [ContiguousEnum](#contiguousenum)
 - [EnumOfUnderlying](#enumofunderlying)
 - [EnumFixedUnderlying](#enumfixedunderlying)
@@ -50,6 +54,18 @@ Quick Reference
 
 **Macros**:
   - [ENCHANTUM_DEFINE_BITWISE_FOR](#enchantum_define_bitwise_for)
+  - [Customization Macros](#customization-macros)
+
+**Namespaces**:
+  - [enchantum::bitwise_operators](#enchantumbitwise_operators-namespace)
+
+# Customization Macros
+Details about specific customization macros like `ENCHANTUM_ASSERT`, `ENCHANTUM_THROW`, etc. will be listed here.
+ - [ENCHANTUM_ASSERT](#enchantum_assert)
+ - [ENCHANTUM_THROW](#enchantum_throw)
+ - [ENCHANTUM_ALIAS_STRING](#enchantum_alias_string)
+ - [ENCHANTUM_ALIAS_BITSET](#enchantum_alias_bitset)
+
 # Concepts
 ## Enum
 The Enum concept is used to identify types that are valid C++ enums. Any type that is an enum, whether scoped or unscoped, signed or unsigned, will satisfy this concept.
@@ -171,6 +187,50 @@ Flags& operator|=(Flags a,Flags b);
 
 
 static_assert(enchantum::BitFlagEnum<Flags>);
+```
+
+## ContiguousBitFlagEnum
+
+The `ContiguousBitFlagEnum` concept combines the requirements of `BitFlagEnum` and the notion of contiguous underlying values (after considering a potential zero flag). It is intended for enums that are used as bitflags and whose set flag values (powers of two) are sequential.
+
+```cpp
+template<typename E>
+concept ContiguousBitFlagEnum = BitFlagEnum<E> && is_contiguous_bitflag<E>;
+```
+
+The determination of "contiguous" for bitflags is handled by the `is_contiguous_bitflag` variable template:
+
+```cpp
+template<BitFlagEnum E>
+inline constexpr bool is_contiguous_bitflag<E> = /* implementation details */;
+```
+This variable checks if the underlying values of the enum members (which should be powers of two for a bitflag enum, plus a potential zero flag) are sequential when considering only the set bits. For example, `Flags { F1 = 1, F2 = 2, F4 = 4 }` would be contiguous in this context, but `Flags { F1 = 1, F2 = 2, F8 = 8 }` (missing `4`) would not.
+
+> Example usage:
+```cpp
+#include <enchantum/common.hpp> // Assuming is_contiguous_bitflag is here or in a related header
+
+enum class SequentialFlags : unsigned int {
+    None = 0,
+    OptA = 1 << 0, // 1
+    OptB = 1 << 1, // 2
+    OptC = 1 << 2  // 4
+};
+// Assume bitwise operators are defined for SequentialFlags making it a BitFlagEnum
+// ENCHANTUM_DEFINE_BITWISE_FOR(SequentialFlags) // if using the macro
+
+// static_assert(enchantum::ContiguousBitFlagEnum<SequentialFlags>); // Placeholder, depends on full library setup
+
+enum class NonSequentialFlags : unsigned int {
+    None = 0,
+    OptA = 1 << 0, // 1
+    OptB = 1 << 2, // 4, skips 2
+    OptC = 1 << 3  // 8
+};
+// Assume bitwise operators are defined for NonSequentialFlags
+// ENCHANTUM_DEFINE_BITWISE_FOR(NonSequentialFlags) // if using the macro
+
+// static_assert(!enchantum::ContiguousBitFlagEnum<NonSequentialFlags>); // Placeholder
 ```
 
 ## ContiguousEnum
@@ -380,7 +440,6 @@ constexpr String to_string_bitflag(E value, char sep = '|');
 #include <enchantum/bitwise_operators.hpp>
 #include <enchantum/bitflags.hpp>
 #include <enchantum/enchantum.hpp>
-#include <cstddef>
 
 enum class Flags : std::uint8_t {
     None = 0,
@@ -503,7 +562,7 @@ enum class Permissions : std::uint8_t {
   Write = 1 << 1,
   Execute = 1 << 2
 };
-ENCHANTUM_DEFINE_BITWISE_FOR(Flags)
+ENCHANTUM_DEFINE_BITWISE_FOR(Permissions)
 
 std::optional<Permissions> p = enchantum::cast_bitflag<Permissions>("Write|Read");
 assert(p.has_value() && (*p == (Permissions::Read | Permissions::Write)));
@@ -765,11 +824,18 @@ constexpr bool contains_bitflag(std::string_view s, char sep, BinaryPred binary_
 
 **Description**:
 
-The `contains_bitflag` function checks whether all bits set in a given `BitFlagEnum` value are valid flags in the enumeration. It is typically used to verify that a bitmask is composed only of valid bit flags.
+The `contains_bitflag` function checks whether a given value, underlying value, or string representation corresponds to a valid bitflag combination for the enum `E`.
+- For enum values or underlying values, it checks if all set bits in the value are defined flags in `E` (i.e., part of `values<E>`).
+- For strings, it parses the string (like `cast_bitflag`) and checks if the resulting combination is valid.
+
+It is typically used to verify that a bitmask is composed only of valid bit flags or that a string correctly represents a valid combination.
 
 **Parameters**:
 
-value: The value to check. It should be a valid instance of the BitFlagEnum type, representing a bitmask where each bit corresponds to a specific flag.
+- `value`: The enum value or underlying integer value to check. It should be an instance of the `BitFlagEnum` type or its underlying type, representing a bitmask.
+- `name` (for string overloads): The string containing flag names, separated by the `sep` character.
+- `sep` (for string overloads): A character used to delimit individual flag names (default: '|').
+- `binary_pred` (for the custom predicate string overload): A predicate to compare the input string segments to the enum `names<E>`.
 
 **Returns**:
 
@@ -1176,12 +1242,12 @@ struct std::hash<enchantum::bitset<E>> : std::hash<std::bitset<enchantum::count<
 #include <enchantum/bitset.hpp>
 
 enum class Color { Red, Green, Blue };
-enchantum::bitset<Color> bitset{Color::Red,Color::Green}
+enchantum::bitset<Color> bitset{Color::Red,Color::Green}; // Added semicolon
 
 std::cout << bitset[Color::Green] << '\n';  // Outputs: 1 
-values[Color::Green] = false;
-std::cout << values.test(Color::Green) << '\n';  // Outputs: 0
-std::cout << values.count() << '\n';  // Outputs: 2 (2 bits are set)
+bitset[Color::Green] = false;
+std::cout << bitset.test(Color::Green) << '\n';  // Outputs: 0
+std::cout << bitset.count() << '\n';  // Outputs: 1 (1 bit is set: Red)
 
 ```
 
@@ -1216,3 +1282,135 @@ Overloads the bitwise operators for a given enum. `~`,`&`,`|`,`^`,`&=`,`|=`,`^=`
   }
 ```
 
+---
+# Namespaces
+
+## `enchantum::bitwise_operators` Namespace
+
+The header `enchantum/bitwise_operators.hpp` provides a special namespace `enchantum::bitwise_operators`.
+
+```cpp
+// enchantum/bitwise_operators.hpp excerpt
+namespace enchantum::bitwise_operators {
+  // Global operator overloads for ~, |, &, ^, |=, &=, ^= for any enum type E
+  // template<typename E> requires std::is_enum_v<E> ...
+}
+```
+
+If this namespace is brought into the current scope (e.g., via `using namespace enchantum::bitwise_operators;`), it defines global bitwise operators (`operator~`, `operator|`, `operator&`, `operator^`, `operator|=`, `operator&=`, `operator^=`) that work for *all* enum types.
+
+**ODR Warning**:
+Using this namespace can potentially lead to One Definition Rule (ODR) issues. If `enchantum` functions (like `is_bitflag` or other utilities that depend on bitwise operations) are instantiated with a particular enum type *before* this namespace is used, and then instantiated again with the same enum type *after* this namespace is used, the program might behave inconsistently or violate ODR. This is because the availability of global bitwise operators can change how `is_bitflag<E>` evaluates for an enum `E` if `E` did not previously have such operators defined.
+
+**Recommendation**:
+For enabling bitwise operations on specific enums, it is generally safer to use the `ENCHANTUM_DEFINE_BITWISE_FOR(MyEnum)` macro for each enum type that requires these operations. This approach avoids the global scope alteration and potential ODR conflicts.
+
+> Example of potential issue:
+```cpp
+#include <enchantum/common.hpp> // For is_bitflag
+#include <enchantum/bitwise_operators.hpp>
+
+enum class MyFlags { F1 = 1, F2 = 2 };
+
+// Stage 1: MyFlags might not be detected as a BitFlagEnum
+// bool is_flag_before = enchantum::is_bitflag<MyFlags>;
+// This might be false if operators are not yet defined.
+
+// Stage 2: Introduce global bitwise operators
+// using namespace enchantum::bitwise_operators;
+// Now MyFlags will likely be seen as a BitFlagEnum by is_bitflag.
+// bool is_flag_after = enchantum::is_bitflag<MyFlags>; // Likely true
+
+// If is_bitflag<MyFlags> is instantiated in different translation units
+// with and without the namespace in scope, it can lead to ODR violations.
+
+// Safer alternative:
+// ENCHANTUM_DEFINE_BITWISE_FOR(MyFlags);
+// This ensures MyFlags is consistently a BitFlagEnum.
+```
+
+---
+# Customization Macros
+
+The Enchantum library provides several macros that can be (re)defined by the user to customize its behavior or integrate it more deeply with existing project infrastructure.
+
+## `ENCHANTUM_ASSERT(condition, message, ...)`
+
+-   **Description**: This macro is used for internal assertions within the Enchantum library. Users can redefine it to integrate with their own assertion systems (e.g., a custom assertion handler or a logging framework).
+-   **Default Behavior**: `assert(condition && message)` (Note: The variadic arguments `...` are typically used to allow format string style messages if the user's assertion macro supports it, but the default `assert` only uses the `message` part if it's a string literal).
+-   **Usage**:
+    ```cpp
+    // Example: Redirecting to a custom assertion handler
+    #define ENCHANTUM_ASSERT(condition, message, ...) \
+        my_custom_assert(condition, #condition, message, __VA_ARGS__)
+
+    #include <enchantum/common.hpp> // Or any other Enchantum header
+    ```
+
+## `ENCHANTUM_THROW(exception, ...)`
+
+-   **Description**: This macro is used by Enchantum functions (e.g., `at()` methods of containers, or failed conversions) to throw exceptions. Users can redefine it to customize exception throwing, for instance, to log the exception before throwing or to use a project-specific exception type.
+-   **Default Behavior**: `throw exception` (The variadic arguments `...` can be used if the user's macro needs to construct the exception with more arguments).
+-   **Usage**:
+    ```cpp
+    // Example: Logging before throwing
+    #define ENCHANTUM_THROW(exception, ...) \
+        do { \
+            my_logger.log_error("Enchantum throwing: ", #__VA_ARGS__); \
+            throw exception; \
+        } while(false)
+
+    #include <enchantum/array.hpp> // Or any other Enchantum header that might throw
+    ```
+
+## `ENCHANTUM_ALIAS_STRING`
+
+-   **Description**: If this macro is defined to a `using` declaration *before* including `enchantum/bitflags.hpp` (or `enchantum/all.hpp`), the specified string type will be used by `enchantum::to_string_bitflag` as its default return type and for internal string manipulations, instead of `std::string`.
+-   **Requirements for Custom String Type**: The custom string type must support:
+    -   `append(const char* str, size_t count)`
+    -   `append(size_t count, char ch)`
+    -   Be default constructible.
+    -   Be movable and/or copyable as appropriate for return values.
+-   **Usage**:
+    ```cpp
+    // Example: Using a custom string type MyProjectString
+    #define ENCHANTUM_ALIAS_STRING using string = MyProjectString;
+
+    #include <enchantum/bitflags.hpp>
+    // Now enchantum::to_string_bitflag will return MyProjectString by default
+    ```
+
+## `ENCHANTUM_ALIAS_BITSET`
+
+-   **Description**: If this macro is defined to a `using` declaration *before* including `enchantum/bitset.hpp` (or `enchantum/all.hpp`), the specified bitset type will be used as the underlying base for `enchantum::bitset<E>` instead of `std::bitset<count<E>>`.
+-   **Requirements for Custom Bitset Type**: The custom bitset type must conform to the `std::bitset` interface. This means it should provide a similar set of member functions (`operator[]`, `test`, `set`, `reset`, `flip`, `count`, `size`, `to_string`, etc.) and be constructible in ways compatible with how `enchantum::bitset` uses it.
+-   **Usage**:
+    ```cpp
+    // Example: Using a custom bitset type MyProjectBitset
+    // MyProjectBitset must be a template class taking size as a template parameter.
+    #define ENCHANTUM_ALIAS_BITSET template<std::size_t N> using bitset = MyProjectBitset<N>;
+
+    #include <enchantum/bitset.hpp>
+    // Now enchantum::bitset<MyEnum> will use MyProjectBitset<enchantum::count<MyEnum>> internally.
+    ```
+
+---
+# How to Include
+
+The Enchantum library is header-only. Most features are available by including specific headers like `enchantum/common.hpp`, `enchantum/enchantum.hpp`, `enchantum/bitflags.hpp`, etc.
+
+For convenience, the header `enchantum/all.hpp` can be included to bring in all core features of the Enchantum library. This is a simple way to get started or if you anticipate using a wide range of functionalities.
+
+```cpp
+#include <enchantum/all.hpp>
+
+// You can now use concepts, functions, containers, etc. from Enchantum.
+enum class MyEnum { Val1, Val2 };
+static_assert(enchantum::Enum<MyEnum>);
+
+void example() {
+    auto name = enchantum::to_string(MyEnum::Val1);
+    // ... and so on.
+}
+```
+Individual headers are still available if you prefer to include only the specific parts of the library you need, potentially reducing compilation times.

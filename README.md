@@ -42,7 +42,7 @@ enum class Enemy {
     Melee = 1 << 1,
     Ranged = 1 << 2
 };
-ENCHANTUM_DEFINE_BITWISE_FOR(Enemy) // defines ~,^,&,|,^=,&=,|=
+ENCHANTUM_DEFINE_BITWISE_FOR(Enemy) // Defines bitwise operators (~, &, |, ^, &=, |=, ^=) for the Enemy enum. See docs/features.md#enchantum_define_bitwise_for for details.
 
 int main() {
   auto music = Music::Rock;
@@ -66,7 +66,7 @@ int main() {
 
   static_assert(enchantum::count<Music> == 3);
   for(Music types : enchantum::values<Music>) { // variable based API
-    using namespace enchantum::iostream_operators;
+    using namespace enchantum::iostream_operators; // Provides std::ostream operator<< and std::istream operator>> for enums. See docs/features.md#stream-operators.
     std::cout << types << '\n'; // calls enchantum::to_string
   }
   for(std::string_view names : enchantum::names<Music>) // variable based API
@@ -141,7 +141,7 @@ There are several enum reflection libraries out there — so why choose **enchan
 
 **Cons**
 - C++20 required
-- Compiler errors are incomprehensable if something goes wrong, needs a level 10 wizard to read them.
+- Compiler errors are incomprehensible if something goes wrong, needs a level 10 wizard to read them (though see `docs/limitations.md#other-compiler-issues` for common issues and solutions).
 - No support for wide strings (yet)
 ---
 
@@ -178,6 +178,41 @@ Each benchmark was run 10 times (except MSVC which was ran 3 times) and averaged
 | MSVC     | >20 min (killed) | ~107 sec      |
 | GCC      | >15 min (killed) | ~37 sec       |
 | Clang    | >15 min (killed) | ~42 sec       |
+---
+
+## Key Performance Considerations
+
+While Enchantum is designed for speed, its compile-time performance for enum reflection is inherently tied to the range of underlying integer values it needs to scan for potential enum members. By default, Enchantum checks the range defined by `ENCHANTUM_MIN_RANGE` (-256) and `ENCHANTUM_MAX_RANGE` (256).
+
+**Impact of Value Range:**
+- If your enums generally fall within this default range, performance is typically excellent.
+- However, if you have enums with values far outside this range (e.g., `enum MyFarEnum { Val = 10000 };`), or if you globally override `ENCHANTUM_MIN_RANGE`/`ENCHANTUM_MAX_RANGE` to be excessively large (e.g., to cover `INT_MIN` to `INT_MAX` for all enums), compile times can increase noticeably. This is because the library will iterate through a much larger set of potential values during its compile-time analysis.
+
+**Recommendations for Optimal Compile Times:**
+
+To ensure the best compile-time performance, it is **strongly recommended** to specialize `enchantum::enum_traits<MyEnum>` for specific enums, particularly if they:
+1.  **Are outside the default `-256` to `256` range**: Define `min` and `max` in the traits to tightly bound the actual values of your enum.
+    ```cpp
+    enum class MyLargeValueEnum { Val1 = 500, Val2 = 501 };
+    template<> struct enchantum::enum_traits<MyLargeValueEnum> {
+        static constexpr auto min = 500;
+        static constexpr auto max = 501;
+    };
+    ```
+2.  **Have a known, smaller range than the default**: Even if within the default range, specifying a tighter bound can yield minor improvements.
+3.  **Have common prefixes in their names**: Use `prefix_length` in the traits to tell Enchantum to automatically strip these prefixes from the reflected names.
+    ```cpp
+    enum class MyPrefixedEnum { MyPrefix_A, MyPrefix_B };
+    template<> struct enchantum::enum_traits<MyPrefixedEnum> {
+        static constexpr auto prefix_length = sizeof("MyPrefix_") - 1;
+    };
+    // enchantum::to_string(MyPrefixedEnum::MyPrefix_A) will be "A"
+    ```
+
+By specializing `enum_traits`, you provide the library with precise information, allowing it to minimize its search space and reduce compile times.
+
+For more details, see the documentation on [`enum_traits`](docs/features.md#enum_traits) and the discussion on [ranges and compile times](docs/limitations.md#range-and-compile-times).
+
 ---
 
 ## Summary
