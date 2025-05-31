@@ -1,19 +1,8 @@
 #pragma once
 #include "common.hpp"
+#include "details/string.hpp"
 #include "details/string_view.hpp"
 #include "enchantum.hpp"
-
-#ifndef ENCHANTUM_ALIAS_STRING
-  #include <string>
-#endif
-
-namespace enchantum {
-#ifdef ENCHANTUM_ALIAS_STRING
-ENCHANTUM_ALIAS_STRING;
-#else
-using ::std::string;
-#endif
-} // namespace enchantum
 
 
 namespace enchantum {
@@ -56,7 +45,7 @@ template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
 {
   std::size_t pos = 0;
   for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
-    if (!enchantum::contains<E>(s.substr(pos, i - pos),binary_pred))
+    if (!enchantum::contains<E>(s.substr(pos, i - pos), binary_pred))
       return false;
     pos = i + 1;
   }

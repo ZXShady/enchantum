@@ -1,10 +1,11 @@
 #pragma once
 #include "details/optional.hpp"
+#include "details/string.hpp"
 #include "details/string_view.hpp"
 #include "details/generate_arrays.hpp"
-
 #include "algorithms.hpp"
 #include "array.hpp"
+#include "bitset.hpp"
 #include "bitflags.hpp"
 #include "bitwise_operators.hpp"
 #include "enchantum.hpp"
