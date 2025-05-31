@@ -125,16 +125,16 @@ namespace details {
     }();
 
     constexpr auto strings = [elements]() {
-      std::array<char, elements.total_string_length> strings;
+      std::array<char, elements.total_string_length> ret;
       for (std::size_t _i = 0, index = 0; _i < elements.valid_count; ++_i) {
         const auto& [_, s] = elements.pairs[_i];
         for (std::size_t i = 0; i < s.size(); ++i)
-          strings[index++] = s[i];
+          ret[index++] = s[i];
 
         if constexpr (ShouldNullTerminate)
-          strings[index++] = '\0';
+          ret[index++] = '\0';
       }
-      return strings;
+      return ret;
     }();
 
     std::array<Pair, elements.valid_count> ret;

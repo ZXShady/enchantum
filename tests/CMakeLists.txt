@@ -11,7 +11,7 @@ target_compile_definitions(Catch2 PUBLIC CATCH_CONFIG_ENABLE_OPTIONAL_STRINGMAKE
 add_executable(tests)
 target_include_directories(tests PRIVATE "third_party")
 target_compile_features(tests PRIVATE cxx_std_20)
- 
+
 
 target_link_libraries(tests PRIVATE enchantum::enchantum Catch2::Catch2WithMain)
 
@@ -22,7 +22,7 @@ endif()
 
 if(MSVC)
   target_compile_options(tests PRIVATE /Za /permissive-)
-  target_compile_options(tests PRIVATE /Wx /W4)
+  target_compile_options(tests PRIVATE /WX /W4)
 else()
   target_compile_options(tests PRIVATE -Werror -Wall -Wextra -Wshadow -Wconversion -Wpedantic)
 endif()

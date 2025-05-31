@@ -119,7 +119,6 @@ TEST_CASE("invalid_casts", "[cast][bitflags]")
 
   SECTION("Empty input returns none") { STATIC_CHECK_FALSE(enchantum::cast_bitflag<Permission>("").has_value()); }
 }
- 
 TEST_CASE("complex_bitflag_combinations", "[bitflags]")
 {
   SECTION("Mixed ordering")
@@ -269,7 +268,7 @@ TEMPLATE_LIST_TEST_CASE("bitflags", "[bitflags]", AllFlagsTestTypes)
 
   SECTION("Value ORs")
   {
-    const auto s = []() {
+    const auto string = []() {
       std::string ret;
       for (const auto& [e, s] : enchantum::entries<TestType>) {
         if (T(e) != 0) {
@@ -280,7 +279,7 @@ TEMPLATE_LIST_TEST_CASE("bitflags", "[bitflags]", AllFlagsTestTypes)
       }
       return ret;
     }();
-    CHECK(enchantum::to_string_bitflag(enchantum::value_ors<TestType>) == s);
+    CHECK(enchantum::to_string_bitflag(enchantum::value_ors<TestType>) == string);
   }
 }
 
