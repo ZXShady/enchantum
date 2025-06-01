@@ -4,9 +4,9 @@
 #include "details/optional.hpp"
 #include "details/string_view.hpp"
 #include "entries.hpp"
+#include <bit>
 #include <type_traits>
 #include <utility>
-
 namespace enchantum {
 
 template<typename>
@@ -32,7 +32,6 @@ inline constexpr bool is_contiguous<E> = static_cast<std::size_t>(to_underlying(
 template<typename E>
 concept ContiguousEnum = Enum<E> && is_contiguous<E>;
 
-
 template<typename>
 inline constexpr bool is_contiguous_bitflag = false;
 
@@ -49,21 +48,33 @@ inline constexpr bool is_contiguous_bitflag<E> = []() {
 template<typename E>
 concept ContiguousBitFlagEnum = BitFlagEnum<E> && is_contiguous_bitflag<E>;
 
-template<Enum E>
-[[nodiscard]] constexpr bool contains(const E value) noexcept
-{
-  for (const auto v : values<E>)
-    if (v == value)
-      return true;
-  return false;
-}
 
 template<Enum E>
 [[nodiscard]] constexpr bool contains(const std::underlying_type_t<E> value) noexcept
 {
-  return enchantum::contains(static_cast<E>(value));
+  using T = std::underlying_type_t<E>;
+  if (value < T(min<E>) || value > T(max<E>))
+    return false;
+
+  if constexpr (is_bitflag<E>) {
+    if constexpr (has_zero_flag<E>)
+      if (value == 0)
+        return true;
+    return 1 == std::popcount(static_cast<std::make_unsigned_t<T>>(value));
+  }
+  else {
+    for (const auto v : values<E>)
+      if (static_cast<T>(v) == value)
+        return true;
+    return is_contiguous<E>;
+  }
 }
 
+template<Enum E>
+[[nodiscard]] constexpr bool contains(const E value) noexcept
+{
+  return enchantum::contains<E>(static_cast<std::underlying_type_t<E>>(value));
+}
 
 template<Enum E>
 [[nodiscard]] constexpr bool contains(const string_view name) noexcept
@@ -84,12 +95,6 @@ template<Enum E, std::predicate<string_view, string_view> BinaryPredicate>
   return false;
 }
 
-template<ContiguousEnum E>
-[[nodiscard]] constexpr bool contains(const E value) noexcept
-{
-  using T = std::underlying_type_t<E>;
-  return T(value) <= T(max<E>) && T(value) >= T(min<E>);
-}
 
 namespace details {
   template<typename E>
@@ -107,15 +112,29 @@ namespace details {
     template<Enum E>
     [[nodiscard]] constexpr optional<std::size_t> operator()(const E e) const noexcept
     {
-      if constexpr (ContiguousEnum<E>) {
-        using T = std::underlying_type_t<E>;
-        if (enchantum::contains(e))
+      using T = std::underlying_type_t<E>;
+
+      if constexpr (is_contiguous<E>) {
+        if (enchantum::contains(e)) {
           return optional<std::size_t>(std::size_t(T(e) - T(min<E>)));
+        }
+      }
+      else if constexpr (is_contiguous_bitflag<E>) {
+        if (enchantum::contains(e)) {
+          constexpr bool has_zero = has_zero_flag<E>;
+          if constexpr (has_zero)
+            if (static_cast<T>(e) == 0)
+              return optional<std::size_t>(0); // assumes 0 is the index of value `0`
+
+          using U = std::make_unsigned_t<T>;
+          return has_zero + std::countr_zero(static_cast<U>(e)) - std::countr_zero(static_cast<U>(values<E>[has_zero]));
+        }
       }
       else {
-        for (std::size_t i = 0; i < values<E>.size(); ++i)
+        for (std::size_t i = 0; i < values<E>.size(); ++i) {
           if (values<E>[i] == e)
-            return optional<std::size_t>(i);
+            return i;
+        }
       }
       return optional<std::size_t>();
     }

@@ -4,7 +4,6 @@
 #include "details/string_view.hpp"
 #include "enchantum.hpp"
 
-
 namespace enchantum {
 
 
@@ -21,17 +20,22 @@ inline constexpr E value_ors = [] {
 template<BitFlagEnum E>
 [[nodiscard]] constexpr bool contains_bitflag(const std::underlying_type_t<E> value) noexcept
 {
-  if (value == 0)
-    return has_zero_flag<E>;
-  using T      = std::underlying_type_t<E>;
-  T valid_bits = 0;
-
-  for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
-    const auto v = static_cast<T>(values<E>[i]);
-    if ((value & v) == v)
-      valid_bits |= v;
+  using T = std::underlying_type_t<E>;
+  if constexpr (is_contiguous_bitflag<E>) {
+    return value >= static_cast<T>(min<E>) && value <= static_cast<T>(value_ors<E>);
   }
-  return valid_bits == value;
+  else {
+    if (value == 0)
+      return has_zero_flag<E>;
+    T valid_bits = 0;
+
+    for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
+      const auto v = static_cast<T>(values<E>[i]);
+      if ((value & v) == v)
+        valid_bits |= v;
+    }
+    return valid_bits == value;
+  }
 }
 
 template<BitFlagEnum E>
@@ -116,23 +120,9 @@ template<BitFlagEnum E>
 }
 
 template<BitFlagEnum E>
-[[nodiscard]] constexpr optional<E> cast_bitflag(const E value) noexcept
+[[nodiscard]] constexpr optional<E> cast_bitflag(const std::underlying_type_t<E> value) noexcept
 {
-  using T              = std::underlying_type_t<E>;
-  const auto raw_value = static_cast<T>(value);
-
-  if constexpr (has_zero_flag<E>)
-    if (raw_value == 0)
-      return optional<E>(E{});
-
-  T valid_bits{0};
-  for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
-    const auto v = static_cast<T>(values<E>[i]);
-    if ((raw_value & v) == v)
-      valid_bits |= v;
-  }
-  return valid_bits == raw_value ? optional<E>(value) : optional<E>();
+  return enchantum::contains_bitflag<E>(value) ? optional<E>(static_cast<E>(value)) : optional<E>();
 }
-
 
 } // namespace enchantum
