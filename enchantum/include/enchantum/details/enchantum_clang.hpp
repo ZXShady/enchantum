@@ -95,14 +95,14 @@ struct enum_traits<E> {
 
 
 namespace details {
-#define SZC(x) (sizeof(x) - 1)  
+#define SZC(x) (sizeof(x) - 1)
   template<auto Enum>
   constexpr auto enum_in_array_name() noexcept
   {
     // constexpr auto f() [with auto _ = (
     //constexpr auto f() [Enum = (Scoped)0]
-    string_view s = __PRETTY_FUNCTION__ + (sizeof("auto enchantum::details::enum_in_array_name() [Enum = ") - 1);
-    s.remove_suffix(SZC("]"));
+    auto s = string_view(__PRETTY_FUNCTION__ + SZC("auto enchantum::details::enum_in_array_name() [Enum = "),
+                         SZC(__PRETTY_FUNCTION__) - SZC("auto enchantum::details::enum_in_array_name() [Enum = ]"));
 
     if constexpr (ScopedEnum<decltype(Enum)>) {
       if (s[s.size() - 2] == ')') {
@@ -131,7 +131,6 @@ namespace details {
     // "auto enchantum::details::var_name() [Vs = <(A)0, a, b, c, e, d, (A)6>]"
     constexpr auto funcsig_off = SZC("auto enchantum::details::var_name() [Vs = <");
     return string_view(__PRETTY_FUNCTION__ + funcsig_off, SZC(__PRETTY_FUNCTION__) - funcsig_off - SZC(">]"));
-#undef SZC
   }
 
 
@@ -168,7 +167,7 @@ namespace details {
       constexpr std::size_t index_check = !enum_in_array_name.empty() && enum_in_array_name.front() == '(' ? 1 : 0;
       while (index < Array.size()) {
         if (str[index_check] == '(') {
-          str.remove_prefix(sizeof("(") - 1 + enum_in_array_len + sizeof(")0") - 1); // there is atleast 1 base 10 digit
+          str.remove_prefix(SZC("(") + enum_in_array_len + SZC(")0")); // there is atleast 1 base 10 digit
           //if(!str.empty())
           //	std::cout << "after str \"" << str << '"' << '\n';
           if (const auto commapos = str.find(','); commapos != str.npos)
@@ -177,7 +176,7 @@ namespace details {
         }
         else {
           if constexpr (enum_in_array_len != 0) {
-            str.remove_prefix(enum_in_array_len + (sizeof("::") - 1));
+            str.remove_prefix(enum_in_array_len + SZC("::"));
           }
           if constexpr (details::prefix_length_or_zero<E> != 0) {
             str.remove_prefix(details::prefix_length_or_zero<E>);
@@ -236,3 +235,4 @@ namespace details {
 #if __clang_major__ < 20
   #pragma clang diagnostic pop
 #endif
+#undef SZC

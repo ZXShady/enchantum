@@ -11,15 +11,16 @@
 
 namespace enchantum {
 namespace details {
-#define SZC(x) (sizeof(x)-1)
+#define SZC(x) (sizeof(x) - 1)
   template<auto Enum>
   constexpr auto enum_in_array_name() noexcept
   {
     // constexpr auto f() [with auto _ = (
     //constexpr auto f() [with auto _ = (Scoped)0]
-    string_view s = __PRETTY_FUNCTION__ +
-      SZC("constexpr auto enchantum::details::enum_in_array_name() [with auto Enum = ");
-    s.remove_suffix(SZC("]"));
+    auto s = string_view(__PRETTY_FUNCTION__ +
+                           SZC("constexpr auto enchantum::details::enum_in_array_name() [with auto Enum = "),
+                         SZC(__PRETTY_FUNCTION__) -
+                           SZC("constexpr auto enchantum::details::enum_in_array_name() [with auto Enum = ]"));
 
     if constexpr (ScopedEnum<decltype(Enum)>) {
       if (s.front() == '(') {
