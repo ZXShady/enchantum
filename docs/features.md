@@ -153,6 +153,8 @@ static_assert(enchantum::UnscopedEnum<UnscopedColor>);
 ## BitFlagEnum
 The `BitFlagEnum` concept is used for enums that support main bitwise operations, such as `&`, `|` , `~` , `&=` and `|=` . This concept can be used to check if an enum is intended for bitflag operations, where each enum value represents a distinct bit.
 
+Enums that satify this concept have their 2^N members and 0 value reflected.
+
 ```cpp
 #include <enchantum/common.hpp>
 
@@ -168,7 +170,8 @@ enum class Flags : uint32_t {
     None = 0,
     FlagA = 1 << 0,
     FlagB = 1 << 1,
-    FlagC = 1 << 2
+    FlagC = 1 << 2,
+    FlagA_B = FlagA | FlagB // not reflected only 2^N members are reflected
 };
 
 Flags operator&(Flags a,Flags b); // can return bool
@@ -217,7 +220,7 @@ static_assert(!enchantum::ContiguousBitFlagEnum<NonContiguousFlags>);
 
 ```
 
-### ContiguousEnum
+### `ContiguousEnum`
 
 The ContiguousEnum concept is used for enums where the underlying values are contiguous. For example, `enum { A = 0, B, C }` is a contiguous enum because the underlying values are 0, 1, and 2, respectively.
 
@@ -234,7 +237,7 @@ enum class Status { Ok = 0, Error = 1, Unknown = 2 };
 static_assert(enchantum::ContiguousEnum<Status>);
 ```
 
-### EnumOfUnderlying
+### `EnumOfUnderlying`
 
 ```cpp
 // defined in header `common.hpp`
@@ -251,7 +254,7 @@ enum class Status : char { Ok = 0, Error = 1, Unknown = 2 };
 static_assert(enchantum::EnumOfUnderlying<Status,char>);
 ```
 
-### EnumFixedUnderlying
+### `EnumFixedUnderlying`
 
 ```cpp
 // defined in header `common.hpp`
@@ -275,7 +278,7 @@ static_assert(!enchantum::EnumFixedUnderlying<Status2>);
 ```
 
 
-### has_zero_flag
+### `has_zero_flag`
 
 ```cpp
 // defined in header `enchantum.hpp`
@@ -312,7 +315,7 @@ static_assert(enchantum::has_zero_flag<FlagsWithNone>);
 ```
 ---
 
-### enum_traits
+### `enum_traits`
 
 ```cpp
 // defined in header `common.hpp`
@@ -1071,7 +1074,7 @@ requires(E e) {
   Checks if an enum is a bitflag enum, i.e., an enum that supports bitwise operations such as `&`, `|`, and `~`.
   you can override this variable for specific enums if needed (e.g `operator&` returns a proxy comparable to bool and convertible to the enum value )
   or make it `false` to disallow treating as bitflag.
-
+  
 - **Returns**:  
   `true` if the enum supports bitwise operations, `false` otherwise.
 
@@ -1095,7 +1098,7 @@ Flags& operator&=(Flags&, Flags);
 static_assert(enchantum::is_bitflag<Flags>);  // true
 ```
 
-### is_contiguous
+### `is_contiguous`
 
 ```cpp
 template<typename>
@@ -1110,7 +1113,7 @@ Checks whether an enum is contiguous. All members are sequential.
 
 Defined in header `enchantum.hpp`
 
-### is_contiguous_bitflag
+### `is_contiguous_bitflag`
 
 ```cpp
 template<typename>
@@ -1129,7 +1132,7 @@ Defined in header `enchantum.hpp`
 
 # Stream Operators
 
-The `operator<<` and `operator>>` are provided in the `enchantum` library to enable **streaming** of enum values to and from input/output streams. These operators are defined in the nested `istream_operators` and `ostream_operators` namespaces in headers `istream.hpp` and `ostream.hpp` respectivly.
+The `operator>>` and `operator<<` are provided in the `enchantum` library to enable **streaming** of enum values to and from input/output streams. These operators are defined in the nested `istream_operators` and `ostream_operators` namespaces in headers `istream.hpp` and `ostream.hpp` respectivly.
 
 There is also the convienence header `iostream.hpp` which includes both of them and has a new nested namespace that contains the istream operators and ostream operators
 

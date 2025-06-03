@@ -1,14 +1,35 @@
 # Enchantum
 
-**Enchantum** (short for "enchant enum") is a modern **C++20** header-only library for **compile-time enum reflection**. It provides fast, lightweight access to enum values, names, and bitflags.
+**Enchantum** (short for "enchant enum") is a modern **C++20** header-only library for **compile-time enum reflection**. It provides fast, lightweight access to enum values, names, and bitflags all without macros or boilerplate.
 
 > Every year, countless turtles perish due to the pollution caused by slow, bloated build times.  
- Save the turtles — and your compile times — by switching to enchantum!!!.
+ Save the turtles — and your compile times — by switching to enchantum!
 
-**Source:** I made it up.
+<sup><sub>Source: I made it up.</sup></sub>
+
+Key Features
+
+  - Macro-free and non-intrusive boilerplate-free reflection
+
+  - Fast compile times (benchmarked below)
+
+  - Supports:
+       -  Scoped enums
+       -  Unscoped C enums
+       -  Sparse enums
+       -  Bitflags
+       -  Iteration over values,names.
+       -  string <=> enums conversions
+       -  enum <=> index conversions
+       -  enum aware containers like `enchantum::bitset` and `enchantum::array`
+  - Extra features like:
+
+      - Null terminator disabling
+
+      - Prefix stripping for C-style enums
 
 
-[Simple Example](#simple-example)
+[Simple Examples](#simple-examples)
 
 [Why another enum reflection library?](#why-another-enum-reflection-library)
 
@@ -25,75 +46,107 @@ Tested locally on Windows 10 with:
 
 ---
 
-## Simple Example
+## Notes
+Please read [Limitations](docs/limitations.md) before use.
 
+## Simple Examples
+
+Enums used in the examples
+
+* to string
 ```cpp
-#include <enchantum/enchantum.hpp>
-#include <enchantum/bitflags.hpp>
-#include <enchantum/bitwise_operators.hpp>
-#include <enchantum/iostream.hpp>
+#include <enchantum/enchantum.hpp> // to_string
+#include <enchantum/ostream.hpp> // ostream support
+enum class Music { Rock, Jazz , Metal };
 
-
-enum class Music { Rock = 42, Jazz = 21, Metal };
-
-enum class Enemy { 
-    None = 0,
-    Fast = 1 << 0,
-    Melee = 1 << 1,
-    Ranged = 1 << 2
-};
-ENCHANTUM_DEFINE_BITWISE_FOR(Enemy) // defines ~,^,&,|,^=,&=,|=
-
-int main() {
+int main() 
+{
   auto music = Music::Rock;
   std::string_view music_name =  enchantum::to_string(music);
   // music_name == "Rock"
-  
-  auto caster = enchantum::cast<Music>; // most "functions" are functors!
 
-  std::optional<Music> music_jazz = caster("Jazz");
-  if (music_jazz.has_value()) {
-    // *music_jazz == Music::Jazz
-  }
-
-
-
-  std::optional<std::size_t> jazzy_index = enchantum::enum_to_index(Music::Jazz);
-  if(jazzy_index.has_value()){
-    std::optional<Music> jazz_from_index = enchantum::index_to_enum<Music>(*jazzy_index);
-    // *jazz_from_index == Music::Jazz
-  }
-
-  static_assert(enchantum::count<Music> == 3);
-  for(Music types : enchantum::values<Music>) { // variable based API
-    using namespace enchantum::iostream_operators;
-    std::cout << types << '\n'; // calls enchantum::to_string
-  }
-  for(std::string_view names : enchantum::names<Music>) // variable based API
-    std::cout << names << '\n';
-  
-  // Both Output:
-  // Rock
-  // Jazz
-  // Metal
-
-
-  for(auto [value,name] : enchantum::entries<Music>) // variable based API
-    std::cout << enchantum::to_underlying(value) << " = " << name << '\n';
- 
- 
-   std::string enemy_string = enchantum::to_string_bitflag(Enemy::Fast | Enemy::Melee); 
-   // enemy "Fast|Melee"
-   std::optional<Enemy> enemy_from_string = enchantum::cast_bitflag<Enemy>(enemy_string);
-   // *enemy_from_string == Enemy::Fast | Enemy::Melee
+  using namespace enchantum::ostream_operators;
+  std::cout << music;
+  // Prints Rock
 }
-
-
 ```
+
+* from strings
+```cpp
+#include <enchantum/enchantum.hpp> // cast
+enum class Music { Rock, Jazz , Metal };
+int main() 
+{
+  // case sensitive
+  std::optional<Music> music = enchantum::cast<Music>("Jazz");
+  if(music.has_value()) // check if cast succeeded
+  {
+    // *music == Music::Jazz
+  }
+  // pass a predicate taking two string views
+  music = enchantum::cast<Music>("JAZZ",[](std::string_view a,std::string_view b){
+    return std::ranges::equal(a,b,[](unsigned char x,unsigned char y){
+      return std::tolower(x) == std::tolower(y);      
+    })
+  });
+  if(music.has_value()) {
+      // *music == Music::JAZZ
+  }
+}
+```
+
+* index into enums
+```cpp
+#include <enchantum/enchantum.hpp> // index_to_enum and enum_to_index
+enum class Music { Rock, Jazz , Metal };
+
+int main() 
+{
+  // case sensitive
+  std::optional<Music> music = enchantum::index_to_enum<Music>(1); // Jazz is the second enum member
+  if(music.has_value()) // check if index is not out of bounds
+  {
+    // *music == Music::Jazz
+    std::optional<std::size_t> index = enchantum::enum_to_index(*music);
+    // *index == 1
+  }
+}
+```
+
+* iteration
+```cpp
+#include <enchantum/enchantum.hpp> // entries,values and names 
+enum class Music { Rock, Jazz , Metal };
+
+int main() 
+{
+  // Iterate over values
+  for(Music music : enchantum::values<Music>)
+    std::cout << static_cast<int>(music) << " ";
+  // Prints "0 1 2"
+
+  // Iterate over names
+  for(std::string_view name : enchantum::names<Music>)
+    std::cout << name << " ";
+  // Prints "Rock Jazz Metal"
+
+  // Iterate over both!
+  for(const auto& [music,name] : enchantum::entries<Music>)
+    std::cout << name << " = " << static_cast<int>(music) << "\n";
+  // Prints 
+  // Rock = 0
+  // Jazz = 1
+  // Metal = 2
+}
+```
+
+Look at [Features](docs/features.md) for more information.
+
 
 ## Why Another Enum Reflection Library?
 
 There are several enum reflection libraries out there — so why choose **enchantum** instead of [magic_enum](https://github.com/Neargye/magic_enum), [simple_enum](https://github.com/arturbac/simple_enum), or [conjure_enum](https://github.com/fix8mt/conjure_enum)?
+
 
 ### magic_enum
 
@@ -104,7 +157,7 @@ There are several enum reflection libraries out there — so why choose **enchan
 - Supports C++17
 - Nicer compiler errors
 - Supports wide strings.
-
+- Efficient Binary size
 **Cons**
 - Compile times grow significantly with larger `MAGIC_ENUM_MAX_RANGE`. 
 - Requires alternate APIs like `magic_enum::enum_name<E::V>()` to mitigate said compile-time costs. which forces those functions not to be functors.
@@ -138,7 +191,7 @@ There are several enum reflection libraries out there — so why choose **enchan
 - Clean and Simple Functor based API `enchantum::to_string(E)` no `enchantum::to_string<E::V>()` since compile times are fast.
 - Features like disabling null termination if not needed and specifying common enum prefix for C style enums, and reflect '0' values for bit flag enums.
 - Supports all sort of enums (scoped,unscoped,C style unfixed underlying type,anonymous namespaced enums, enums with commas in their typename,etc...);
-
+- Efficient Binary size
 **Cons**
 - C++20 required
 - Compiler errors are incomprehensible if something goes wrong, needs a level 10 wizard to read them.
@@ -161,7 +214,7 @@ Each benchmark was run 10 times (except MSVC which was ran 3 times) and averaged
 ### Large Enums  
 *32 enums, 200 values each, range: -256 to 256*
 
-| Compiler    | `magic_enum` (s) | `Enchantum` (s) | Time Saved |
+| Compiler    | `magic_enum` (s) | `enchantum` (s) | Time Saved |
 | ----------- | ---------------- | --------------- | ---------- |
 | MSVC        | 37               | 15              | 22         |
 | Clang       | 18               | 5               | 13         |
@@ -173,7 +226,7 @@ Each benchmark was run 10 times (except MSVC which was ran 3 times) and averaged
 
 *Only ran 2 times due to extreme compilation times.*
 
-| Compiler | magic_enum       | Enchantum     |
+| Compiler | `magic_enum`     | `enchantum`   |
 |----------|------------------|---------------|
 | MSVC     | >20 min (killed) | ~107 sec      |
 | GCC      | >15 min (killed) | ~37 sec       |
@@ -186,31 +239,6 @@ Each benchmark was run 10 times (except MSVC which was ran 3 times) and averaged
 
 The trade-off is that `enchantum` requires C++20, while `magic_enum` supports C++17.
 But this requirement can be lifted if there is enough demand for a C++17 version of `enchantum`.
-
----
-
-## Other Examples
-### Checking for validity
-```cpp
-#include <enchantum/enchantum.hpp>
-
-enum class Direction { North, South, East, West };
-
-enchantum::contains<Direction>("North"); // true
-enchantum::contains(Direction(-42));     // false
-enchantum::contains<Direction>(0);       // true
-```
-### Min Max Count
-```cpp
-
-enum class Errno { BadSomething = -1, IamGood = 0, IAmBadV2 = 1 };
-
-enchantum::min<Errno>; // BadSomething
-enchantum::max<Errno>; //IAmBadV2
-enchantum::count<Errno>; // 3
-```
-
----
 
 
 # CMake Integration
