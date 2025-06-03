@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../enchantum.hpp"
 #include <string>
 
