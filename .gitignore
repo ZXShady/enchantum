@@ -32,3 +32,4 @@ buildGCC/
 CMakeFiles/
 .vs/
 benchmarks/time.py
+benchmarks/*.cpp
