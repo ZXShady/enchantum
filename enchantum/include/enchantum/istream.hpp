@@ -1,7 +1,7 @@
 #pragma once
 #include "enchantum.hpp"
 #include <concepts>
-#include <iosfwd>
+#include <iostream>
 #include <string>
 
 namespace enchantum::istream_operators {

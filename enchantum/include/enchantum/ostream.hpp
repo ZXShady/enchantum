@@ -1,9 +1,8 @@
 #pragma once
 
-#include "enchantum.hpp"
-#include <iosfwd>
-#include <string_view>
 #include "details/format_util.hpp"
+#include "enchantum.hpp"
+#include <iostream>
 
 namespace enchantum::ostream_operators {
 template<typename Traits, Enum E>
