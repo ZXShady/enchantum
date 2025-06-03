@@ -7,7 +7,24 @@
 #include <bit>
 #include <type_traits>
 #include <utility>
+
 namespace enchantum {
+
+namespace details {
+  constexpr std::pair<std::size_t, std::size_t> minmax_string_size(const string_view* begin, const string_view* const end)
+  {
+    using T     = std::size_t;
+    auto minmax = std::pair<T, T>(std::numeric_limits<T>::max(), 0);
+
+    for (; begin != end; ++begin) {
+      const auto size = begin->size();
+      minmax.first    = minmax.first < size ? minmax.first : size;
+      minmax.second   = minmax.second > size ? minmax.second : size;
+    }
+    return minmax;
+  }
+
+} // namespace details
 
 template<typename>
 inline constexpr bool has_zero_flag = false;
@@ -79,6 +96,10 @@ template<Enum E>
 template<Enum E>
 [[nodiscard]] constexpr bool contains(const string_view name) noexcept
 {
+  constexpr auto minmax = details::minmax_string_size(names<E>.data(), names<E>.data() + names<E>.size());
+  if (const auto size = name.size(); size < minmax.first || size > minmax.second)
+    return false;
+
   for (const auto& s : names<E>)
     if (s == name)
       return true;
@@ -155,6 +176,11 @@ namespace details {
     [[nodiscard]] constexpr optional<E> operator()(const string_view name) const noexcept
     {
       optional<E> a; // rvo not that it really matters
+
+      constexpr auto minmax = details::minmax_string_size(names<E>.data(), names<E>.data() + names<E>.size());
+      if (const auto size = name.size(); size < minmax.first || size > minmax.second)
+        return a;
+
       for (const auto& [e, s] : entries<E>) {
         if (s == name) {
           a.emplace(e);
