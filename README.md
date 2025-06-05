@@ -18,22 +18,23 @@ Key Features
        -  Unscoped C enums
        -  Sparse enums
        -  Bitflags
-       -  Iteration over values,names.
-       -  string <=> enums conversions
-       -  enum <=> index conversions
-       -  enum aware containers like `enchantum::bitset` and `enchantum::array`
+       -  Iteration over values,names and `[enum, name]` pairs.
+       -  `string <=> enum` conversions
+       -  `enum <=> index` conversions
+       -  enum validation functions like `cast` and `contains`
+       -  enum aware containers: `enchantum::bitset` and `enchantum::array`
   - Extra features like:
-
-      - Null terminator disabling
-
-      - Prefix stripping for C-style enums
-
+      - Optional null terminator disabling
+      - Optional prefix stripping for C-style enums
+      - `0` values are reflected for bitflag enums 
 
 [Simple Examples](#simple-examples)
 
 [Why another enum reflection library?](#why-another-enum-reflection-library)
 
 [Features](docs/features.md)
+
+[Compile Time Benchmarks](#compile-time-benchmarks)
 
 [Limitations](docs/limitations.md)
 
@@ -46,8 +47,8 @@ Tested locally on Windows 10 with:
 
 ---
 
-## Notes
-Please read [Limitations](docs/limitations.md) before use.
+> [!IMPORTANT]
+> Be sure to read [Limitations](docs/limitations.md) before using Enchantum in production.
 
 ## Simple Examples
 
@@ -87,10 +88,10 @@ int main()
   music = enchantum::cast<Music>("JAZZ",[](std::string_view a,std::string_view b){
     return std::ranges::equal(a,b,[](unsigned char x,unsigned char y){
       return std::tolower(x) == std::tolower(y);      
-    })
+    });
   });
   if(music.has_value()) {
-      // *music == Music::JAZZ
+      // *music == Music::Jazz
   }
 }
 ```
@@ -151,16 +152,18 @@ There are several enum reflection libraries out there — so why choose **enchan
 ### magic_enum
 
 **Pros**
-- Macro-free (non intrusive)
-- No modifications needed for existing enums
-- Allows specifying ranges for specific enums when needed
-- Supports C++17
-- Nicer compiler errors
+- Macro-free (non intrusive).
+- No modifications needed for existing enums.
+- Allows specifying ranges for specific enums when needed.
+- Supports C++17.
+- Nicer compiler errors.
 - Supports wide strings.
-- Efficient Binary size
+- Efficient Binary size.
+
 **Cons**
 - Compile times grow significantly with larger `MAGIC_ENUM_MAX_RANGE`. 
 - Requires alternate APIs like `magic_enum::enum_name<E::V>()` to mitigate said compile-time costs. which forces those functions not to be functors.
+
 ### conjure_enum
 
 **Pros**
@@ -174,12 +177,13 @@ There are several enum reflection libraries out there — so why choose **enchan
 ### simple_enum
 
 **Pros**
-- Fast compile times but only if range is small
+- Fast compile times but only if range is small.
 - Functor based api.
 
 **Cons**
-- Requires specifying enum first/last values manually (instrusive does not mix well with third party enums)
+- Requires specifying enum `first`/`last` values manually (intrusive, doesn't work well with third-party enums)
 - Compile time slows down with large enum ranges
+- Binary Size Bloat.
 
 ### enchantum
 
@@ -192,6 +196,7 @@ There are several enum reflection libraries out there — so why choose **enchan
 - Features like disabling null termination if not needed and specifying common enum prefix for C style enums, and reflect '0' values for bit flag enums.
 - Supports all sort of enums (scoped,unscoped,C style unfixed underlying type,anonymous namespaced enums, enums with commas in their typename,etc...);
 - Efficient Binary size
+
 **Cons**
 - C++20 required
 - Compiler errors are incomprehensible if something goes wrong, needs a level 10 wizard to read them.
@@ -203,34 +208,48 @@ There are several enum reflection libraries out there — so why choose **enchan
 Each benchmark was run 10 times (except MSVC which was ran 3 times) and averaged unless noted otherwise.
 `range` is `ENCHANTUM_MAX_RANGE` and `MAGIC_ENUM_RANGE_MAX`
 ### Small Enums  
-*200 enums, 16 values each, range: -128 to 128*
+enum count: `200`
 
-| Compiler    | `magic_enum` (s) | `enchantum` (s) | Time Saved |
+enum member count: `16`
+
+range: `-128` to `128`
+
+
+| Compiler    | `magic_enum`     | `enchantum`     | Time Saved |
 | ----------- | ---------------- | --------------- | ---------- |
-| MSVC        | 80               | 22              | 58         |
-| GCC         | 47               | 7               | 40         |
-| Clang       | 47               | 8               | 39         |
+| MSVC        | 80 secs          | 22  secs        | 58         |
+| GCC         | 47 secs          | 7   secs        | 40         |
+| Clang       | 47 secs          | 6.2 secs        | 40.8       |
 
 ### Large Enums  
-*32 enums, 200 values each, range: -256 to 256*
+enum count: `32`
 
-| Compiler    | `magic_enum` (s) | `enchantum` (s) | Time Saved |
+enum member count: `200`
+
+range: `-256` to `256`
+
+
+| Compiler    | `magic_enum`     | `enchantum`     | Time Saved |
 | ----------- | ---------------- | --------------- | ---------- |
-| MSVC        | 37               | 15              | 22         |
-| Clang       | 18               | 5               | 13         |
-| GCC         | 21               | 6               | 15         |
+| MSVC        | 37 secs           | 15 secs        | 22         |
+| Clang       | 18 secs           | 5  secs        | 13         |
+| GCC         | 21 secs           | 6  secs        | 15         |
 
 
 ### Very Large Enum Range  
-*200 enums, 16 values each, range: -1024 to 1024*
+enum count: `200`
+
+enum member count: `16`
+
+range: `-1024` to `1024`
 
 *Only ran 2 times due to extreme compilation times.*
 
 | Compiler | `magic_enum`     | `enchantum`   |
 |----------|------------------|---------------|
-| MSVC     | >20 min (killed) | ~107 sec      |
-| GCC      | >15 min (killed) | ~37 sec       |
-| Clang    | >15 min (killed) | ~42 sec       |
+| MSVC     | >20 min (killed) | 107  secs     |
+| GCC      | >15 min (killed) | 37   secs     |
+| Clang    | >15 min (killed) | 24.5 secs     |
 ---
 
 ## Summary
