@@ -45,7 +45,7 @@ namespace details {
 
     using T = typename decltype(Array)::value_type;
     std::size_t    funcsig_off   = SZC("auto __cdecl enchantum::details::var_name<class std::array<enum ");
-    constexpr auto type_name_len = type_name<T>.size();
+    constexpr auto type_name_len = raw_type_name<T>.size();
     funcsig_off += type_name_len + SZC(",");
     constexpr auto Size = Array.size();
     // clang-format off
@@ -70,7 +70,7 @@ namespace details {
   template<typename E, typename Pair, auto Array, bool ShouldNullTerminate>
   constexpr auto get_elements()
   {
-    constexpr auto type_name_len = type_name<E>.size();
+    constexpr auto type_name_len = raw_type_name<E>.size();
 
     auto str = var_name<Array>();
     struct RetVal {

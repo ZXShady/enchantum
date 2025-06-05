@@ -51,7 +51,7 @@ namespace details {
     }
     else {
       constexpr auto  s      = enum_in_array_name<Enum{}>().size();
-      constexpr auto& tyname = type_name<Enum>;
+      constexpr auto& tyname = raw_type_name<Enum>;
       if (constexpr auto pos = tyname.rfind("::"); pos != tyname.npos) {
         return s + tyname.substr(pos).size();
       }

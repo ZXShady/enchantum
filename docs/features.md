@@ -48,6 +48,8 @@ Quick Reference
   - [count](#count)
   - [value_ors](#value_ors)
   - [type_name](#type_name)
+  - [raw_type_name](#raw_type_name)
+
 
 **Containers**:
   - [array](#array)
@@ -660,6 +662,7 @@ constexpr inline std::string_view type_name = /*implementation detail";
 **Description**:  
   Gives an implementation defined null-terminated string representing the type name.
 
+**Notes**: `T` must not be a function, function pointer or a member function pointer otherwise a `static_assert` fires.
   
 
 **Example**:
@@ -671,12 +674,41 @@ enum class Enum : std::uint8_t;
 namespace NS { struct Type; }
 
 enchantum::type_name<Enum>;
-enchantum::type_name<NS::Type>;
+enchantum::type_name<NS::Type>; // ignores namespaces
+// Gives on ALL compilers:
+// "Enum"
+// "Type"
+// Other output may be compiler dependant
+```
+
+### `raw_type_name`
+
+```cpp
+// defined in header `type_name.hpp`
+
+template<typename T>
+constexpr inline std::string_view raw_type_name = /*implementation detail";
+```
+
+**Description**:  
+  Gives an implementation defined null-terminated string representing the type name.
+
+**Example**:
+```cpp
+#include <enchantum/type_name.hpp>
+
+enum class Enum : std::uint8_t;
+
+namespace NS { struct Type; }
+
+enchantum::raw_type_name<Enum>;
+enchantum::raw_type_name<NS::Type>;
 // Gives on ALL compilers:
 // "Enum"
 // "NS::Type"
 // Other output may be compiler dependant
 ```
+
 
 ---
 

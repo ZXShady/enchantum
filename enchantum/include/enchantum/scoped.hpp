@@ -8,17 +8,10 @@
 
 namespace enchantum::scoped {
 namespace details {
-  constexpr string_view extract_name_from_type_name(const string_view type_name) noexcept
-  {
-    if (const auto n = type_name.rfind(':'); n != type_name.npos)
-      return type_name.substr(n + 1);
-    else
-      return type_name;
-  }
 
-  constexpr string_view remove_scope_or_empty(string_view string, const string_view full_type_name) noexcept
+
+  constexpr string_view remove_scope_or_empty(string_view string, const string_view type_name) noexcept
   {
-    const auto type_name = extract_name_from_type_name(full_type_name);
     if (!string.starts_with(type_name))
       return string_view();
     string.remove_prefix(type_name.size());
@@ -70,7 +63,7 @@ namespace details {
     {
       string s;
       if (const auto i = enchantum::enum_to_index(value)) {
-        s += details::extract_name_from_type_name(type_name<E>);
+        s += type_name<E>;
         s += "::";
         s += names<E>[*i];
         return s;
@@ -121,7 +114,7 @@ template<BitFlagEnum E>
 
   string         name;
   T              check_value = 0;
-  constexpr auto scope_name  = details::extract_name_from_type_name(type_name<E>);
+  constexpr auto scope_name  = type_name<E>;
   for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
     const auto& [v, s] = entries<E>[i];
     if (T(v) == (T(value) & T(v))) {
