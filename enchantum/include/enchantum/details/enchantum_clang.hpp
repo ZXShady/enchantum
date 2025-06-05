@@ -10,13 +10,15 @@
 #include <array>
 #include <cassert>
 #include <climits>
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 
 namespace enchantum {
-namespace details {
+
 
 #if __clang_major__ >= 20
+namespace details {
 
   template<typename T, auto V, typename = void>
   inline constexpr bool is_valid_cast = false;
@@ -24,75 +26,75 @@ namespace details {
   template<typename T, auto V>
   inline constexpr bool is_valid_cast<T, V, std::void_t<std::integral_constant<T, static_cast<T>(V)>>> = true;
 
-  template<typename T, std::underlying_type_t<T> max_range = 1>
-  constexpr auto valid_cast_range()
+  template<typename T, std::underlying_type_t<T> range, decltype(range) old_range>
+  constexpr auto valid_cast_range_recurse() noexcept
   {
-    if constexpr (max_range >= 0) {
-      if constexpr (max_range <= ENCHANTUM_MAX_RANGE) {
-        // this tests whether `static_cast`ing max_range is valid
-        // because C style enums stupidly is like a bit field
-        // `enum E { a,b,c,d = 3};` is like a bitfield `struct E { int val : 2;}`
-        // which means giving E.val a larger than 2 bit value is UB so is it for enums
-        // and gcc and msvc ignore this (for good)
-        // while clang makes it a subsituation failure which we can check for
-        // using std::inegral_constant makes sure this is a constant expression situation
-        // for SFINAE to occur
-        if constexpr (is_valid_cast<T, max_range>)
-          return valid_cast_range<T, max_range * 2>();
-        else
-          return max_range - 1;
-      }
-      else {
-        return max_range - 1;
-      }
-    }
-    else {
-      if constexpr (max_range >= ENCHANTUM_MIN_RANGE) {
-        // this tests whether `static_cast`ing max_range is valid
-        // because C style enums stupidly is like a bit field
-        // `enum E { a,b,c,d = 3};` is like a bitfield `struct E { int val : 2;}`
-        // which means giving E.val a larger than 2 bit value is UB so is it for enums
-        // and gcc and msvc ignore this (for good)
-        // while clang makes it a subsituation failure which we can check for
-        // using std::inegral_constant makes sure this is a constant expression situation
-        // for SFINAE to occur
-        if constexpr (is_valid_cast<T, max_range>)
-          return valid_cast_range<T, max_range * 2>();
-        else
-          return max_range / 2;
-      }
-      else {
-        return max_range / 2;
-      }
-    }
-  }
-#else
-  template<typename T, std::underlying_type_t<T> max_range = 1>
-  constexpr auto valid_cast_range()
-  {
-    if constexpr (max_range >= 0)
-      return ENCHANTUM_MAX_RANGE;
+    // this tests whether `static_cast`ing range is valid
+    // because C style enums stupidly is like a bit field
+    // `enum E { a,b,c,d = 3};` is like a bitfield `struct E { int val : 2;}`
+    // which means giving E.val a larger than 2 bit value is UB so is it for enums
+    // and gcc and msvc ignore this (for good)
+    // while clang makes it a subsituation failure which we can check for
+    // using std::inegral_constant makes sure this is a constant expression situation
+    // for SFINAE to occur
+    if constexpr (is_valid_cast<T, range>)
+      return valid_cast_range_recurse<T, range * 2, range>();
     else
-      return ENCHANTUM_MIN_RANGE;
+      return old_range > 0 ? old_range * 2 - 1 : old_range;
   }
-#endif
+  template<typename T, std::underlying_type_t<T> max_range = 1>
+  constexpr auto valid_cast_range()
+  {
+    using L = std::numeric_limits<decltype(max_range)>;
+    if constexpr (max_range > 0 && is_valid_cast<T, (L::max())>)
+      return L::max();
+    else if constexpr (max_range < 0 && is_valid_cast<T, (L::min())>)
+      return L::min();
+    else
+      return valid_cast_range_recurse<T, max_range, 0>();
+
+
+    //else {
+    //  if constexpr (max_range >= ENCHANTUM_MIN_RANGE) {
+    //    // this tests whether `static_cast`ing max_range is valid
+    //    // because C style enums stupidly is like a bit field
+    //    // `enum E { a,b,c,d = 3};` is like a bitfield `struct E { int val : 2;}`
+    //    // which means giving E.val a larger than 2 bit value is UB so is it for enums
+    //    // and gcc and msvc ignore this (for good)
+    //    // while clang makes it a subsituation failure which we can check for
+    //    // using std::inegral_constant makes sure this is a constant expression situation
+    //    // for SFINAE to occur
+    //    if constexpr (is_valid_cast<T, max_range>)
+    //      return valid_cast_range<T, max_range * 2>();
+    //    else
+    //      return max_range / 2;
+    //  }
+    //  else {
+    //    return max_range / 2;
+    //  }
+    //}
+  }
+
 
 } // namespace details
 
 template<UnscopedEnum E>
   requires SignedEnum<E> && (!EnumFixedUnderlying<E>)
 struct enum_traits<E> {
-  static constexpr auto          max = details::valid_cast_range<E>();
-  static constexpr decltype(max) min = details::valid_cast_range<E, -1>();
+private:
+  using T = std::underlying_type_t<E>;
+public:
+  static constexpr auto          max = details::Min(details::valid_cast_range<E>(), static_cast<T>(ENCHANTUM_MAX_RANGE));
+  static constexpr decltype(max) min = details::Max(details::valid_cast_range<E, -1>(), static_cast<T>(ENCHANTUM_MIN_RANGE));
 };
 
 template<UnscopedEnum E>
   requires UnsignedEnum<E> && (!EnumFixedUnderlying<E>)
 struct enum_traits<E> {
-  static constexpr auto          max = details::valid_cast_range<E>();
+  static constexpr auto          max = details::Min(details::valid_cast_range<E>(), static_cast<std::underlying_type_t<E>>(ENCHANTUM_MAX_RANGE));
   static constexpr decltype(max) min = 0;
 };
-
+#endif
 
 namespace details {
 #define SZC(x) (sizeof(x) - 1)
@@ -119,8 +121,8 @@ namespace details {
         s.remove_prefix(SZC("("));
         s.remove_suffix(SZC(")0"));
       }
-      if (const auto pos = s.rfind("::"); pos != s.npos)
-        return s.substr(0, pos);
+      if (const auto pos = s.rfind(':'); pos != s.npos)
+        return s.substr(0, pos - 1);
       return string_view();
     }
   }
@@ -137,27 +139,56 @@ namespace details {
   template<auto Copy>
   inline constexpr auto static_storage_for = Copy;
 
-  template<typename E, typename Pair, bool ShouldNullTerminate>
+  template<typename E, typename Pair, bool NullTerminated>
   constexpr auto reflect() noexcept
   {
-    constexpr auto Min = enum_traits<E>::min;
-    constexpr auto Max = enum_traits<E>::max;
-
+    constexpr auto Min  = enum_traits<E>::min;
+    constexpr auto Max  = enum_traits<E>::max;
+    constexpr auto bits = []() {
+#if __clang_major__ < 20
+      return (sizeof(E) * CHAR_BIT) - std::is_signed_v<E>;
+#else
+      if constexpr (EnumFixedUnderlying<E>) {
+        return (sizeof(E) * CHAR_BIT) - std::is_signed_v<E>;
+      }
+      else {
+        auto        v = valid_cast_range<E>();
+        std::size_t r = 1;
+        while (v >>= 1)
+          r++;
+        return r;
+      }
+#endif
+    }();
     constexpr auto elements = []() {
-      constexpr auto Array = details::generate_arrays<E, Min, Max>();
-      auto           str   = [Array]<std::size_t... Idx>(std::index_sequence<Idx...>) {
-        return details::var_name<Array[Idx]...>();
-      }(std::make_index_sequence<Array.size()>());
+      using Under      = std::underlying_type_t<E>;
+      using Underlying = std::make_unsigned_t<std::conditional_t<std::is_same_v<bool, Under>, unsigned char, Under>>;
+      constexpr auto ArraySize = is_bitflag<E> ? 1 + bits : (Max - Min) + 1;
+      constexpr auto ConstStr  = []<std::size_t... Idx>(std::index_sequence<Idx...>) {
+        if constexpr (sizeof...(Idx) && is_bitflag<E>) // sizeof... to make contest dependant
+          return details::var_name<E{}, static_cast<E>(Underlying(1) << Idx)...>();
+        else
+          return details::var_name<static_cast<E>(static_cast<decltype(Min)>(Idx) + Min)...>();
+      }(std::make_index_sequence<is_bitflag<E> ? bits : ArraySize>());
 
-      struct RetVal {
-        std::array<Pair, decltype(Array){}.size()> pairs{};
-        std::size_t                                total_string_length = 0;
-        std::size_t                                valid_count         = 0;
-      } ret;
+      auto           str        = ConstStr;
+      constexpr auto StringSize = ConstStr.size();
 
-      std::size_t    index              = 0;
       constexpr auto enum_in_array_name = details::enum_in_array_name<E{}>();
       constexpr auto enum_in_array_len  = enum_in_array_name.size();
+      // Ubuntu Clang 20 complains about using local constexpr variables in a local struct
+      using CharArray = std::array<char, StringSize + (NullTerminated + ArraySize) - (enum_in_array_len * ArraySize)>;
+      struct RetVal {
+        struct ElemenetPair {
+          E            value;
+          std::uint8_t len;
+        };
+        std::array<ElemenetPair, ArraySize> pairs{};
+        CharArray                           strings{};
+        std::size_t                         total_string_length = 0;
+        std::size_t                         valid_count         = 0;
+      } ret;
+
 
       // ((anonymous namespace)::A)0
       // (anonymous namespace)::a
@@ -165,14 +196,13 @@ namespace details {
       // this is needed to determine whether the above are cast expression if 2 braces are
       // next to eachother then it is a cast but only for anonymoused namespaced enums
       constexpr std::size_t index_check = !enum_in_array_name.empty() && enum_in_array_name.front() == '(' ? 1 : 0;
-      while (index < Array.size()) {
+      for (std::size_t index = 0; index < ArraySize; ++index) {
         if (str[index_check] == '(') {
           str.remove_prefix(SZC("(") + enum_in_array_len + SZC(")0")); // there is atleast 1 base 10 digit
-          //if(!str.empty())
-          //	std::cout << "after str \"" << str << '"' << '\n';
-          if (const auto commapos = str.find(','); commapos != str.npos)
-            str.remove_prefix(commapos + 2);
-          //std::cout << "strsize \"" << str.size() << '"' << '\n';
+
+          //char* __builtin_char_memchr(const char* haystack, int needle, size_t size);
+          if (const auto* commapos = __builtin_char_memchr(str.data(), ',', str.size()); commapos)
+            str.remove_prefix(static_cast<std::size_t>(commapos - str.data()) + 2);
         }
         else {
           if constexpr (enum_in_array_len != 0) {
@@ -181,47 +211,54 @@ namespace details {
           if constexpr (details::prefix_length_or_zero<E> != 0) {
             str.remove_prefix(details::prefix_length_or_zero<E>);
           }
-          const auto commapos = str.find(',');
+
+          const auto* commapos_ = __builtin_char_memchr(str.data(), ',', str.size());
+
+          const auto commapos = commapos_ ? std::size_t(commapos_ - str.data()) : str.npos;
 
           const auto name = str.substr(0, commapos);
 
-          ret.pairs[ret.valid_count] = Pair{Array[index], name};
-          ret.total_string_length += name.size() + ShouldNullTerminate;
+          {
+            const auto name_size = static_cast<std::uint8_t>(name.size());
+            if constexpr (is_bitflag<E>)
+              ret.pairs[ret.valid_count++] = {index == 0 ? E() : E(Underlying{1} << (index - 1)), name_size};
+            else
+              ret.pairs[ret.valid_count++] = {E(Min + static_cast<decltype(Min)>(index)), name_size};
 
+            __builtin_memcpy(ret.strings.data() + ret.total_string_length, name.data(), name_size);
+            ret.total_string_length += name_size + NullTerminated;
+          }
           if (commapos != str.npos)
-            str.remove_prefix(commapos + 2); // skip comma and space
-          ++ret.valid_count;
+            str.remove_prefix(commapos + SZC(", "));
         }
-        ++index;
       }
       return ret;
     }();
 
-    constexpr auto strings = [elements]() {
-      std::array<char, elements.total_string_length> strings;
-      for (std::size_t _i = 0, index = 0; _i < elements.valid_count; ++_i) {
-        const auto& [_, s] = elements.pairs[_i];
-        for (std::size_t i = 0; i < s.size(); ++i)
-          strings[index++] = s[i];
-
-        if constexpr (ShouldNullTerminate)
-          strings[index++] = '\0';
-      }
-      return strings;
-    }();
 
     std::array<Pair, elements.valid_count> ret;
-    constexpr const auto*                  str = static_storage_for<strings>.data();
-    for (std::size_t i = 0, string_index = 0; i < elements.valid_count; ++i) {
-      const auto& [e, s] = elements.pairs[i];
-      auto& [re, rs]     = ret[i];
-      re                 = e;
+    {
+      constexpr auto strings = [](const auto total_length, const char* data) {
+        std::array<char, total_length.value> strings;
+        __builtin_memcpy(strings.data(), data, total_length.value);
+        return strings;
+      }(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings.data());
 
-      rs = {str + string_index, str + string_index + s.size()};
-      string_index += s.size() + ShouldNullTerminate;
+      auto* const       ret_data  = ret.data();
+      const auto* const pair_data = elements.pairs.data();
+
+      constexpr const auto* str = static_storage_for<strings>.data();
+      for (std::size_t i = 0, string_index = 0; i < elements.valid_count; ++i) {
+        const auto [e, length] = pair_data[i];
+        auto& [re, rs]         = ret_data[i];
+        using StringView       = std::decay_t<decltype(rs)>;
+        re                     = e;
+        rs                     = StringView{str + string_index, length};
+        string_index += length + NullTerminated;
+      }
     }
     return ret;
-  }
+  } // namespace details
 
 } // namespace details
 
