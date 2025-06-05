@@ -70,6 +70,7 @@ template<Enum E>
 [[nodiscard]] constexpr bool contains(const std::underlying_type_t<E> value) noexcept
 {
   using T = std::underlying_type_t<E>;
+
   if (value < T(min<E>) || value > T(max<E>))
     return false;
 
@@ -77,13 +78,17 @@ template<Enum E>
     if constexpr (has_zero_flag<E>)
       if (value == 0)
         return true;
-    return 1 == std::popcount(static_cast<std::make_unsigned_t<T>>(value));
+
+    return std::popcount(static_cast<std::make_unsigned_t<T>>(value)) == 1;
+  }
+  else if constexpr (is_contiguous<E>) {
+    return true;
   }
   else {
     for (const auto v : values<E>)
       if (static_cast<T>(v) == value)
         return true;
-    return is_contiguous<E>;
+    return false;
   }
 }
 
