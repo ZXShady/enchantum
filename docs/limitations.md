@@ -51,7 +51,7 @@ Change the limit for the number of constexpr steps allowed: (hyperlink to docs)
 
 [GCC](https://gcc.gnu.org/onlinedocs/gcc-14.2.0/gcc/C_002b_002b-Dialect-Options.html#index-fconstexpr-depth): `-fconstexpr-depth=N, -fconstexpr-loop-limit=N, -fconstexpr-ops-limit=N`
 
-## Unscoped enums in templates may not work correctly on Сlang.
+## Unscoped enums in templates may not work correctly on Сlang or GCC 10.
 
 Clang is super weird with these enums
 
@@ -80,6 +80,12 @@ struct GoodClang {
 
 enchantum::entries<GoodClang<int>::Type>; // happy clang
 ```
+
+GCC 10 Straight up won't output anything correct about those enums.
+
+So don't use GCC 10 with enums inside templates.
+
+This is fixable but requires much work. if heavily wanted though I will make it.
 
 ## Unscoped Enums
 

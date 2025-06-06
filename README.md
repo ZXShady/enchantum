@@ -45,6 +45,10 @@ Tested locally on Windows 10 with:
 - GCC 14.2.0
 - Clang 20.1.2
 
+Compiler Support: (Look at [CI](https://github.com/ZXShady/enchantum/actions))
+- GCC >= 11 (GCC 10 Partial no support for enums in templates)
+- Clang >= 13
+
 ---
 
 > [!IMPORTANT]
