@@ -33,6 +33,9 @@ jobs:
           - { name: Ubuntu GCC 13,    os: ubuntu-latest, compiler: gcc, version: 13, flags: "-DCMAKE_CXX_COMPILER=g++" }
           - { name: Ubuntu GCC 14,    os: ubuntu-latest, compiler: gcc, version: 14, flags: "-DCMAKE_CXX_COMPILER=g++" }
           
+          - { name: Ubuntu Clang 13,  os: ubuntu-22.04, compiler: clang, version: 13, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          - { name: Ubuntu Clang 14,  os: ubuntu-22.04, compiler: clang, version: 14, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          - { name: Ubuntu Clang 15,  os: ubuntu-22.04, compiler: clang, version: 15, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           - { name: Ubuntu Clang 16,  os: ubuntu-latest, compiler: clang, version: 16, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           - { name: Ubuntu Clang 17,  os: ubuntu-latest, compiler: clang, version: 17, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           - { name: Ubuntu Clang 18,  os: ubuntu-latest, compiler: clang, version: 18, flags: "-DCMAKE_CXX_COMPILER=clang++" }

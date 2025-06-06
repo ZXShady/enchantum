@@ -6,7 +6,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(Catch2)
 
-target_compile_features(Catch2 PRIVATE cxx_std_20)
+target_compile_features(Catch2 PRIVATE cxx_std_17)
 target_compile_definitions(Catch2 PUBLIC CATCH_CONFIG_ENABLE_OPTIONAL_STRINGMAKER)
 add_executable(tests)
 target_include_directories(tests PRIVATE "third_party")

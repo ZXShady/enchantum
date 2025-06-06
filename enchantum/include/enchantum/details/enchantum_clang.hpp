@@ -1,5 +1,6 @@
 #pragma once
-#if __clang_major__ < 20
+
+#if defined __has_warning && __has_warning("-Wenum-constexpr-conversion")
   #pragma clang diagnostic push
   #pragma clang diagnostic ignored "-Wenum-constexpr-conversion"
 #endif
@@ -84,14 +85,15 @@ struct enum_traits<E> {
 private:
   using T = std::underlying_type_t<E>;
 public:
-  static constexpr auto          max = details::Min(details::valid_cast_range<E>(), static_cast<T>(ENCHANTUM_MAX_RANGE));
+  static constexpr auto max = details::Min(details::valid_cast_range<E>(), static_cast<T>(ENCHANTUM_MAX_RANGE));
   static constexpr decltype(max) min = details::Max(details::valid_cast_range<E, -1>(), static_cast<T>(ENCHANTUM_MIN_RANGE));
 };
 
 template<UnscopedEnum E>
   requires UnsignedEnum<E> && (!EnumFixedUnderlying<E>)
 struct enum_traits<E> {
-  static constexpr auto          max = details::Min(details::valid_cast_range<E>(), static_cast<std::underlying_type_t<E>>(ENCHANTUM_MAX_RANGE));
+  static constexpr auto          max = details::Min(details::valid_cast_range<E>(),
+                                           static_cast<std::underlying_type_t<E>>(ENCHANTUM_MAX_RANGE));
   static constexpr decltype(max) min = 0;
 };
 #endif
@@ -269,7 +271,7 @@ namespace details {
 
 } // namespace enchantum
 
-#if __clang_major__ < 20
+#if defined __has_warning && __has_warning("-Wenum-constexpr-conversion")
   #pragma clang diagnostic pop
 #endif
 #undef SZC
