@@ -4,6 +4,7 @@
 #include <array>
 #include <cassert>
 #include <climits>
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 
@@ -81,18 +82,32 @@ namespace details {
 
     constexpr auto elements = []() {
       constexpr auto length_of_enum_in_template_array_casting = details::length_of_enum_in_template_array_if_casting<E>();
-      constexpr auto Array = details::generate_arrays<E, Min, Max>();
-      auto           str   = [Array]<std::size_t... Idx>(std::index_sequence<Idx...>) {
-        return details::var_name<Array[Idx]...>();
-      }(std::make_index_sequence<Array.size()>());
+      constexpr auto ArraySize = 1 + std::size_t { is_bitflag<E> ? (sizeof(E) * CHAR_BIT - std::is_signed_v<E>) : Max - Min };
+      //constexpr auto Array    = details::generate_arrays<E, Min, Max>();
+      using Under      = std::underlying_type_t<E>;
+      using Underlying = std::make_unsigned_t<std::conditional_t<std::is_same_v<bool, Under>, unsigned char, Under>>;
+
+
+      constexpr auto ConstStr = []<std::size_t... Idx>(std::index_sequence<Idx...>) {
+        if constexpr (sizeof...(Idx) && is_bitflag<E>) // sizeof... to make contest dependant
+          return details::var_name<E{}, __builtin_bit_cast(E, static_cast<Under>(Underlying(1) << Idx))...>();
+        else
+          return details::var_name<__builtin_bit_cast(E, static_cast<Under>(static_cast<decltype(Min)>(Idx) + Min))...>();
+      }(std::make_index_sequence<ArraySize - is_bitflag<E>>());
+      auto str = ConstStr;
       struct RetVal {
-        std::array<Pair, Array.size()> pairs{};
-        std::size_t                    total_string_length = 0;
-        std::size_t                    valid_count         = 0;
+        struct ElementPair {
+          E           value;
+          std::size_t length;
+        };
+
+        ElementPair pairs[ArraySize];
+        char        strings[ConstStr.size()]{};
+        std::size_t total_string_length = 0;
+        std::size_t valid_count         = 0;
       } ret;
-      std::size_t    index             = 0;
       constexpr auto enum_in_array_len = enum_in_array_name<E{}>().size();
-      while (index < Array.size()) {
+      for (std::size_t index = 0; index < ArraySize; ++index) {
         if (str.front() == '(') {
           str.remove_prefix(SZC("(") + length_of_enum_in_template_array_casting + SZC(")0")); // there is atleast 1 base 10 digit
           //if(!str.empty())
@@ -111,42 +126,46 @@ namespace details {
           }
           const auto commapos = str.find(',');
 
-          const auto name = str.substr(0, commapos);
 
-          ret.pairs[ret.valid_count] = Pair{Array[index], name};
-          ret.total_string_length += name.size() + ShouldNullTerminate;
+          {
+            const auto        name      = str.substr(0, commapos);
+            const auto        name_size = name.size();
+            const auto* const name_data = name.data();
 
-          if (commapos != str.npos)
-            str.remove_prefix(commapos + 2);
-          ++ret.valid_count;
+            if constexpr (is_bitflag<E>)
+              ret.pairs[ret.valid_count++] = {index == 0 ? E() : E(Underlying{1} << (index - 1)), name_size};
+            else
+              ret.pairs[ret.valid_count++] = {E(Min + static_cast<decltype(Min)>(index)), name_size};
+
+            for (std::size_t i = 0; i < name_size; ++i)
+              ret.strings[ret.total_string_length++] = name_data[i];
+            ret.total_string_length += ShouldNullTerminate;
+
+            if (commapos != str.npos)
+              str.remove_prefix(commapos + 2);
+          }
         }
-        ++index;
       }
       return ret;
     }();
 
-    constexpr auto strings = [elements]() {
-      std::array<char, elements.total_string_length> ret;
-      for (std::size_t _i = 0, index = 0; _i < elements.valid_count; ++_i) {
-        const auto& [_, s] = elements.pairs[_i];
-        for (std::size_t i = 0; i < s.size(); ++i)
-          ret[index++] = s[i];
-
-        if constexpr (ShouldNullTerminate)
-          ret[index++] = '\0';
-      }
+    constexpr auto strings = [](const auto total_length, const char* data) {
+      std::array<char, total_length.value> ret;
+      auto* const                          ret_data = ret.data();
+      for (std::size_t i = 0; i < total_length.value; ++i)
+        ret_data[i] = data[i];
       return ret;
-    }();
+    }(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings);
 
     std::array<Pair, elements.valid_count> ret;
     constexpr const auto*                  str = static_storage_for<strings>.data();
     for (std::size_t i = 0, string_index = 0; i < elements.valid_count; ++i) {
-      const auto& [e, s] = elements.pairs[i];
-      auto& [re, rs]     = ret[i];
-      re                 = e;
+      const auto& [e, length] = elements.pairs[i];
+      auto& [re, rs]          = ret[i];
+      re                      = e;
 
-      rs = {str + string_index, str + string_index + s.size()};
-      string_index += s.size() + ShouldNullTerminate;
+      rs = {str + string_index, str + string_index + length};
+      string_index += length + ShouldNullTerminate;
     }
     return ret;
   }

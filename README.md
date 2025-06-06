@@ -218,11 +218,10 @@ enum member count: `16`
 
 range: `-128` to `128`
 
-
 | Compiler    | `magic_enum`     | `enchantum`     | Time Saved |
 | ----------- | ---------------- | --------------- | ---------- |
 | MSVC        | 80 secs          | 22  secs        | 58         |
-| GCC         | 47 secs          | 7   secs        | 40         |
+| GCC         | 47 secs          | 6.1 secs        | 40.9       |
 | Clang       | 47 secs          | 6.2 secs        | 40.8       |
 
 ### Large Enums  
@@ -235,9 +234,9 @@ range: `-256` to `256`
 
 | Compiler    | `magic_enum`     | `enchantum`     | Time Saved |
 | ----------- | ---------------- | --------------- | ---------- |
-| MSVC        | 37 secs           | 15 secs        | 22         |
-| Clang       | 18 secs           | 5  secs        | 13         |
-| GCC         | 21 secs           | 6  secs        | 15         |
+| MSVC        | 37 secs          | 15  secs        | 22         |
+| GCC         | 21 secs          | 4.5 secs        | 16.5       |
+| Clang       | 18 secs          | 5 secs          | 13         |
 
 
 ### Very Large Enum Range  
@@ -252,7 +251,7 @@ range: `-1024` to `1024`
 | Compiler | `magic_enum`     | `enchantum`   |
 |----------|------------------|---------------|
 | MSVC     | >20 min (killed) | 107  secs     |
-| GCC      | >15 min (killed) | 37   secs     |
+| GCC      | >15 min (killed) | 26.7 secs     |
 | Clang    | >15 min (killed) | 24.5 secs     |
 ---
 
