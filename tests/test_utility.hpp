@@ -51,46 +51,8 @@ struct Really_Unreadable_Class_Name {
   using BlockType = decltype(BlockType_::Dirt);
 };
 
-//template<typename... Ts>
-//[[nodiscard]] constexpr auto operator~(typename Really_Unreadable_Class_Name<Ts...>::Flags a) noexcept
-//{
-//  using T = std::underlying_type_t<decltype(a)>;
-//  return static_cast<decltype(a)>(~static_cast<T>(a));
-//}
-//
-//template<typename... Ts>
-//[[nodiscard]] constexpr auto operator|(typename Really_Unreadable_Class_Name<Ts...>::Flags a,
-//                                        typename Really_Unreadable_Class_Name<Ts...>::Flags b) noexcept
-//{
-//  using T = std::underlying_type_t<decltype(a)>;
-//  return static_cast<decltype(a)>(static_cast<T>(a) | static_cast<T>(b));
-//}
-//
-//template<typename... Ts>
-//[[nodiscard]] constexpr auto operator&(typename Really_Unreadable_Class_Name<Ts...>::Flags a,
-//                                        typename Really_Unreadable_Class_Name<Ts...>::Flags b) noexcept
-//{
-//  using T = std::underlying_type_t<decltype(a)>;
-//  return static_cast<decltype(a)>(static_cast<T>(a) & static_cast<T>(b));
-//}
-//
-//template<typename... Ts>
-//constexpr auto& operator|=(typename Really_Unreadable_Class_Name<Ts...>::Flags& a,
-//                           typename Really_Unreadable_Class_Name<Ts...>::Flags  b) noexcept
-//{
-//  return a = a | b;
-//}
-
-//template<typename... Ts>
-//constexpr auto& operator&=(typename Really_Unreadable_Class_Name<Ts...>::Flags& a,
-//                           typename Really_Unreadable_Class_Name<Ts...>::Flags b) noexcept
-//{
-//  return a = a & b;
-//}
-
 using UglyType = Really_Unreadable_Class_Name<int, long, int***, TypeWithCommas<int, long[3], TypeWithCommas<long, int>>>;
 using BlockType = UglyType::BlockType;
-
 
 // Clang seems to have weird behavior with enum in templates
 // It does not display them in pretty function names unless atleast 1 member of the enum was
@@ -108,6 +70,19 @@ using UnscopedColor = UglyType::UnscopedColor;
 ENCHANTUM_DEFINE_BITWISE_FOR(Flags)
 
 } // namespace LongNamespaced::Namespace2::inline InlineNamespace
+
+enum class StrongFlagsNoOverloadedOperators : std::uint8_t {
+  Flag0 = 1 << 0,
+  Flag1 = 1 << 1,
+  Flag2 = 1 << 2,
+  Flag3 = 1 << 3,
+  Flag4 = 1 << 4,
+  Flag5 = 1 << 5,
+  Flag6 = 1 << 6,
+};
+
+template<>
+inline constexpr bool enchantum::is_bitflag<StrongFlagsNoOverloadedOperators> = true;
 
 // taken from ImGui.
 // https://github.com/ocornut/imgui/blob/46235e91f602b663f9b0f1f1a300177b61b193f5/misc/freetype/imgui_freetype.h#L26
@@ -346,7 +321,7 @@ using concat = decltype([]<typename... Ts, typename... Us>(type_list<Ts...>, typ
   return type_list<Ts..., Us...>{};
 }(A{}, B{}));
 
-using AllFlagsTestTypes = type_list<ImGuiFreeTypeBuilderFlags, NonContigFlagsWithNoneCStyle, FlagsWithNone, Flags>;
+using AllFlagsTestTypes = type_list<StrongFlagsNoOverloadedOperators, ImGuiFreeTypeBuilderFlags, NonContigFlagsWithNoneCStyle, FlagsWithNone, Flags>;
 using AllEnumsTestTypes = concat<
   AllFlagsTestTypes,
   type_list<

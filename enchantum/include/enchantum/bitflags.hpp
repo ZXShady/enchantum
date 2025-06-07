@@ -81,12 +81,13 @@ template<typename String = string, BitFlagEnum E>
   String name;
   T      check_value = 0;
   for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
-    const auto& [v, s] = entries<E>[i];
-    if (v == (value & v)) {
+    const auto& [v, s]  = entries<E>[i];
+    const auto casted_v = static_cast<T>(v);
+    if (casted_v == (static_cast<T>(value) & casted_v)) {
       if (!name.empty())
         name.append(1, sep);           // append separator if not the first value
       name.append(s.data(), s.size()); // not using operator += since this may not be std::string_view always
-      check_value |= static_cast<T>(v);
+      check_value |= casted_v;
     }
   }
   if (check_value == static_cast<T>(value))

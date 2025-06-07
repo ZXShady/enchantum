@@ -173,13 +173,13 @@ TEST_CASE("contains_bitflag", "[contains][bitflags]")
   {
     STATIC_CHECK(enchantum::contains_bitflag<EntityStatus>("Active"));
     STATIC_CHECK(enchantum::contains_bitflag<EntityStatus>("Inactive"));
-    STATIC_CHECK(enchantum::contains_bitflag<EntityStatus>("pendinG",'|', case_insensitive));
+    STATIC_CHECK(enchantum::contains_bitflag<EntityStatus>("pendinG", '|', case_insensitive));
     STATIC_CHECK(enchantum::contains_bitflag<EntityStatus>("peNdIng|AcTive", '|', case_insensitive));
-    STATIC_CHECK(enchantum::contains_bitflag<EntityStatus>("Inactive.Active",'.'));
+    STATIC_CHECK(enchantum::contains_bitflag<EntityStatus>("Inactive.Active", '.'));
 
     STATIC_CHECK_FALSE(enchantum::contains_bitflag<EntityStatus>("Hello.Active", '.'));
     STATIC_CHECK_FALSE(enchantum::contains_bitflag<EntityStatus>("Hello|Active"));
-    STATIC_CHECK_FALSE(enchantum::contains_bitflag<EntityStatus>("hello.active",'.',case_insensitive));
+    STATIC_CHECK_FALSE(enchantum::contains_bitflag<EntityStatus>("hello.active", '.', case_insensitive));
 
 
     STATIC_CHECK(enchantum::contains_bitflag<Permission>("Read"));
@@ -286,12 +286,12 @@ TEMPLATE_LIST_TEST_CASE("bitflags", "[bitflags]", AllFlagsTestTypes)
 TEMPLATE_LIST_TEST_CASE("contains_bitflag returns false for invalid combinations", "[bitflags]", AllFlagsTestTypes)
 {
   using Underlying = std::underlying_type_t<TestType>;
-
   std::vector<TestType> invalid_combinations;
 
   for (std::size_t bit = 0; bit < sizeof(Underlying) * CHAR_BIT; ++bit) {
     const auto test_bit = static_cast<TestType>(Underlying{1} << bit);
 
+    using namespace enchantum::bitwise_operators;
     if (!static_cast<bool>(enchantum::value_ors<TestType> & test_bit)) {
       // This bit is not part of the valid mask, so it's invalid
       invalid_combinations.push_back(test_bit);
