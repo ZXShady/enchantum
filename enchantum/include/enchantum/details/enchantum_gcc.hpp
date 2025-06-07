@@ -119,10 +119,12 @@ namespace details {
           //std::cout << "strsize \"" << str.size() << '"' << '\n';
         }
         else {
-          if constexpr (enum_in_array_len != 0)
-            str.remove_prefix(enum_in_array_len + SZC("::"));
-          if constexpr (details::prefix_length_or_zero<E> != 0) {
-            str.remove_prefix(details::prefix_length_or_zero<E>);
+          constexpr std::size_t base_prefix_len = (enum_in_array_len != 0 ? enum_in_array_len + SZC("::") : 0);
+          constexpr std::size_t user_prefix_len = details::prefix_length_or_zero<E>;
+          constexpr std::size_t total_prefix_to_remove = base_prefix_len + user_prefix_len;
+
+          if constexpr (total_prefix_to_remove > 0) {
+            str.remove_prefix(total_prefix_to_remove);
           }
           const auto commapos = str.find(',');
 
