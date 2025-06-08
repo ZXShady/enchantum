@@ -21,6 +21,7 @@ jobs:
       matrix:
         platform:
           - { name: Windows MSVC 2022, os: windows-2022, compiler: msvc,flags: "" }
+          - { name: Windows MSVC 2022 with Disable Speedup, os: windows-2022, compiler: msvc,flags: "-DENCHANTUM_ENABLE_MSVC_SPEEDUP=OFF" }
 
           - { name: Windows Clang 18, os: windows-latest, compiler: clang, version: 18.1.0, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           - { name: Windows Clang 19, os: windows-latest, compiler: clang, version: 19.1.0, flags: "-DCMAKE_CXX_COMPILER=clang++" }

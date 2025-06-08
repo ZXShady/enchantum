@@ -11,14 +11,19 @@ file(GLOB_RECURSE INCS "${INCDIR}/*.hpp")
 add_library(enchantum INTERFACE ${INCS})
 add_library(enchantum::enchantum ALIAS enchantum)
 target_compile_features(enchantum INTERFACE cxx_std_20)
-
+ 
 target_include_directories(enchantum INTERFACE
     $<BUILD_INTERFACE:${INCDIR}>
     $<INSTALL_INTERFACE:include>
 )
 
 option(ENCHANTUM_BUILD_TESTS "Enable tests for this `enchantum` library" OFF)
+option(ENCHANTUM_ENABLE_MSVC_SPEEDUP "Enable faster but not 100% accurate MSVC enum reflection." ON)
 option(ENCHANTUM_BUILD_BENCHMARKS "Enable compile time benchmarks `enchantum` library" OFF)
+
+if(ENCHANTUM_ENABLE_MSVC_SPEEDUP)
+    target_compile_definitions(enchantum INTERFACE ENCHANTUM_ENABLE_MSVC_SPEEDUP=1)
+endif()
 
 if(ENCHANTUM_BUILD_TESTS)
   enable_testing()
