@@ -237,7 +237,7 @@ range: `-256` to `256`
 | ----------- | ---------------- | --------------- | ---------- |
 | MSVC        | 37 secs          | 8.8 secs        | 28.2       |
 | GCC         | 21 secs          | 4.5 secs        | 16.5       |
-| Clang       | 18 secs          | 5   secs        | 13         |
+| Clang       | 18 secs          | 3.5 secs        | 14.5       |
 
 
 ### Very Large Enum Range  
@@ -253,7 +253,7 @@ range: `-1024` to `1024`
 |----------|------------------|---------------|
 | MSVC     | >20 min (killed) | 85.3 secs     |
 | GCC      | >15 min (killed) | 26.7 secs     |
-| Clang    | >15 min (killed) | 24.5 secs     |
+| Clang    | >15 min (killed) | 22.3 secs     |
 ---
 
 ## Summary

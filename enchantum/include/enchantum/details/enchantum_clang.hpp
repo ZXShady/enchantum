@@ -174,21 +174,20 @@ namespace details {
       }(std::make_index_sequence<is_bitflag<E> ? bits : ArraySize>());
 
       auto           str        = ConstStr;
-      constexpr auto StringSize = ConstStr.size();
 
       constexpr auto enum_in_array_name = details::enum_in_array_name<E{}>();
       constexpr auto enum_in_array_len  = enum_in_array_name.size();
       // Ubuntu Clang 20 complains about using local constexpr variables in a local struct
-      using CharArray = std::array<char, StringSize + (NullTerminated + ArraySize) - (enum_in_array_len * ArraySize)>;
+      using CharArray = char[ConstStr.size() + (NullTerminated + ArraySize) - (enum_in_array_len * ArraySize)];
       struct RetVal {
         struct ElemenetPair {
           E            value;
           std::uint8_t len;
         };
-        std::array<ElemenetPair, ArraySize> pairs{};
-        CharArray                           strings{};
-        std::size_t                         total_string_length = 0;
-        std::size_t                         valid_count         = 0;
+        ElemenetPair pairs[ArraySize]{};
+        CharArray    strings{};
+        std::size_t  total_string_length = 0;
+        std::size_t  valid_count         = 0;
       } ret;
 
 
@@ -227,7 +226,7 @@ namespace details {
             else
               ret.pairs[ret.valid_count++] = {E(Min + static_cast<decltype(Min)>(index)), name_size};
 
-            __builtin_memcpy(ret.strings.data() + ret.total_string_length, name.data(), name_size);
+            __builtin_memcpy(ret.strings + ret.total_string_length, name.data(), name_size);
             ret.total_string_length += name_size + NullTerminated;
           }
           if (commapos != str.npos)
@@ -244,14 +243,13 @@ namespace details {
         std::array<char, total_length.value> strings;
         __builtin_memcpy(strings.data(), data, total_length.value);
         return strings;
-      }(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings.data());
+      }(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings);
 
       auto* const       ret_data  = ret.data();
-      const auto* const pair_data = elements.pairs.data();
 
       constexpr const auto* str = static_storage_for<strings>.data();
       for (std::size_t i = 0, string_index = 0; i < elements.valid_count; ++i) {
-        const auto [e, length] = pair_data[i];
+        const auto [e, length] = elements.pairs[i];
         auto& [re, rs]         = ret_data[i];
         using StringView       = std::decay_t<decltype(rs)>;
         re                     = e;
