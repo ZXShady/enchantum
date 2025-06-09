@@ -43,8 +43,10 @@ install(TARGETS enchantum
     EXPORT enchantumTargets
 )
 
-install(DIRECTORY ${INCDIR}/enchantum/
-    DESTINATION include/enchantum
+include(GNUInstallDirs)
+
+install(DIRECTORY ${INCDIR}/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     FILES_MATCHING PATTERN "*.hpp"
 )
 
