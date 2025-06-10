@@ -53,27 +53,6 @@ namespace details {
       return L::min();
     else
       return valid_cast_range_recurse<T, max_range, 0>();
-
-
-    //else {
-    //  if constexpr (max_range >= ENCHANTUM_MIN_RANGE) {
-    //    // this tests whether `static_cast`ing max_range is valid
-    //    // because C style enums stupidly is like a bit field
-    //    // `enum E { a,b,c,d = 3};` is like a bitfield `struct E { int val : 2;}`
-    //    // which means giving E.val a larger than 2 bit value is UB so is it for enums
-    //    // and gcc and msvc ignore this (for good)
-    //    // while clang makes it a subsituation failure which we can check for
-    //    // using std::inegral_constant makes sure this is a constant expression situation
-    //    // for SFINAE to occur
-    //    if constexpr (is_valid_cast<T, max_range>)
-    //      return valid_cast_range<T, max_range * 2>();
-    //    else
-    //      return max_range / 2;
-    //  }
-    //  else {
-    //    return max_range / 2;
-    //  }
-    //}
   }
 
 
@@ -119,7 +98,7 @@ namespace details {
       }
     }
     else {
-      if (s[s.size() - 2] == ')') {
+      if (s.size() != 1 && s[s.size() - 2] == ')') {
         s.remove_prefix(SZC("("));
         s.remove_suffix(SZC(")0"));
       }

@@ -289,6 +289,44 @@ enum class Direction3D : std::int16_t {
 };
 
 
+enum CStyleLetters {
+  a,
+  b,
+  c,
+  e,
+  d,
+  f,
+  g
+};
+
+namespace {
+namespace Outer {
+  namespace {
+    namespace Inner {
+      enum Anon {
+        _0,
+        _1,
+        _2,
+        _3,
+        _4,
+        _5,
+        _6
+      };
+      enum CStyleAnon {
+        CStyleAnon_0,
+        CStyleAnon_1,
+        CStyleAnon_2,
+        CStyleAnon_3,
+        CStyleAnon_4,
+        CStyleAnon_5,
+        CStyleAnon_6
+      };
+    } // namespace Inner
+  } // namespace
+} // namespace Outer
+} // namespace
+
+
 enum Unscoped : int {
 };
 
@@ -345,7 +383,10 @@ using AllEnumsTestTypes = concat<
     BoolEnum,
     Direction2D,
     Direction3D,
-    Letters>>;
+    Letters,
+    CStyleLetters,
+    Outer::Inner::Anon,
+    Outer::Inner::CStyleAnon>>;
 
 template<enchantum::Enum E>
 struct Catch::StringMaker<E> {
