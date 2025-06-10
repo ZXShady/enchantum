@@ -52,7 +52,7 @@ install(DIRECTORY ${INCDIR}/
 
 install(EXPORT enchantumTargets
     NAMESPACE enchantum::
-    DESTINATION cmake
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/enchantum/cmake
 )
 
 include(CMakePackageConfigHelpers)
@@ -73,4 +73,10 @@ install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/enchantumConfig.cmake"
     "${CMAKE_CURRENT_BINARY_DIR}/enchantumConfigVersion.cmake"
     DESTINATION cmake
+)
+
+export(
+    TARGETS enchantum
+    NAMESPACE enchantum::
+    FILE "${CMAKE_CURRENT_BINARY_DIR}/enchantumTargets.cmake"
 )
