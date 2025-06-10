@@ -164,10 +164,10 @@ There are several enum reflection libraries out there — so why choose **enchan
 - Supports C++17.
 - Nicer compiler errors.
 - Supports wide strings.
+- Efficient executable binary size.
 
 **Cons**
 - Compile times grow significantly with larger `MAGIC_ENUM_MAX_RANGE`. 
-- Requires alternate APIs like `magic_enum::enum_name<E::V>()` to mitigate said compile-time costs. which forces those functions not to be functors.
 - Bigger Binary Size.
 
 ### conjure_enum
@@ -202,7 +202,7 @@ There are several enum reflection libraries out there — so why choose **enchan
 - Clean and Simple Functor based API `enchantum::to_string(E)` no `enchantum::to_string<E::V>()` since compile times are fast.
 - Features like disabling null termination if not needed and specifying common enum prefix for C style enums, and reflect '0' values for bit flag enums.
 - Supports all sort of enums (scoped,unscoped,C style unfixed underlying type,anonymous namespaced enums, enums with commas in their typename,etc...);
-- Efficient Binary size
+- Efficient object binary size and executable size.
 
 **Cons**
 - C++20 required
@@ -231,21 +231,21 @@ All times in **seconds** (lower is better). Compiled with `-O3` fir GCC and Clan
 **Note**: "Timeout" means it took more than 20 minutes and still did not finish
 
 | Compiler    | Test Case   | `enchantum`  | `magic_enum` | `simple_enum` |
-|-------------|-------------|--------------| ------------ |-------------|
-| **GCC**     | Small       | 6.1          |  47          | 21.5        |
-|             | Big         | 4.5          |  21          | 6.3         |
-|             | Large Range | 26.7         |  Timeout     | 1.1         |
-|             | Ideal Range | 3            |  8.1         | 2.7         |
-|                                                                       |
-| **Clang**   | Small       | 6.2          |  47          | 14          |
-|             | Big         | 3.5          |  18          | 4.451       |
-|             | Large Range | 22.3         |  Timeout     | 101.3       |
-|             | Ideal Range | 3            |  8.7         | 2.3         |
-|                                                                       |
-| **MSVC**    | Small       | 15.8         |  80          | 186         |
-|             | Big         | 8.8          |  37          | 32.1        |
-|             | Large Range | 85.3         |  Timeout     | Timeout     |
-|             | Ideal Range | 5.8          |  17.9        | 4.7         |
+|-------------|-------------|--------------| ------------ |---------------|
+| **GCC**     | Small       | 6.1          |  47          | 21.5          |
+|             | Big         | 4.5          |  21          | 6.3           |
+|             | Large Range | 26.7         |  Timeout     | 313           |
+|             | Ideal Range | 3            |  8.1         | 2.7           |
+|                                                                         |
+| **Clang**   | Small       | 6.2          |  47          | 14            |
+|             | Big         | 3.5          |  18          | 4.4           |
+|             | Large Range | 22.3         |  Timeout     | 96.3          |
+|             | Ideal Range | 3            |  8.7         | 2.3           |
+|                                                                         |
+| **MSVC**    | Small       | 15.8         |  80          | 186           |
+|             | Big         | 8.8          |  37          | 32.1          |
+|             | Large Range | 85.3         |  Timeout     | Timeout       |
+|             | Ideal Range | 5.8          |  17.9        | 4.7           |
 
 
 ## Object File Sizes
@@ -264,9 +264,23 @@ Clang is only currently measured. But GCC produced same sizes almost
 |             | Large Range | 504  KB      |  Unknown     | ~96000 KB     |
 |             | Ideal Range | 465  KB      |  1091 KB     |  1253 KB      |
 
+**Note**:
+The reason `simple_enum` is so big in object sizes is that it generates a huge table of all strings it does not do string optimizations like `enchantum` or `magic_enum` which leads to big object sizes there are a lot of useless strings in the binary but it also allows the library to do `O(1)` enum to string lookup for **any** enum, which I don't necessarily think is worth it and compile faster.
 
-**Note**: I am unsure why the object size got bigger with larger ranges for `enchantum` 
-Why is `simple_enum` so big in object sizes? it generates a huge table of all strings it does not do string optimizations like `enchantum` which leads to big object sizes there are a lot of useless strings in the binary but it also allows the library to do `O(1)` enum to string lookup for **any** enum, which I don't necessarily think is worth it.
+
+### Executable Sizes
+
+Compiled the object files into their own executable then ran `strip` over them.
+
+| Compiler    | Test Case   | `enchantum`  | `magic_enum` | `simple_enum` |
+|-------------|-------------|--------------| ------------ |---------------|
+| **Clang**   | Small       | 106  KB      |  106 KB      |  2996   KB    |
+|             | Big         | 182  KB      |  182  KB     |  959    KB    |
+|             | Large Range | 106  KB      |  Unknown     |  ~23000 KB    |
+|             | Ideal Range | 147  KB      |  147 KB      |  323    KB    |
+
+**Remarks**: although magic enum did not compile in the large range test, the executable size is expected to be the same as enchantum given it optimizes strings.
+
 
 ---
 
