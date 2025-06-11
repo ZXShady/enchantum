@@ -1,5 +1,7 @@
 #pragma once
 #include "enchantum.hpp"
+#include "bitflags.hpp"
+
 #include <concepts>
 #include <iostream>
 #include <string>

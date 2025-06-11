@@ -2,9 +2,9 @@
 #include "case_insensitive.hpp"
 #include <catch2/catch_tostring.hpp>
 #include <cstdint>
-#include <enchantum/bitflags.hpp>
 #include <enchantum/bitwise_operators.hpp>
-#include <enchantum/enchantum.hpp>
+#include <enchantum/common.hpp>
+
 #include <type_traits>
 
 
@@ -392,11 +392,12 @@ template<enchantum::Enum E>
 struct Catch::StringMaker<E> {
   static std::string convert(E e)
   {
-    if constexpr (enchantum::BitFlagEnum<E>)
-      return "\"" + enchantum::to_string_bitflag(e) + "\" (" +
-        std::to_string(static_cast<std::underlying_type_t<E>>(e)) + ")";
-    else
-      return "\"" + std::string(enchantum::to_string(e)) + "\" (" +
-        std::to_string(static_cast<std::underlying_type_t<E>>(e)) + ")";
+    return '"' + std::to_string(static_cast<std::underlying_type_t<E>>(e)) + '"';
+    //if constexpr (enchantum::BitFlagEnum<E>)
+    //  return "\"" + enchantum::to_string_bitflag(e) + "\" (" +
+    //    std::to_string(static_cast<std::underlying_type_t<E>>(e)) + ")";
+    //else
+    //  return "\"" + std::string(enchantum::to_string(e)) + "\" (" +
+    //    std::to_string(static_cast<std::underlying_type_t<E>>(e)) + ")";
   }
 };
