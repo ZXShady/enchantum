@@ -1,13 +1,6 @@
 #pragma once
-
-#include "details/format_util.hpp"
-#include "enchantum.hpp"
-#include <iostream>
+#include "iostream.hpp"
 
 namespace enchantum::ostream_operators {
-template<typename Traits, Enum E>
-std::basic_ostream<char, Traits>& operator<<(std::basic_ostream<char, Traits>& os, const E e)
-{
-  return os << details::format(e);
+	using enchantum::iostream_operators::operator<<;
 }
-} // namespace enchantum::ostream_operators
