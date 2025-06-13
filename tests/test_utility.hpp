@@ -354,10 +354,11 @@ using namespace LongNamespaced::Namespace2;
 template<typename...>
 struct type_list {}; // not wanting to include tuple to detect if I am missing a header in tests
 
+template<typename... Ts,typename... Us>
+type_list<Ts..., Us...> concatter_func(type_list<Ts...>,type_list<Us...>);
+
 template<typename A, typename B>
-using concat = decltype([]<typename... Ts, typename... Us>(type_list<Ts...>, type_list<Us...>) {
-  return type_list<Ts..., Us...>{};
-}(A{}, B{}));
+using concat = decltype(::concatter_func(A{},B{}));
 
 using AllFlagsTestTypes = type_list<StrongFlagsNoOverloadedOperators, ImGuiFreeTypeBuilderFlags, NonContigFlagsWithNoneCStyle, FlagsWithNone, Flags>;
 using AllEnumsTestTypes = concat<

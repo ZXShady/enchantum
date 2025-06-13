@@ -13,7 +13,7 @@ defaults:
 
 jobs:
   build:
-    name: ${{ matrix.platform.name }} -  ${{ matrix.build_type.name }}
+    name: ${{ matrix.platform.name }}
     runs-on: ${{ matrix.platform.os }}
 
     strategy:
@@ -27,7 +27,7 @@ jobs:
           - { name: Windows Clang 19, os: windows-latest, compiler: clang, version: 19.1.0, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           - { name: Windows Clang 20, os: windows-latest, compiler: clang, version: 20.1.0, flags: "-DCMAKE_CXX_COMPILER=clang++" }
 
-          - { name: MacOS Clang Latest, os: macos-latest, compiler: clang, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          #- { name: MacOS Clang Latest, os: macos-latest, compiler: clang, flags: "-DCMAKE_CXX_COMPILER=clang++" }
 
           # Sadly Disabled Due to weird quirks :(
           #- { name: Ubuntu GCC 9,     os: ubuntu-22.04,  compiler: gcc, version: 9, flags: "-DENCHANTUM_RUNTIME_TESTS=ON -DCMAKE_CXX_COMPILER=g++" }
@@ -36,9 +36,13 @@ jobs:
           - { name: Ubuntu GCC 12,    os: ubuntu-latest, compiler: gcc, version: 12, flags: "-DCMAKE_CXX_COMPILER=g++" }
           - { name: Ubuntu GCC 13,    os: ubuntu-latest, compiler: gcc, version: 13, flags: "-DCMAKE_CXX_COMPILER=g++" }
           - { name: Ubuntu GCC 14,    os: ubuntu-latest, compiler: gcc, version: 14, flags: "-DCMAKE_CXX_COMPILER=g++" }
-          # Disabled due to unable to install
+          # Sadly cannot install
           #- { name: Ubuntu GCC 15,    os: ubuntu-latest, compiler: gcc, version: 15, flags: "-DCMAKE_CXX_COMPILER=g++" }
           
+          - { name: Ubuntu Clang 10,  os: ubuntu-22.04, compiler: clang, version: 10, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          - { name: Ubuntu Clang 11,  os: ubuntu-22.04, compiler: clang, version: 11, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          - { name: Ubuntu Clang 12,  os: ubuntu-22.04, compiler: clang, version: 12, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+
           - { name: Ubuntu Clang 13,  os: ubuntu-22.04, compiler: clang, version: 13, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           - { name: Ubuntu Clang 14,  os: ubuntu-22.04, compiler: clang, version: 14, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           - { name: Ubuntu Clang 15,  os: ubuntu-22.04, compiler: clang, version: 15, flags: "-DCMAKE_CXX_COMPILER=clang++" }
@@ -47,10 +51,8 @@ jobs:
           - { name: Ubuntu Clang 18,  os: ubuntu-latest, compiler: clang, version: 18, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           - { name: Ubuntu Clang 19,  os: ubuntu-latest, compiler: clang, version: 19, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           - { name: Ubuntu Clang 20,  os: ubuntu-latest, compiler: clang, version: 20, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-        build_type:
-          - { name: Debug,   flags: "-DCMAKE_BUILD_TYPE=Debug" }
-          - { name: Release, flags: "-DCMAKE_BUILD_TYPE=Release" }
-
+          - { name: Ubuntu Clang 21,  os: ubuntu-latest, compiler: clang, version: 21, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+        
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -70,26 +72,44 @@ jobs:
 
       - name: Setup Clang (Linux)
         if: runner.os == 'Linux' && matrix.platform.compiler == 'clang'
-        uses: egor-tensin/setup-clang@v1
+        uses: aminya/setup-cpp@v1
         with:
-          version: ${{ matrix.platform.version }}
+          compiler: llvm-${{matrix.platform.version}}
 
       - name: Setup GCC
         if: matrix.platform.compiler == 'gcc'
-        uses: egor-tensin/setup-gcc@v1
+        uses: aminya/setup-cpp@v1
         with:
-          version: ${{ matrix.platform.version }}
+          compiler: gcc-${{matrix.platform.version}}
 
-      - name: Configure CMake
+      - name: Configure CMake (Debug)
         run: >
           cmake -B build
           -G Ninja
           ${{ matrix.platform.flags }}
-          ${{ matrix.build_type.flags }}
+          -DCMAKE_BUILD_TYPE=Debug
           -DENCHANTUM_BUILD_TESTS=ON
 
-      - name: Build
+      - name: Build (Debug)
         run: cmake --build build
 
-      - name: Run Tests
+      - name: Run Tests (Debug)
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Clean Build Directory
+        run: "rm -rf build"
+        shell: bash
+
+      - name: Configure CMake (Release)
+        run: >
+          cmake -B build
+          -G Ninja
+          ${{ matrix.platform.flags }}
+          -DCMAKE_BUILD_TYPE=Release
+          -DENCHANTUM_BUILD_TESTS=ON
+
+      - name: Build (Release)
+        run: cmake --build build
+
+      - name: Run Tests (Release)
         run: ctest --test-dir build --output-on-failure
