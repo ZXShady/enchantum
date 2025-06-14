@@ -43,13 +43,14 @@ Key Features
 [CMake Integration](#cmake-integration)
 
 Tested locally on Windows 10 with:
-- Visual Studio 2022 (v17.13.6)
+- Visual Studio 2022 (19.44)
 - GCC 14.2.0
 - Clang 20.1.2
 
 Compiler Support: (Look at [CI](https://github.com/ZXShady/enchantum/actions))
 - GCC >= 11 (GCC 10 Partial no support for enums in templates)
 - Clang >= 10
+- MSVC >= 19.31 (Tested through godbolt)
 
 ---
 
