@@ -4,6 +4,105 @@
   #include ENCHANTUM_CONFIG_FILE
 #endif
 
+#ifndef ENCHANTUM_ALIAS_STRING_VIEW
+  #include <string_view>
+#endif
+
+namespace enchantum {
+#ifdef ENCHANTUM_ALIAS_STRING_VIEW
+ENCHANTUM_ALIAS_STRING_VIEW;
+#else
+using ::std::string_view;
+#endif
+
+} // namespace enchantum
+#include <array>
+
+namespace enchantum {
+
+namespace details {
+#define SZC(x) (sizeof(x) - 1)
+  constexpr string_view extract_name_from_type_name(const string_view type_name) noexcept
+  {
+    if (const auto n = type_name.rfind(':'); n != type_name.npos)
+      return type_name.substr(n + 1);
+    else
+      return type_name;
+  }
+
+  template<typename T>
+  constexpr auto raw_type_name_func() noexcept
+  {
+
+#if defined(__clang__)
+    constexpr std::size_t prefix = 0;
+    constexpr auto s = string_view(__PRETTY_FUNCTION__ + SZC("auto enchantum::details::raw_type_name_func() [_ = "),
+                                   SZC(__PRETTY_FUNCTION__) - SZC("auto enchantum::details::raw_type_name_func() [_ = ]"));
+#elif defined(_MSC_VER)
+    constexpr auto s = string_view(__FUNCSIG__ + SZC("auto __cdecl enchantum::details::raw_type_name_func<"),
+                                   SZC(__FUNCSIG__) - SZC("auto __cdecl enchantum::details::raw_type_name_func<") -
+                                     SZC(">(void) noexcept"));
+
+    // clang-format off
+    constexpr auto prefix = std::is_enum_v<T> ? SZC("enum ") : 
+        std::is_class_v<T> ?  SZC("struct ") - (s[0] == 'c') :
+        0;
+// clang-format on
+#elif defined(__GNUG__)
+    constexpr std::size_t prefix = 0;
+    constexpr auto        s      = string_view(__PRETTY_FUNCTION__ +
+                                     SZC("constexpr auto enchantum::details::raw_type_name_func() [with _ = "),
+                                   SZC(__PRETTY_FUNCTION__) -
+                                     SZC("constexpr auto enchantum::details::raw_type_name_func() [with _ = ]"));
+#endif
+    std::array<char, 1 + s.size() - prefix> ret{};
+    auto* const                             ret_data = ret.data();
+    const auto* const                       s_data   = s.data();
+
+    for (std::size_t i = 0; i < ret.size() - 1; ++i)
+      ret_data[i] = s_data[i + prefix];
+    return ret;
+  }
+
+  template<typename T>
+  inline constexpr auto raw_type_name_func_var = raw_type_name_func<T>();
+
+  template<typename T>
+  constexpr auto type_name_func() noexcept
+  {
+    static_assert(!std::is_function_v<std::remove_pointer_t<T>> && !std::is_member_function_pointer_v<T>,
+                  "enchantum::type_name<T> does not work well with function pointers or functions or member function\n"
+                  "pointers");
+
+    constexpr auto& array = raw_type_name_func_var<T>;
+    constexpr auto  s     = details::extract_name_from_type_name(string_view(array.data(), array.size() - 1));
+    std::array<char, s.size() + 1> ret{};
+    for (std::size_t i = 0; i < s.size(); ++i)
+      ret[i] = s[i];
+    return ret;
+  }
+
+  template<typename T>
+  inline constexpr auto type_name_func_var = type_name_func<T>();
+
+#undef SZC
+
+} // namespace details
+
+template<typename T>
+inline constexpr auto type_name = string_view(details::type_name_func_var<T>.data(),
+                                              details::type_name_func_var<T>.size() - 1);
+
+template<typename T>
+inline constexpr auto raw_type_name = string_view(details::raw_type_name_func_var<T>.data(),
+                                                  details::raw_type_name_func_var<T>.size() - 1);
+
+} // namespace enchantum
+
+#ifdef ENCHANTUM_CONFIG_FILE
+  #include ENCHANTUM_CONFIG_FILE
+#endif
+
 #ifndef ENCHANTUM_ALIAS_OPTIONAL
   #include <optional>
 #endif
@@ -30,23 +129,6 @@ namespace enchantum {
 ENCHANTUM_ALIAS_STRING;
 #else
 using ::std::string;
-#endif
-
-} // namespace enchantum
-
-#ifdef ENCHANTUM_CONFIG_FILE
-  #include ENCHANTUM_CONFIG_FILE
-#endif
-
-#ifndef ENCHANTUM_ALIAS_STRING_VIEW
-  #include <string_view>
-#endif
-
-namespace enchantum {
-#ifdef ENCHANTUM_ALIAS_STRING_VIEW
-ENCHANTUM_ALIAS_STRING_VIEW;
-#else
-using ::std::string_view;
 #endif
 
 } // namespace enchantum
@@ -198,6 +280,9 @@ constexpr auto generate_arrays()
 #if defined(__clang__)
   
 
+// Clang <= 12 outputs "NUMBER" if casting
+// Clang > 12 outputs "(E)NUMBER".
+
 #if defined __has_warning && __has_warning("-Wenum-constexpr-conversion")
   #pragma clang diagnostic push
   #pragma clang diagnostic ignored "-Wenum-constexpr-conversion"
@@ -247,26 +332,6 @@ namespace details {
       return L::min();
     else
       return valid_cast_range_recurse<T, max_range, 0>();
-
-    //else {
-    //  if constexpr (max_range >= ENCHANTUM_MIN_RANGE) {
-    //    // this tests whether `static_cast`ing max_range is valid
-    //    // because C style enums stupidly is like a bit field
-    //    // `enum E { a,b,c,d = 3};` is like a bitfield `struct E { int val : 2;}`
-    //    // which means giving E.val a larger than 2 bit value is UB so is it for enums
-    //    // and gcc and msvc ignore this (for good)
-    //    // while clang makes it a subsituation failure which we can check for
-    //    // using std::inegral_constant makes sure this is a constant expression situation
-    //    // for SFINAE to occur
-    //    if constexpr (is_valid_cast<T, max_range>)
-    //      return valid_cast_range<T, max_range * 2>();
-    //    else
-    //      return max_range / 2;
-    //  }
-    //  else {
-    //    return max_range / 2;
-    //  }
-    //}
   }
 
 } // namespace details
@@ -295,6 +360,17 @@ namespace details {
   template<auto Enum>
   constexpr auto enum_in_array_name() noexcept
   {
+#if __clang_major__ <= 12
+    using E = decltype(Enum);
+    if constexpr (std::is_convertible_v<E, std::underlying_type_t<E>>) {
+      if (const auto pos = raw_type_name<E>.rfind(':'); pos != string_view::npos)
+        return raw_type_name<E>.substr(0, pos - 1);
+      return string_view();
+    }
+    else {
+      return raw_type_name<E>;
+    }
+#else
     // constexpr auto f() [with auto _ = (
     //constexpr auto f() [Enum = (Scoped)0]
     auto s = string_view(__PRETTY_FUNCTION__ + SZC("auto enchantum::details::enum_in_array_name() [Enum = "),
@@ -311,7 +387,7 @@ namespace details {
       }
     }
     else {
-      if (s[s.size() - 2] == ')') {
+      if (s.size() != 1 && s[s.size() - 2] == ')') {
         s.remove_prefix(SZC("("));
         s.remove_suffix(SZC(")0"));
       }
@@ -319,6 +395,7 @@ namespace details {
         return s.substr(0, pos - 1);
       return string_view();
     }
+#endif
   }
 
   template<auto... Vs>
@@ -329,9 +406,13 @@ namespace details {
     return string_view(__PRETTY_FUNCTION__ + funcsig_off, SZC(__PRETTY_FUNCTION__) - funcsig_off - SZC(">]"));
   }
 
+#if __clang_major__ <= 11
+  template<char... Chars>
+  inline constexpr auto static_storage_for_chars = std::array<char, sizeof...(Chars)>{Chars...};
+#else
   template<auto Copy>
   inline constexpr auto static_storage_for = Copy;
-
+#endif
   template<typename E, typename Pair, bool NullTerminated>
   constexpr auto reflect() noexcept
   {
@@ -364,12 +445,12 @@ namespace details {
           return details::var_name<static_cast<E>(static_cast<decltype(Min)>(Idx) + Min)...>();
       }(std::make_index_sequence<is_bitflag<E> ? bits : ArraySize>());
 
-      auto           str        = ConstStr;
+      auto str = ConstStr;
 
       constexpr auto enum_in_array_name = details::enum_in_array_name<E{}>();
       constexpr auto enum_in_array_len  = enum_in_array_name.size();
       // Ubuntu Clang 20 complains about using local constexpr variables in a local struct
-      using CharArray = char[ConstStr.size() + (NullTerminated + ArraySize) - (enum_in_array_len * ArraySize)];
+      using CharArray = char[ConstStr.size() + (NullTerminated * ArraySize)];
       struct RetVal {
         struct ElemenetPair {
           E            value;
@@ -381,24 +462,36 @@ namespace details {
         std::size_t  valid_count         = 0;
       } ret;
 
-      // ((anonymous namespace)::A)0
-      // (anonymous namespace)::a
+// ((anonymous namespace)::A)0
+// (anonymous namespace)::a
 
-      // this is needed to determine whether the above are cast expression if 2 braces are
-      // next to eachother then it is a cast but only for anonymoused namespaced enums
+// this is needed to determine whether the above are cast expression if 2 braces are
+// next to eachother then it is a cast but only for anonymoused namespaced enums
+#if __clang_major__ > 12
       constexpr std::size_t index_check = !enum_in_array_name.empty() && enum_in_array_name.front() == '(' ? 1 : 0;
+#endif
       for (std::size_t index = 0; index < ArraySize; ++index) {
-        if (str[index_check] == '(') {
+#if __clang_major__ > 12
+        // check if cast (starts with '(')
+        if (str[index_check] == '(')
+#else
+        // check if it is a number or negative sign
+        if (str[0] == '-' || (str[0] >= '0' && str[0] <= '9'))
+#endif
+        {
+#if __clang_major__ > 12
           str.remove_prefix(SZC("(") + enum_in_array_len + SZC(")0")); // there is atleast 1 base 10 digit
-
+#endif
+          // https://clang.llvm.org/docs/LanguageExtensions.html#string-builtins
           //char* __builtin_char_memchr(const char* haystack, int needle, size_t size);
           if (const auto* commapos = __builtin_char_memchr(str.data(), ',', str.size()); commapos)
-            str.remove_prefix(static_cast<std::size_t>(commapos - str.data()) + 2);
+            str.remove_prefix(static_cast<std::size_t>(commapos - str.data()) + SZC(", "));
         }
         else {
           if constexpr (enum_in_array_len != 0) {
             str.remove_prefix(enum_in_array_len + SZC("::"));
           }
+
           if constexpr (details::prefix_length_or_zero<E> != 0) {
             str.remove_prefix(details::prefix_length_or_zero<E>);
           }
@@ -428,15 +521,21 @@ namespace details {
 
     std::array<Pair, elements.valid_count> ret;
     {
+      // intentionally >= 12, clang 11 does not support class non type template parameters
+#if __clang_major__ >= 12
       constexpr auto strings = [](const auto total_length, const char* data) {
         std::array<char, total_length.value> strings;
         __builtin_memcpy(strings.data(), data, total_length.value);
         return strings;
       }(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings);
-
-      auto* const       ret_data  = ret.data();
-
       constexpr const auto* str = static_storage_for<strings>.data();
+#else
+      constexpr const auto* str = [elements]<std::size_t... Idx>(std::index_sequence<Idx...>) {
+        return static_storage_for_chars<elements.strings[Idx]...>.data();
+      }(std::make_index_sequence<elements.total_string_length>{});
+#endif
+
+      auto* const ret_data = ret.data();
       for (std::size_t i = 0, string_index = 0; i < elements.valid_count; ++i) {
         const auto [e, length] = elements.pairs[i];
         auto& [re, rs]         = ret_data[i];
@@ -464,89 +563,6 @@ namespace details {
   
 
 #include <array>
-
-namespace enchantum {
-
-namespace details {
-#define SZC(x) (sizeof(x) - 1)
-  constexpr string_view extract_name_from_type_name(const string_view type_name) noexcept
-  {
-    if (const auto n = type_name.rfind(':'); n != type_name.npos)
-      return type_name.substr(n + 1);
-    else
-      return type_name;
-  }
-
-  template<typename T>
-  constexpr auto raw_type_name_func() noexcept
-  {
-
-#if defined(__clang__)
-    constexpr std::size_t prefix = 0;
-    constexpr auto s = string_view(__PRETTY_FUNCTION__ + SZC("auto enchantum::details::raw_type_name_func() [_ = "),
-                                   SZC(__PRETTY_FUNCTION__) - SZC("auto enchantum::details::raw_type_name_func() [_ = ]"));
-#elif defined(_MSC_VER)
-    constexpr auto s = string_view(__FUNCSIG__ + SZC("auto __cdecl enchantum::details::raw_type_name_func<"),
-                                   SZC(__FUNCSIG__) - SZC("auto __cdecl enchantum::details::raw_type_name_func<") -
-                                     SZC(">(void) noexcept"));
-
-    // clang-format off
-    constexpr auto prefix = std::is_enum_v<T> ? SZC("enum ") : 
-        std::is_class_v<T> ?  SZC("struct ") - (s[0] == 'c') :
-        0;
-// clang-format on
-#elif defined(__GNUG__)
-    constexpr std::size_t prefix = 0;
-    constexpr auto        s      = string_view(__PRETTY_FUNCTION__ +
-                                     SZC("constexpr auto enchantum::details::raw_type_name_func() [with _ = "),
-                                   SZC(__PRETTY_FUNCTION__) -
-                                     SZC("constexpr auto enchantum::details::raw_type_name_func() [with _ = ]"));
-#endif
-    std::array<char, 1 + s.size() - prefix> ret{};
-    auto* const                             ret_data = ret.data();
-    const auto* const                       s_data   = s.data();
-
-    for (std::size_t i = 0; i < ret.size() - 1; ++i)
-      ret_data[i] = s_data[i + prefix];
-    return ret;
-  }
-
-  template<typename T>
-  inline constexpr auto raw_type_name_func_var = raw_type_name_func<T>();
-
-  template<typename T>
-  constexpr auto type_name_func() noexcept
-  {
-    static_assert(!std::is_function_v<std::remove_pointer_t<T>> && !std::is_member_function_pointer_v<T>,
-                  "enchantum::type_name<T> does not work well with function pointers or functions or member function\n"
-                  "pointers");
-
-    constexpr auto& array = raw_type_name_func_var<T>;
-    constexpr auto  s     = details::extract_name_from_type_name(string_view(array.data(), array.size() - 1));
-    std::array<char, s.size() + 1> ret{};
-    for (std::size_t i = 0; i < s.size(); ++i)
-      ret[i] = s[i];
-    return ret;
-  }
-
-  template<typename T>
-  inline constexpr auto type_name_func_var = type_name_func<T>();
-
-#undef SZC
-
-} // namespace details
-
-template<typename T>
-inline constexpr auto type_name = string_view(details::type_name_func_var<T>.data(),
-                                              details::type_name_func_var<T>.size() - 1);
-
-template<typename T>
-inline constexpr auto raw_type_name = string_view(details::raw_type_name_func_var<T>.data(),
-                                                  details::raw_type_name_func_var<T>.size() - 1);
-
-} // namespace enchantum
-
-#include <array>
 #include <cassert>
 #include <climits>
 #include <cstdint>
@@ -556,34 +572,29 @@ inline constexpr auto raw_type_name = string_view(details::raw_type_name_func_va
 namespace enchantum {
 namespace details {
 #define SZC(x) (sizeof(x) - 1)
+  // this is needed since gcc transforms "{anonymous}" into "<unnamed>" for values
   template<auto Enum>
-  constexpr auto enum_in_array_name() noexcept
+  constexpr auto enum_in_array_name_size() noexcept
   {
     // constexpr auto f() [with auto _ = (
     //constexpr auto f() [with auto _ = (Scoped)0]
-    auto s = string_view(__PRETTY_FUNCTION__ +
-                           SZC("constexpr auto enchantum::details::enum_in_array_name() [with auto Enum = "),
+    auto s  = string_view(__PRETTY_FUNCTION__ +
+                           SZC("constexpr auto enchantum::details::enum_in_array_name_size() [with auto Enum = "),
                          SZC(__PRETTY_FUNCTION__) -
-                           SZC("constexpr auto enchantum::details::enum_in_array_name() [with auto Enum = ]"));
-
-    if constexpr (ScopedEnum<decltype(Enum)>) {
-      if (s.front() == '(') {
-        s.remove_prefix(SZC("("));
-        s.remove_suffix(SZC(")0"));
-        return s;
-      }
-      else {
-        return s.substr(0, s.rfind("::"));
-      }
+                           SZC("constexpr auto enchantum::details::enum_in_array_name_size() [with auto Enum = ]"));
+    using E = decltype(Enum);
+    // if scoped
+    if constexpr (!std::is_convertible_v<E, std::underlying_type_t<E>>) {
+      return s.front() == '(' ? s.size() - SZC("()0") : s.rfind(':') - 1;
     }
     else {
       if (s.front() == '(') {
         s.remove_prefix(SZC("("));
         s.remove_suffix(SZC(")0"));
       }
-      if (const auto pos = s.rfind("::"); pos != s.npos)
-        return s.substr(0, pos);
-      return string_view();
+      if (const auto pos = s.rfind(':'); pos != s.npos)
+        return pos - 1;
+      return std::size_t{0};
     }
   }
 
@@ -591,10 +602,10 @@ namespace details {
   constexpr auto length_of_enum_in_template_array_if_casting() noexcept
   {
     if constexpr (ScopedEnum<Enum>) {
-      return details::enum_in_array_name<Enum{}>().size();
+      return details::enum_in_array_name_size<Enum{}>();
     }
     else {
-      constexpr auto  s      = enum_in_array_name<Enum{}>().size();
+      constexpr auto  s      = details::enum_in_array_name_size<Enum{}>();
       constexpr auto& tyname = raw_type_name<Enum>;
       if (constexpr auto pos = tyname.rfind("::"); pos != tyname.npos) {
         return s + tyname.substr(pos).size();
@@ -624,7 +635,7 @@ namespace details {
 
     constexpr auto elements = []() {
       constexpr auto length_of_enum_in_template_array_casting = details::length_of_enum_in_template_array_if_casting<E>();
-      constexpr auto ArraySize = 1 + std::size_t { is_bitflag<E> ? (sizeof(E) * CHAR_BIT - std::is_signed_v<E>) : Max - Min };
+      constexpr auto ArraySize = 1 + std::size_t{is_bitflag<E> ? (sizeof(E) * CHAR_BIT - std::is_signed_v<E>) : Max - Min};
       //constexpr auto Array    = details::generate_arrays<E, Min, Max>();
       using Under      = std::underlying_type_t<E>;
       using Underlying = std::make_unsigned_t<std::conditional_t<std::is_same_v<bool, Under>, unsigned char, Under>>;
@@ -647,7 +658,7 @@ namespace details {
         std::size_t total_string_length = 0;
         std::size_t valid_count         = 0;
       } ret;
-      constexpr auto enum_in_array_len = enum_in_array_name<E{}>().size();
+      constexpr auto enum_in_array_len = details::enum_in_array_name_size<E{}>();
       for (std::size_t index = 0; index < ArraySize; ++index) {
         if (str.front() == '(') {
           str.remove_prefix(SZC("(") + length_of_enum_in_template_array_casting + SZC(")0")); // there is atleast 1 base 10 digit
@@ -836,12 +847,22 @@ namespace details {
     } ret;
 
     // there is atleast 1 base 16 hex digit
-    constexpr auto skip_if_cast_count = SZC("(enum ") + type_name_len + SZC(")0x0");
+    // MSVC adds an extra 0 prefix at front if the underlying type equals to 8 bytes.
+    // Don't ask why
+    constexpr auto skip_if_cast_count = SZC("(enum ") + type_name_len + SZC(")0x0")
+        + (sizeof(E)==8);
     // clang-format off
 #if ENCHANTUM_ENABLE_MSVC_SPEEDUP
     using Underlying = std::underlying_type_t<E>;
     constexpr auto skip_work_if_neg = std::is_unsigned_v<Underlying> || sizeof(E) <= 2 ? 0 : 
-        std::is_same_v<Underlying,char32_t>  ? sizeof(char32_t)*2-1 : sizeof(std::uint64_t)*2-1;
+// MSVC 19.31 and below don't cast int/unsigned int into `unsigned long long` (std::uint64_t)
+// While higher versions do cast them
+#if _MSC_VER <= 1931
+        sizeof(Underlying) == 4
+#else
+        std::is_same_v<Underlying,char32_t> 
+#endif
+        ? sizeof(char32_t)*2-1 : sizeof(std::uint64_t)*2-1 - (sizeof(E)==8); // subtract 1 more from uint64_t since I am adding it in skip_if_cast_count
 #endif
     // clang-format on
 
@@ -1135,11 +1156,11 @@ namespace details {
 
       constexpr auto minmax = details::minmax_string_size(names<E>.data(), names<E>.data() + names<E>.size());
       if (const auto size = name.size(); size < minmax.first || size > minmax.second)
-        return a;
+        return a; // nullopt
 
-      for (const auto& [e, s] : entries<E>) {
-        if (s == name) {
-          a.emplace(e);
+      for (std::size_t i = 0; i < count<E>; ++i) {
+        if (names<E>[i] == name) {
+          a.emplace(values<E>[i]);
           return a;
         }
       }
@@ -1150,9 +1171,9 @@ namespace details {
     [[nodiscard]] constexpr optional<E> operator()(const string_view name, const BinaryPred binary_predicate) const noexcept
     {
       optional<E> a; // rvo not that it really matters
-      for (const auto& [e, s] : entries<E>) {
-        if (binary_predicate(name, s)) {
-          a.emplace(e);
+      for (std::size_t i = 0; i < count<E>; ++i) {
+        if (binary_predicate(name,names<E>[i])) {
+          a.emplace(values<E>[i]);
           return a;
         }
       }
@@ -1185,6 +1206,153 @@ namespace details {
 inline constexpr details::to_string_functor to_string{};
 
 } // namespace enchantum
+
+namespace enchantum {
+
+template<BitFlagEnum E>
+inline constexpr E value_ors = [] {
+  using T = std::underlying_type_t<E>;
+  T ret{};
+  for (const auto val : values<E>)
+    ret |= static_cast<T>(val);
+  return static_cast<E>(ret);
+}();
+
+template<BitFlagEnum E>
+[[nodiscard]] constexpr bool contains_bitflag(const std::underlying_type_t<E> value) noexcept
+{
+  using T = std::underlying_type_t<E>;
+  if constexpr (is_contiguous_bitflag<E>) {
+    return value >= static_cast<T>(min<E>) && value <= static_cast<T>(value_ors<E>);
+  }
+  else {
+    if (value == 0)
+      return has_zero_flag<E>;
+    T valid_bits = 0;
+
+    for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
+      const auto v = static_cast<T>(values<E>[i]);
+      if ((value & v) == v)
+        valid_bits |= v;
+    }
+    return valid_bits == value;
+  }
+}
+
+template<BitFlagEnum E>
+[[nodiscard]] constexpr bool contains_bitflag(const E value) noexcept
+{
+  return enchantum::contains_bitflag<E>(static_cast<std::underlying_type_t<E>>(value));
+}
+
+template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
+[[nodiscard]] constexpr bool contains_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
+{
+  std::size_t pos = 0;
+  for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
+    if (!enchantum::contains<E>(s.substr(pos, i - pos), binary_pred))
+      return false;
+    pos = i + 1;
+  }
+  return enchantum::contains<E>(s.substr(pos), binary_pred);
+}
+
+template<BitFlagEnum E>
+[[nodiscard]] constexpr bool contains_bitflag(const string_view s, const char sep = '|') noexcept
+{
+  std::size_t pos = 0;
+  for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
+    if (!enchantum::contains<E>(s.substr(pos, i - pos)))
+      return false;
+    pos = i + 1;
+  }
+  return enchantum::contains<E>(s.substr(pos));
+}
+
+template<typename String = string, BitFlagEnum E>
+[[nodiscard]] constexpr String to_string_bitflag(const E value, const char sep = '|')
+{
+  using T = std::underlying_type_t<E>;
+  if constexpr (has_zero_flag<E>)
+    if (static_cast<T>(value) == 0)
+      return String(names<E>[0]);
+
+  String name;
+  T      check_value = 0;
+  for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
+    const auto& [v, s]  = entries<E>[i];
+    const auto casted_v = static_cast<T>(v);
+    if (casted_v == (static_cast<T>(value) & casted_v)) {
+      if (!name.empty())
+        name.append(1, sep);           // append separator if not the first value
+      name.append(s.data(), s.size()); // not using operator += since this may not be std::string_view always
+      check_value |= casted_v;
+    }
+  }
+  if (check_value == static_cast<T>(value))
+    return name;
+  return String();
+}
+
+template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
+[[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
+{
+  using T = std::underlying_type_t<E>;
+  T           check_value{};
+  std::size_t pos = 0;
+  for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
+    if (const auto v = enchantum::cast<E>(s.substr(pos, i - pos), binary_pred))
+      check_value |= static_cast<T>(*v);
+    else
+      return optional<E>();
+    pos = i + 1;
+  }
+
+  if (const auto v = enchantum::cast<E>(s.substr(pos), binary_pred))
+    return optional<E>(static_cast<E>(check_value | static_cast<T>(*v)));
+  return optional<E>();
+}
+
+template<BitFlagEnum E>
+[[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep = '|') noexcept
+{
+  return enchantum::cast_bitflag<E>(s, sep, [](const auto& a, const auto& b) { return a == b; });
+}
+
+template<BitFlagEnum E>
+[[nodiscard]] constexpr optional<E> cast_bitflag(const std::underlying_type_t<E> value) noexcept
+{
+  return enchantum::contains_bitflag<E>(value) ? optional<E>(static_cast<E>(value)) : optional<E>();
+}
+
+} // namespace enchantum
+
+#include <string>
+
+namespace enchantum {
+namespace details {
+  template<Enum E>
+  std::string format(E e) noexcept
+  {
+    if constexpr (is_bitflag<E>) {
+      if (const auto name = enchantum::to_string_bitflag(e); !name.empty()) {
+        if constexpr (std::is_same_v<std::string, string>) {
+          return name;
+        }
+        else {
+          return std::string(name.data(), name.size());
+        }
+      }
+    }
+    else {
+      if (const auto name = enchantum::to_string(e); !name.empty())
+        return std::string(name.data(), name.size());
+    }
+    return std::to_string(+enchantum::to_underlying(e)); // promote using + to select int overload if to underlying returns char
+  }
+} // namespace details
+} // namespace enchantum
+
 #include <concepts>
 #include <utility>
 
@@ -1323,125 +1491,6 @@ public:
   #include <bitset>
 #endif
 
-namespace enchantum {
-
-template<BitFlagEnum E>
-inline constexpr E value_ors = [] {
-  using T = std::underlying_type_t<E>;
-  T ret{};
-  for (const auto val : values<E>)
-    ret |= static_cast<T>(val);
-  return static_cast<E>(ret);
-}();
-
-template<BitFlagEnum E>
-[[nodiscard]] constexpr bool contains_bitflag(const std::underlying_type_t<E> value) noexcept
-{
-  using T = std::underlying_type_t<E>;
-  if constexpr (is_contiguous_bitflag<E>) {
-    return value >= static_cast<T>(min<E>) && value <= static_cast<T>(value_ors<E>);
-  }
-  else {
-    if (value == 0)
-      return has_zero_flag<E>;
-    T valid_bits = 0;
-
-    for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
-      const auto v = static_cast<T>(values<E>[i]);
-      if ((value & v) == v)
-        valid_bits |= v;
-    }
-    return valid_bits == value;
-  }
-}
-
-template<BitFlagEnum E>
-[[nodiscard]] constexpr bool contains_bitflag(const E value) noexcept
-{
-  return enchantum::contains_bitflag<E>(static_cast<std::underlying_type_t<E>>(value));
-}
-
-template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
-[[nodiscard]] constexpr bool contains_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
-{
-  std::size_t pos = 0;
-  for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
-    if (!enchantum::contains<E>(s.substr(pos, i - pos), binary_pred))
-      return false;
-    pos = i + 1;
-  }
-  return enchantum::contains<E>(s.substr(pos), binary_pred);
-}
-
-template<BitFlagEnum E>
-[[nodiscard]] constexpr bool contains_bitflag(const string_view s, const char sep = '|') noexcept
-{
-  std::size_t pos = 0;
-  for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
-    if (!enchantum::contains<E>(s.substr(pos, i - pos)))
-      return false;
-    pos = i + 1;
-  }
-  return enchantum::contains<E>(s.substr(pos));
-}
-
-template<typename String = string, BitFlagEnum E>
-[[nodiscard]] constexpr String to_string_bitflag(const E value, const char sep = '|')
-{
-  using T = std::underlying_type_t<E>;
-  if constexpr (has_zero_flag<E>)
-    if (static_cast<T>(value) == 0)
-      return String(names<E>[0]);
-
-  String name;
-  T      check_value = 0;
-  for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
-    const auto& [v, s]  = entries<E>[i];
-    const auto casted_v = static_cast<T>(v);
-    if (casted_v == (static_cast<T>(value) & casted_v)) {
-      if (!name.empty())
-        name.append(1, sep);           // append separator if not the first value
-      name.append(s.data(), s.size()); // not using operator += since this may not be std::string_view always
-      check_value |= casted_v;
-    }
-  }
-  if (check_value == static_cast<T>(value))
-    return name;
-  return String();
-}
-
-template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
-[[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
-{
-  using T = std::underlying_type_t<E>;
-  T           check_value{};
-  std::size_t pos = 0;
-  for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
-    if (const auto v = enchantum::cast<E>(s.substr(pos, i - pos), binary_pred))
-      check_value |= static_cast<T>(*v);
-    else
-      return optional<E>();
-    pos = i + 1;
-  }
-
-  if (const auto v = enchantum::cast<E>(s.substr(pos), binary_pred))
-    return optional<E>(static_cast<E>(check_value | static_cast<T>(*v)));
-  return optional<E>();
-}
-
-template<BitFlagEnum E>
-[[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep = '|') noexcept
-{
-  return enchantum::cast_bitflag<E>(s, sep, [](const auto& a, const auto& b) { return a == b; });
-}
-
-template<BitFlagEnum E>
-[[nodiscard]] constexpr optional<E> cast_bitflag(const std::underlying_type_t<E> value) noexcept
-{
-  return enchantum::contains_bitflag<E>(value) ? optional<E>(static_cast<E>(value)) : optional<E>();
-}
-
-} // namespace enchantum
 #include <stdexcept>
 
 namespace enchantum {
@@ -1470,7 +1519,7 @@ public:
   using base::base;
   using base::operator=;
 
-  [[nodiscard]] constexpr string to_string(const char sep = '|') const
+  [[nodiscard]] string to_string(const char sep = '|') const
   {
     string name;
     for (std::size_t i = 0; i < enchantum::count<E>; ++i) {
@@ -1638,7 +1687,13 @@ constexpr E& operator^=(E& a, E b) noexcept
 #include <iostream>
 #include <string>
 
-namespace enchantum::istream_operators {
+namespace enchantum::iostream_operators {
+template<typename Traits, Enum E>
+std::basic_ostream<char, Traits>& operator<<(std::basic_ostream<char, Traits>& os, const E e)
+{
+  return os << details::format(e);
+}
+
 template<typename Traits, Enum E>
   requires std::assignable_from<E&, E>
 std::basic_istream<char, Traits>& operator>>(std::basic_istream<char, Traits>& is, E& value)
@@ -1662,42 +1717,6 @@ std::basic_istream<char, Traits>& operator>>(std::basic_istream<char, Traits>& i
   }
   return is;
 }
-
-} // namespace enchantum::istream_operators
-
-#include <string>
-
-namespace enchantum {
-namespace details {
-  template<Enum E>
-  std::string format(E e) noexcept
-  {
-    if constexpr (is_bitflag<E>) {
-      if (const auto name = enchantum::to_string_bitflag(e); !name.empty())
-        return std::string(name.data(), name.size());
-    }
-    else {
-      if (const auto name = enchantum::to_string(e); !name.empty())
-        return std::string(name.data(), name.size());
-    }
-    return std::to_string(+enchantum::to_underlying(e)); // promote using + to select int overload if to underlying returns char
-  }
-} // namespace details
-} // namespace enchantum
-
-#include <iostream>
-
-namespace enchantum::ostream_operators {
-template<typename Traits, Enum E>
-std::basic_ostream<char, Traits>& operator<<(std::basic_ostream<char, Traits>& os, const E e)
-{
-  return os << details::format(e);
-}
-} // namespace enchantum::ostream_operators
-
-namespace enchantum::iostream_operators {
-using ::enchantum::istream_operators::operator>>;
-using ::enchantum::ostream_operators::operator<<;
 } // namespace enchantum::iostream_operators
 
 #include <cstddef>
