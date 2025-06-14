@@ -22,7 +22,6 @@ Quick Reference
 - [is_bitflag](#is_bitflag)
 - [is_contiguous_bitflag](#is_contiguous_bitflag)
 - [enum_traits](#enum_traits)
-
 **Functions**:
 - [to_string](#to_string)
 - [to_string_bitflag](#to_string_bitflag)
@@ -30,6 +29,7 @@ Quick Reference
 - [cast_bitflag](#cast_bitflag)
 - [contains](#contains)
 - [contains_bitflag](#contains_bitflag)
+- [scoped::*](#scoped-functions)
 - [index_to_enum](#index_to_enum)
 - [enum_to_index](#enum_to_index)
 - [next_value/prev_value](#next_valueprev_value)
@@ -58,6 +58,8 @@ Quick Reference
 **Macros**:
   - [ENCHANTUM_DEFINE_BITWISE_FOR](#enchantum_define_bitwise_for)
   - [ENCHANTUM_ASSERT](#enchantum_assert)
+  - [ENCHANTUM_THROW](#enchantum_throw)
+
 
 
 # Concepts
@@ -937,7 +939,88 @@ std::cout << contains_bitflag(value | Permissions(1<<3)) << '\n';
 
 ```
 
----
+### Scoped Functions
+
+There is scoped variants for functions `cast`,`to_string`,`contains`,`cast_bitflag`,`to_string_bitflag`,`contains_bitflag`.
+
+They ocheck or output the scope.
+
+```cpp
+// defined in header scoped.hpp
+namespace scoped {
+
+namespace details {
+  struct TO_STRING_FUNCTOR {
+    template<Enum E>
+    std::string_view operator()(E value) const noexcept;
+  };
+
+  template<Enum E>
+  struct CAST_FUNCTOR {
+    constexpr std::optional<E> operator()(std::string_view name) const noexcept;
+
+    template<std::predicate<std::string_view, std::string_view> BinaryPred>
+    constexpr std::optional<E> operator(std::string_view name, BinaryPred binary_predicate)() const noexcept;
+  };
+}
+
+inline constexpr details::TO_STRING_FUNCTOR to_string;
+
+template<Enum E>
+inline constexpr details::CAST_FUNCTOR<E> cast;
+
+template<Enum E>
+constexpr bool contains(std::string_view name) noexcept;
+
+template<Enum E, std::predicate<std::string_view, std::string_view> BinaryPredicate>
+constexpr bool contains(std::string_view name, BinaryPredicate binary_predicate) noexcept;
+
+
+template<BitFlagEnum E>
+string to_string_bitflag(E value, char sep = '|');
+
+template<BitFlagEnum E, std::predicate<std::string_view, std::string_view> BinaryPred>
+constexpr std::optional<E> cast_bitflag(std::string_view s, char sep, BinaryPred binary_pred) noexcept;
+
+template<BitFlagEnum E>
+constexpr std::optional<E> cast_bitflag(std::string_view s, char sep = '|') noexcept;
+
+template<BitFlagEnum E, std::predicate<std::string_view, std::string_view> BinaryPred>
+constexpr bool contains_bitflag(std::string_view s, char sep, BinaryPred binary_pred) noexcept;
+
+template<BitFlagEnum E>
+constexpr bool contains_bitflag(std::string_view s, char sep = '|') noexcept;
+
+} // namespace scoped
+```
+
+- **Example**:
+```cpp
+#include <enchantum/scoped.hpp>
+#include <enchantum/bitwise_operators.hpp>
+enum class InputModifiers { 
+    None     = 0,
+    Shift    = 1 << 0,
+    Control  = 1 << 1,
+    Alt      = 1 << 2,
+};
+ENCHANTUM_DEFINE_BITWISE_FOR(InputModifiers);
+
+int main() {
+  // Outputs: "InputModifiers::Shift"
+  std::cout << enchantum::to_string(InputModifiers::Shift);
+
+  // Outputs: "InputModifiers::Control|InputModifiers::Alt"
+  std::cout << enchantum::to_string_bitflag(InputModifiers::Control|InputModifiers::Alt);
+
+  std::optional<InputModifiers> cast = enchantum::cast("InputModifiers::Shift");
+  // cast.value() == InputModifiers::Shift
+
+  std::optional<InputModifiers> cast_bitflag = enchantum::cast_bitflags("InputModifiers::Control|InputModifiers::Alt");
+  // cast.value() == InputModifiers::Control|InputModifiers::Alt (7)
+}
+
+```
 
 ### `index_to_enum`
 
@@ -1395,5 +1478,20 @@ The `__VA_ARGS__` at the end is more info in the macro for example local variabl
 // defined in header `common.hpp`
 #ifndef ENCHANTUM_ASSERT
 #define ENCHANTUM_ASSERT(cond,msg,...) assert(cond && msg)
+#endif
+```
+
+
+### ENCHANTUM_THROW
+
+- **Description**: 
+A customizable macro for throwing exception in the library.
+
+The `__VA_ARGS__` at the end is more info in the macro for example local variables are put there so if you have a way to output more info within an exception, can override this macro by defining `#define ENCHANTUM_THROW(exception,...) MY_THROW_MACRO(exception,__VA_ARGS__)` before including `common.hpp`
+
+```cpp
+// defined in header `common.hpp`
+#ifndef ENCHANTUM_THROW
+#define ENCHANTUM_THROW(exception,...) throw exception
 #endif
 ```

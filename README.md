@@ -26,6 +26,7 @@ Key Features
        -  enum validation functions like `cast` and `contains`
        -  enum aware containers: `enchantum::bitset` and `enchantum::array`
   - Extra features like:
+      - Scoped Functions
       - Optional null terminator disabling
       - Optional prefix stripping for C-style enums
       - `0` values are reflected for bitflag enums 
