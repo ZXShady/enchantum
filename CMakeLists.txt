@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22.0)
 project(enchantum
-VERSION 0.2.0
+VERSION 0.3.0
 HOMEPAGE_URL "https://github.com/ZXShady/enchantum"
 DESCRIPTION  "Fast macro-free enum reflection C++ library"
 LANGUAGES CXX)
