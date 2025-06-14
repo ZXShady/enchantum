@@ -22,6 +22,7 @@ Quick Reference
 - [is_bitflag](#is_bitflag)
 - [is_contiguous_bitflag](#is_contiguous_bitflag)
 - [enum_traits](#enum_traits)
+
 **Functions**:
 - [to_string](#to_string)
 - [to_string_bitflag](#to_string_bitflag)
@@ -34,8 +35,7 @@ Quick Reference
 - [enum_to_index](#enum_to_index)
 - [next_value/prev_value](#next_valueprev_value)
 - [std::format/fmt::format](#fmtformat--stdformat-support)
-- [operator<<](#operator-stream-output-operator)
-- [operator>>](#operator-stream-input-operator)
+- [iostream support](#operator-stream-output-operator)
 - [for_each](#for_each)
 - [to_underlying](#to_underlying)
 
@@ -49,7 +49,6 @@ Quick Reference
   - [value_ors](#value_ors)
   - [type_name](#type_name)
   - [raw_type_name](#raw_type_name)
-
 
 **Containers**:
   - [array](#array)
@@ -1253,34 +1252,40 @@ There is also the convienence header `iostream.hpp` which includes both of them 
 
 They are not `[[nodiscard]]`.
 
-## `operator<<` (Stream Output Operator)
+## iostream support
 
 ```cpp
-namespace ostream_operators {
+// defined in header iostream.hpp
+namespace iostream_operators {
   template<typename Traits,Enum E>
   std::basic_ostream<char,Traits>& operator<<(std::basic_ostream<char,Traits>& os, E value);
-}
-```
 
-
-## `operator>>` (Stream Input Operator)
-
-```cpp
-namespace istream_operators {
   template<typename Traits,Enum E>
+  requires std::assignable_from<E&,E>
   std::basic_istream<char,Traits>& operator>>(std::basic_istream<char,Traits>& os, E& value);
 }
 ```
 
-**iostream.hpp**
-```cpp
-#include "istream.hpp"
-#include "ostream.hpp"
+These functions are not `[[nodiscard]]`.
 
-namespace enchantum::iostream_operators {
-using ::enchantum::istream_operators::operator>>;
-using ::enchantum::ostream_operators::operator<<;
-} // namespace enchantum::iostream_operators
+- **Example**:
+```cpp
+#include <enchantum/iostream.hpp>
+
+enum class Animals { Monkey,Giraffe,Elephant}
+
+int main() {
+  using enchantum::iostream_operators::operator<<;
+  // Outputs: Monkey
+  std::cout << Animals::Monkey;
+
+  using enchantum::iostream_operators::operator>>;
+  Animals animal;
+  // If input is "Giraffe" then `animal` is `Animals::Giraffe`
+  std::cin >> animal;
+}
+
+
 ```
 
 ## `fmt::format` / `std::format` support
