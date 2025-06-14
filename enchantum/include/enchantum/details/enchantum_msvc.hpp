@@ -121,12 +121,22 @@ namespace details {
     } ret;
 
     // there is atleast 1 base 16 hex digit
-    constexpr auto skip_if_cast_count = SZC("(enum ") + type_name_len + SZC(")0x0");
+    // MSVC adds an extra 0 prefix at front if the underlying type equals to 8 bytes.
+    // Don't ask why
+    constexpr auto skip_if_cast_count = SZC("(enum ") + type_name_len + SZC(")0x0")
+        + (sizeof(E)==8);
     // clang-format off
 #if ENCHANTUM_ENABLE_MSVC_SPEEDUP
     using Underlying = std::underlying_type_t<E>;
     constexpr auto skip_work_if_neg = std::is_unsigned_v<Underlying> || sizeof(E) <= 2 ? 0 : 
-        std::is_same_v<Underlying,char32_t>  ? sizeof(char32_t)*2-1 : sizeof(std::uint64_t)*2-1;
+// MSVC 19.31 and below don't cast int/unsigned int into `unsigned long long` (std::uint64_t)
+// While higher versions do cast them
+#if _MSC_VER <= 1931
+        sizeof(Underlying) == 4
+#else
+        std::is_same_v<Underlying,char32_t> 
+#endif
+        ? sizeof(char32_t)*2-1 : sizeof(std::uint64_t)*2-1 - (sizeof(E)==8); // subtract 1 more from uint64_t since I am adding it in skip_if_cast_count
 #endif
     // clang-format on
 
