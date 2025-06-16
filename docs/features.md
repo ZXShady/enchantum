@@ -1007,15 +1007,15 @@ ENCHANTUM_DEFINE_BITWISE_FOR(InputModifiers);
 
 int main() {
   // Outputs: "InputModifiers::Shift"
-  std::cout << enchantum::to_string(InputModifiers::Shift);
+  std::cout << enchantum::scoped::to_string(InputModifiers::Shift);
 
   // Outputs: "InputModifiers::Control|InputModifiers::Alt"
-  std::cout << enchantum::to_string_bitflag(InputModifiers::Control|InputModifiers::Alt);
+  std::cout << enchantum::scoped::to_string_bitflag(InputModifiers::Control|InputModifiers::Alt);
 
-  std::optional<InputModifiers> cast = enchantum::cast("InputModifiers::Shift");
+  std::optional<InputModifiers> cast = enchantum::scoped::cast("InputModifiers::Shift");
   // cast.value() == InputModifiers::Shift
 
-  std::optional<InputModifiers> cast_bitflag = enchantum::cast_bitflags("InputModifiers::Control|InputModifiers::Alt");
+  std::optional<InputModifiers> cast_bitflag = enchantum::scoped::cast_bitflags("InputModifiers::Control|InputModifiers::Alt");
   // cast.value() == InputModifiers::Control|InputModifiers::Alt (7)
 }
 
