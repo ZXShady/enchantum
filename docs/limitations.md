@@ -1,18 +1,37 @@
 # Limitations
 
-This library requires C++20. but I can make a C++17 version if really wanted the clang implementation is actually almost C++17 except for some things.
-
 This library just like other libraries uses compiler-specific hacks based on `__FUNCSIG__` / `__PRETTY_FUNCTION__`.
+
+If you face any issues while using the library don't hesistate to open up an issue.
+
+## Forward Declared Enums
+
+This library cannot reflect on forward declared enums you will get a cryptic error usually telling you that you are not initializing a variable in a constexpr context.
+
+The reason is to avoid ODR issues, where you reflect on a forward declared enum in one translation unit then reflect the full definition in another unit you will face ODR issues.
+
+But however this disallows reflection of empty enums.
+
+```cpp
+enum class Empty {};
+```
+
+Cannot be reflected as a consequence of disabling forward declared enums.
 
 ## Enum Range
 
 Enum values must be in the range [`ENCHANTUM_MIN_RANGE`,`ENCHANTUM_MAX_RANGE`] 
 By default, `ENCHANTUM_MIN_RANGE` = -256, `ENCHANTUM_MAX_RANGE` = 256. 
 
-If you need a different range for all enum types by default, redefine the macro `ENCHANTUM_MAX_RANGE` and if you don't explicitly define `ENCHANTUM_MIN_RANGE` it will be `-ENCHANTUM_MAX_RANGE`. Increasing this value can lead to longer compilation times but unlike other libraries it is not massivly increasing [see benchmarks](../README.md#compile-time-benchmarks).
+If you need a different range for all enum types by default, redefine the macro `ENCHANTUM_MAX_RANGE` and if you don't explicitly define `ENCHANTUM_MIN_RANGE` it will be `-ENCHANTUM_MAX_RANGE`. Increasing this value can lead to longer compilation times but unlike other libraries it is not massivly increasing [see benchmarks](../README.md#benchmarks).
 
+Enum values outside of this range won't be reflected by enchantum.
 
-*Note: Defining the macro values project wide is recommended*
+Enums that satisfy the `BitFlagEnum` concept ignore the [min, max] range, and reflect:
+- The 0 value
+- All powers-of-two up to the max bit set
+
+*Note: Defining the macro values project wide is recommended to avoid ODR issues*
 
 ```cpp
 #define ENCHANTUM_MIN_RANGE 0 // if not defined it will be -512
@@ -39,11 +58,14 @@ struct enchantum::enum_traits<wizards> { // defined in enchantum/common.hpp you 
 If you see a message that goes like this
 
 ```
-note: constexpr evaluation hit maximum step limit; possible infinite loop? // gcc or clang
-note: maximum constexpr step count exceeded. // msvc
+note: constexpr evaluation hit maximum step limit; possible infinite loop? 
 ```
-
-Change the limit for the number of constexpr steps allowed: (hyperlink to docs)
+or
+```
+maximum constexpr step count exceeded. 
+```
+Which is rare, since this library optimizes `constexpr` steps needed to reflect so you will only really hit this with extremely large rangesl ike 
+Change the limit for the number of `constexpr` steps allowed: (hyperlink to docs)
 
 [MSVC](https://docs.microsoft.com/en-us/cpp/build/reference/constexpr-control-constexpr-evaluation): `/constexpr:depthN, /constexpr:stepsN`
 
