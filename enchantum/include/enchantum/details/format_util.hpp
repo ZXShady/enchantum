@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../bitflags.hpp"
 #include "../enchantum.hpp"
 #include <string>
 
@@ -9,8 +10,14 @@ namespace details {
   std::string format(E e) noexcept
   {
     if constexpr (is_bitflag<E>) {
-      if (const auto name = enchantum::to_string_bitflag(e); !name.empty())
-        return std::string(name.data(), name.size());
+      if (const auto name = enchantum::to_string_bitflag(e); !name.empty()) {
+        if constexpr (std::is_same_v<std::string, string>) {
+          return name;
+        }
+        else {
+          return std::string(name.data(), name.size());
+        }
+      }
     }
     else {
       if (const auto name = enchantum::to_string(e); !name.empty())

@@ -184,11 +184,11 @@ namespace details {
 
       constexpr auto minmax = details::minmax_string_size(names<E>.data(), names<E>.data() + names<E>.size());
       if (const auto size = name.size(); size < minmax.first || size > minmax.second)
-        return a;
+        return a; // nullopt
 
-      for (const auto& [e, s] : entries<E>) {
-        if (s == name) {
-          a.emplace(e);
+      for (std::size_t i = 0; i < count<E>; ++i) {
+        if (names<E>[i] == name) {
+          a.emplace(values<E>[i]);
           return a;
         }
       }
@@ -199,9 +199,9 @@ namespace details {
     [[nodiscard]] constexpr optional<E> operator()(const string_view name, const BinaryPred binary_predicate) const noexcept
     {
       optional<E> a; // rvo not that it really matters
-      for (const auto& [e, s] : entries<E>) {
-        if (binary_predicate(name, s)) {
-          a.emplace(e);
+      for (std::size_t i = 0; i < count<E>; ++i) {
+        if (binary_predicate(name,names<E>[i])) {
+          a.emplace(values<E>[i]);
           return a;
         }
       }

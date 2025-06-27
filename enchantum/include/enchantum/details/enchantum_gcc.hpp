@@ -13,34 +13,29 @@
 namespace enchantum {
 namespace details {
 #define SZC(x) (sizeof(x) - 1)
+  // this is needed since gcc transforms "{anonymous}" into "<unnamed>" for values
   template<auto Enum>
-  constexpr auto enum_in_array_name() noexcept
+  constexpr auto enum_in_array_name_size() noexcept
   {
     // constexpr auto f() [with auto _ = (
     //constexpr auto f() [with auto _ = (Scoped)0]
-    auto s = string_view(__PRETTY_FUNCTION__ +
-                           SZC("constexpr auto enchantum::details::enum_in_array_name() [with auto Enum = "),
+    auto s  = string_view(__PRETTY_FUNCTION__ +
+                           SZC("constexpr auto enchantum::details::enum_in_array_name_size() [with auto Enum = "),
                          SZC(__PRETTY_FUNCTION__) -
-                           SZC("constexpr auto enchantum::details::enum_in_array_name() [with auto Enum = ]"));
-
-    if constexpr (ScopedEnum<decltype(Enum)>) {
-      if (s.front() == '(') {
-        s.remove_prefix(SZC("("));
-        s.remove_suffix(SZC(")0"));
-        return s;
-      }
-      else {
-        return s.substr(0, s.rfind("::"));
-      }
+                           SZC("constexpr auto enchantum::details::enum_in_array_name_size() [with auto Enum = ]"));
+    using E = decltype(Enum);
+    // if scoped
+    if constexpr (!std::is_convertible_v<E, std::underlying_type_t<E>>) {
+      return s.front() == '(' ? s.size() - SZC("()0") : s.rfind(':') - 1;
     }
     else {
       if (s.front() == '(') {
         s.remove_prefix(SZC("("));
         s.remove_suffix(SZC(")0"));
       }
-      if (const auto pos = s.rfind("::"); pos != s.npos)
-        return s.substr(0, pos);
-      return string_view();
+      if (const auto pos = s.rfind(':'); pos != s.npos)
+        return pos - 1;
+      return std::size_t{0};
     }
   }
 
@@ -48,10 +43,10 @@ namespace details {
   constexpr auto length_of_enum_in_template_array_if_casting() noexcept
   {
     if constexpr (ScopedEnum<Enum>) {
-      return details::enum_in_array_name<Enum{}>().size();
+      return details::enum_in_array_name_size<Enum{}>();
     }
     else {
-      constexpr auto  s      = enum_in_array_name<Enum{}>().size();
+      constexpr auto  s      = details::enum_in_array_name_size<Enum{}>();
       constexpr auto& tyname = raw_type_name<Enum>;
       if (constexpr auto pos = tyname.rfind("::"); pos != tyname.npos) {
         return s + tyname.substr(pos).size();
@@ -82,7 +77,7 @@ namespace details {
 
     constexpr auto elements = []() {
       constexpr auto length_of_enum_in_template_array_casting = details::length_of_enum_in_template_array_if_casting<E>();
-      constexpr auto ArraySize = 1 + std::size_t { is_bitflag<E> ? (sizeof(E) * CHAR_BIT - std::is_signed_v<E>) : Max - Min };
+      constexpr auto ArraySize = 1 + std::size_t{is_bitflag<E> ? (sizeof(E) * CHAR_BIT - std::is_signed_v<E>) : Max - Min};
       //constexpr auto Array    = details::generate_arrays<E, Min, Max>();
       using Under      = std::underlying_type_t<E>;
       using Underlying = std::make_unsigned_t<std::conditional_t<std::is_same_v<bool, Under>, unsigned char, Under>>;
@@ -106,7 +101,7 @@ namespace details {
         std::size_t total_string_length = 0;
         std::size_t valid_count         = 0;
       } ret;
-      constexpr auto enum_in_array_len = enum_in_array_name<E{}>().size();
+      constexpr auto enum_in_array_len = details::enum_in_array_name_size<E{}>();
       for (std::size_t index = 0; index < ArraySize; ++index) {
         if (str.front() == '(') {
           str.remove_prefix(SZC("(") + length_of_enum_in_template_array_casting + SZC(")0")); // there is atleast 1 base 10 digit

@@ -2,9 +2,9 @@
 #include "case_insensitive.hpp"
 #include <catch2/catch_tostring.hpp>
 #include <cstdint>
-#include <enchantum/bitflags.hpp>
 #include <enchantum/bitwise_operators.hpp>
-#include <enchantum/enchantum.hpp>
+#include <enchantum/common.hpp>
+
 #include <type_traits>
 
 
@@ -289,6 +289,44 @@ enum class Direction3D : std::int16_t {
 };
 
 
+enum CStyleLetters {
+  a,
+  b,
+  c,
+  e,
+  d,
+  f,
+  g
+};
+
+namespace {
+namespace Outer {
+  namespace {
+    namespace Inner {
+      enum Anon {
+        _0,
+        _1,
+        _2,
+        _3,
+        _4,
+        _5,
+        _6
+      };
+      enum CStyleAnon {
+        CStyleAnon_0,
+        CStyleAnon_1,
+        CStyleAnon_2,
+        CStyleAnon_3,
+        CStyleAnon_4,
+        CStyleAnon_5,
+        CStyleAnon_6
+      };
+    } // namespace Inner
+  } // namespace
+} // namespace Outer
+} // namespace
+
+
 enum Unscoped : int {
 };
 
@@ -316,10 +354,11 @@ using namespace LongNamespaced::Namespace2;
 template<typename...>
 struct type_list {}; // not wanting to include tuple to detect if I am missing a header in tests
 
+template<typename... Ts,typename... Us>
+type_list<Ts..., Us...> concatter_func(type_list<Ts...>,type_list<Us...>);
+
 template<typename A, typename B>
-using concat = decltype([]<typename... Ts, typename... Us>(type_list<Ts...>, type_list<Us...>) {
-  return type_list<Ts..., Us...>{};
-}(A{}, B{}));
+using concat = decltype(::concatter_func(A{},B{}));
 
 using AllFlagsTestTypes = type_list<StrongFlagsNoOverloadedOperators, ImGuiFreeTypeBuilderFlags, NonContigFlagsWithNoneCStyle, FlagsWithNone, Flags>;
 using AllEnumsTestTypes = concat<
@@ -345,17 +384,21 @@ using AllEnumsTestTypes = concat<
     BoolEnum,
     Direction2D,
     Direction3D,
-    Letters>>;
+    Letters,
+    CStyleLetters,
+    Outer::Inner::Anon,
+    Outer::Inner::CStyleAnon>>;
 
 template<enchantum::Enum E>
 struct Catch::StringMaker<E> {
   static std::string convert(E e)
   {
-    if constexpr (enchantum::BitFlagEnum<E>)
-      return "\"" + enchantum::to_string_bitflag(e) + "\" (" +
-        std::to_string(static_cast<std::underlying_type_t<E>>(e)) + ")";
-    else
-      return "\"" + std::string(enchantum::to_string(e)) + "\" (" +
-        std::to_string(static_cast<std::underlying_type_t<E>>(e)) + ")";
+    return '"' + std::to_string(static_cast<std::underlying_type_t<E>>(e)) + '"';
+    //if constexpr (enchantum::BitFlagEnum<E>)
+    //  return "\"" + enchantum::to_string_bitflag(e) + "\" (" +
+    //    std::to_string(static_cast<std::underlying_type_t<E>>(e)) + ")";
+    //else
+    //  return "\"" + std::string(enchantum::to_string(e)) + "\" (" +
+    //    std::to_string(static_cast<std::underlying_type_t<E>>(e)) + ")";
   }
 };

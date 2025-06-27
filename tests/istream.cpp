@@ -2,11 +2,11 @@
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <enchantum/enchantum.hpp>
-#include <enchantum/istream.hpp>
+#include <enchantum/iostream.hpp>
 #include <sstream>
 
 
-using namespace enchantum::istream_operators;
+using enchantum::iostream_operators::operator>>;
 TEMPLATE_LIST_TEST_CASE("istream operator>>", "[istream]", AllEnumsTestTypes)
 {
   SECTION("Parses correctly")

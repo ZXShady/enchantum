@@ -6,35 +6,62 @@
 #include <array>
 #include <cassert>
 #include <climits>
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 
+// This macro controls the compile time optimization of msvc
+// This macro may break some enums with very large enum ranges selected.
+// **may** as in I have not found a case where it does
+// but it speeds up compilation massivly.
+// from 20 secs to 14.6 secs
+// from 119 secs to 85
+#ifndef ENCHANTUM_ENABLE_MSVC_SPEEDUP
+  #define ENCHANTUM_ENABLE_MSVC_SPEEDUP 1
+#endif
 namespace enchantum {
+
+struct simple_string_view {
+  const char*           begin;
+  const char*           end;
+  constexpr std::size_t find(const char c) const noexcept
+  {
+    for (auto copy = begin; copy != end; ++copy)
+      if (*copy == c)
+        return std::size_t(copy - begin);
+  }
+  constexpr std::size_t find_comma() const noexcept
+  {
+    for (auto copy = begin; copy != end; ++copy)
+      if (*copy == ',')
+        return std::size_t(copy - begin);
+  }
+};
 
 #define SZC(x) (sizeof(x) - 1)
 namespace details {
   template<auto Enum>
-  constexpr auto enum_in_array_name() noexcept
+  constexpr auto enum_in_array_name_size() noexcept
   {
-    string_view s = __FUNCSIG__ + SZC("auto __cdecl enchantum::details::enum_in_array_name<");
+    string_view s = __FUNCSIG__ + SZC("auto __cdecl enchantum::details::enum_in_array_name_size<");
     s.remove_suffix(SZC(">(void) noexcept"));
 
     if constexpr (ScopedEnum<decltype(Enum)>) {
       if (s.front() == '(') {
         s.remove_prefix(SZC("(enum "));
         s.remove_suffix(SZC(")0x0"));
-        return s;
+        return s.size();
       }
-      return s.substr(0, s.rfind("::"));
+      return s.substr(0, s.rfind(':') - 1).size();
     }
     else {
       if (s.front() == '(') {
         s.remove_prefix(SZC("(enum "));
         s.remove_suffix(SZC(")0x0"));
       }
-      if (const auto pos = s.rfind("::"); pos != s.npos)
-        return s.substr(0, pos);
-      return string_view();
+      if (const auto pos = s.rfind(':'); pos != s.npos)
+        return pos - 1;
+      return std::size_t(0);
     }
   }
 
@@ -43,7 +70,7 @@ namespace details {
   {
     //auto __cdecl f<class std::array<enum `anonymous namespace'::UnscopedAnon,32>{enum `anonymous-namespace'::UnscopedAnon
 
-    using T = typename decltype(Array)::value_type;
+    using T                      = typename decltype(Array)::value_type;
     std::size_t    funcsig_off   = SZC("auto __cdecl enchantum::details::var_name<class std::array<enum ");
     constexpr auto type_name_len = raw_type_name<T>.size();
     funcsig_off += type_name_len + SZC(",");
@@ -67,45 +94,84 @@ namespace details {
   template<auto Copy>
   inline constexpr auto static_storage_for = Copy;
 
-  template<typename E, typename Pair, auto Array, bool ShouldNullTerminate>
+  template<typename E, bool ShouldNullTerminate>
   constexpr auto get_elements()
   {
-    constexpr auto type_name_len = raw_type_name<E>.size();
+    constexpr auto Min = enum_traits<E>::min;
+    constexpr auto Max = enum_traits<E>::max;
 
-    auto str = var_name<Array>();
+    constexpr auto Array             = details::generate_arrays<E, Min, Max>();
+    const E* const ArrayData         = Array.data();
+    constexpr auto ConstStr          = var_name<Array>();
+    constexpr auto StringSize        = ConstStr.size();
+    constexpr auto ArraySize         = Array.size() - 1;
+    auto           str               = simple_string_view(ConstStr.data(), ConstStr.data() + ConstStr.size());
+    constexpr auto type_name_len     = raw_type_name<E>.size();
+    constexpr auto enum_in_array_len = details::enum_in_array_name_size<E{}>();
+
     struct RetVal {
-      std::array<Pair, Array.size()> pairs{};
-      std::size_t                    total_string_length = 0;
-      std::size_t                    valid_count         = 0;
+      struct ElementPair {
+        E           value;
+        std::size_t string_length;
+      };
+      ElementPair pairs[ArraySize]{};
+      char        strings[StringSize - (details::Min(type_name_len, enum_in_array_len) * ArraySize)]{};
+      std::size_t total_string_length = 0;
+      std::size_t valid_count         = 0;
     } ret;
-    std::size_t    index             = 0;
-    constexpr auto enum_in_array_len = details::enum_in_array_name<E{}>().size();
-    while (index < Array.size()) {
-      if (str.front() == '(') {
-        str.remove_prefix(SZC("(enum ") + type_name_len + SZC(")0x0")); // there is atleast 1 base 16 hex digit
 
-        if (const auto commapos = str.find(','); commapos != str.npos)
-          str.remove_prefix(commapos + 1);
+    // there is atleast 1 base 16 hex digit
+    // MSVC adds an extra 0 prefix at front if the underlying type equals to 8 bytes.
+    // Don't ask why
+    constexpr auto skip_if_cast_count = SZC("(enum ") + type_name_len + SZC(")0x0")
+        + (sizeof(E)==8);
+    // clang-format off
+#if ENCHANTUM_ENABLE_MSVC_SPEEDUP
+    using Underlying = std::underlying_type_t<E>;
+    constexpr auto skip_work_if_neg = std::is_unsigned_v<Underlying> || sizeof(E) <= 2 ? 0 : 
+// MSVC 19.31 and below don't cast int/unsigned int into `unsigned long long` (std::uint64_t)
+// While higher versions do cast them
+#if _MSC_VER <= 1931
+        sizeof(Underlying) == 4
+#else
+        std::is_same_v<Underlying,char32_t> 
+#endif
+        ? sizeof(char32_t)*2-1 : sizeof(std::uint64_t)*2-1 - (sizeof(E)==8); // subtract 1 more from uint64_t since I am adding it in skip_if_cast_count
+#endif
+    // clang-format on
+
+    for (std::size_t index = 0; index < ArraySize; ++index) {
+      if (*str.begin == '(') {
+#if ENCHANTUM_ENABLE_MSVC_SPEEDUP
+        if constexpr (skip_work_if_neg != 0) {
+          const auto i = static_cast<std::underlying_type_t<E>>(ArrayData[index]);
+          str.begin += skip_if_cast_count + ((i < 0) * skip_work_if_neg);
+        }
+        else {
+          str.begin += skip_if_cast_count;
+        }
+#else
+        str.begin += skip_if_cast_count;
+#endif
+
+        str.begin += str.find_comma() + 1;
       }
       else {
         if constexpr (enum_in_array_len != 0)
-          str.remove_prefix(enum_in_array_len + SZC("::"));
+          str.begin += enum_in_array_len + SZC("::");
 
         if constexpr (details::prefix_length_or_zero<E> != 0)
-          str.remove_prefix(details::prefix_length_or_zero<E>);
+          str.begin += details::prefix_length_or_zero<E>;
 
-        const auto commapos = str.find(',');
+        const auto commapos = str.find_comma();
 
-        const auto name = str.substr(0, commapos);
+        ret.pairs[ret.valid_count++] = {ArrayData[index], commapos};
+        for (std::size_t i = 0; i < commapos; ++i)
+          ret.strings[ret.total_string_length++] = str.begin[i];
+        ret.total_string_length += ShouldNullTerminate;
 
-        ret.pairs[ret.valid_count] = Pair{Array[index], name};
-        ret.total_string_length += name.size() + ShouldNullTerminate;
-
-        if (commapos != str.npos)
-          str.remove_prefix(commapos + 1);
-        ++ret.valid_count;
+        str.begin += commapos + 1;
       }
-      ++index;
     }
     return ret;
   }
@@ -113,33 +179,26 @@ namespace details {
   template<typename E, typename Pair, bool ShouldNullTerminate>
   constexpr auto reflect() noexcept
   {
-    constexpr auto Min = enum_traits<E>::min;
-    constexpr auto Max = enum_traits<E>::max;
+    constexpr auto elements = details::get_elements<E, ShouldNullTerminate>();
 
-    constexpr auto elements = details::get_elements<E, Pair, details::generate_arrays<E, Min, Max>(), ShouldNullTerminate>();
-
-    constexpr auto strings = [elements]() {
-      std::array<char, elements.total_string_length> strings;
-      for (std::size_t _i = 0, index = 0; _i < elements.valid_count; ++_i) {
-        const auto& [_, s] = elements.pairs[_i];
-        for (std::size_t i = 0; i < s.size(); ++i)
-          strings[index++] = s[i];
-
-        if constexpr (ShouldNullTerminate)
-          strings[index++] = '\0';
-      }
-      return strings;
-    }();
+    constexpr auto strings = [](const auto total_length, const char* const name_data) {
+      std::array<char, total_length> ret;
+      auto* const                    ret_data = ret.data();
+      for (std::size_t i = 0; i < total_length.value; ++i)
+        ret_data[i] = name_data[i];
+      return ret;
+    }(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings);
 
     std::array<Pair, elements.valid_count> ret;
-    constexpr const auto*                  str = static_storage_for<strings>.data();
+    auto* const                            ret_data = ret.data();
+    constexpr const auto*                  str      = static_storage_for<strings>.data();
     for (std::size_t i = 0, string_index = 0; i < elements.valid_count; ++i) {
-      const auto& [e, s] = elements.pairs[i];
-      auto& [re, rs]     = ret[i];
-      re                 = e;
+      const auto& [e, length] = elements.pairs[i];
+      auto& [re, rs]          = ret_data[i];
+      re                      = e;
 
-      rs = {str + string_index, str + string_index + s.size()};
-      string_index += s.size() + ShouldNullTerminate;
+      rs = {str + string_index, str + string_index + length};
+      string_index += length + ShouldNullTerminate;
     }
 
     return ret;

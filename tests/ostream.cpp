@@ -2,10 +2,10 @@
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <enchantum/enchantum.hpp>
-#include <enchantum/ostream.hpp>
+#include <enchantum/iostream.hpp>
 #include <sstream>
 
-using namespace enchantum::ostream_operators;
+using enchantum::iostream_operators::operator<<;
 
 TEMPLATE_LIST_TEST_CASE("ostream operator<<", "[ostream]", AllEnumsTestTypes)
 {

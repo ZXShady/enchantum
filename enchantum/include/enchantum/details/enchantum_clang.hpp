@@ -1,11 +1,15 @@
 #pragma once
 
+// Clang <= 12 outputs "NUMBER" if casting
+// Clang > 12 outputs "(E)NUMBER".
+
 #if defined __has_warning && __has_warning("-Wenum-constexpr-conversion")
   #pragma clang diagnostic push
   #pragma clang diagnostic ignored "-Wenum-constexpr-conversion"
 #endif
 
 #include "../common.hpp"
+#include "../type_name.hpp"
 #include "generate_arrays.hpp"
 #include "string_view.hpp"
 #include <array>
@@ -53,27 +57,6 @@ namespace details {
       return L::min();
     else
       return valid_cast_range_recurse<T, max_range, 0>();
-
-
-    //else {
-    //  if constexpr (max_range >= ENCHANTUM_MIN_RANGE) {
-    //    // this tests whether `static_cast`ing max_range is valid
-    //    // because C style enums stupidly is like a bit field
-    //    // `enum E { a,b,c,d = 3};` is like a bitfield `struct E { int val : 2;}`
-    //    // which means giving E.val a larger than 2 bit value is UB so is it for enums
-    //    // and gcc and msvc ignore this (for good)
-    //    // while clang makes it a subsituation failure which we can check for
-    //    // using std::inegral_constant makes sure this is a constant expression situation
-    //    // for SFINAE to occur
-    //    if constexpr (is_valid_cast<T, max_range>)
-    //      return valid_cast_range<T, max_range * 2>();
-    //    else
-    //      return max_range / 2;
-    //  }
-    //  else {
-    //    return max_range / 2;
-    //  }
-    //}
   }
 
 
@@ -103,6 +86,17 @@ namespace details {
   template<auto Enum>
   constexpr auto enum_in_array_name() noexcept
   {
+#if __clang_major__ <= 12
+    using E = decltype(Enum);
+    if constexpr (std::is_convertible_v<E, std::underlying_type_t<E>>) {
+      if (const auto pos = raw_type_name<E>.rfind(':'); pos != string_view::npos)
+        return raw_type_name<E>.substr(0, pos - 1);
+      return string_view();
+    }
+    else {
+      return raw_type_name<E>;
+    }
+#else
     // constexpr auto f() [with auto _ = (
     //constexpr auto f() [Enum = (Scoped)0]
     auto s = string_view(__PRETTY_FUNCTION__ + SZC("auto enchantum::details::enum_in_array_name() [Enum = "),
@@ -119,7 +113,7 @@ namespace details {
       }
     }
     else {
-      if (s[s.size() - 2] == ')') {
+      if (s.size() != 1 && s[s.size() - 2] == ')') {
         s.remove_prefix(SZC("("));
         s.remove_suffix(SZC(")0"));
       }
@@ -127,6 +121,7 @@ namespace details {
         return s.substr(0, pos - 1);
       return string_view();
     }
+#endif
   }
 
   template<auto... Vs>
@@ -137,10 +132,13 @@ namespace details {
     return string_view(__PRETTY_FUNCTION__ + funcsig_off, SZC(__PRETTY_FUNCTION__) - funcsig_off - SZC(">]"));
   }
 
-
+#if __clang_major__ <= 11
+  template<char... Chars>
+  inline constexpr auto static_storage_for_chars = std::array<char, sizeof...(Chars)>{Chars...};
+#else
   template<auto Copy>
   inline constexpr auto static_storage_for = Copy;
-
+#endif
   template<typename E, typename Pair, bool NullTerminated>
   constexpr auto reflect() noexcept
   {
@@ -173,43 +171,54 @@ namespace details {
           return details::var_name<static_cast<E>(static_cast<decltype(Min)>(Idx) + Min)...>();
       }(std::make_index_sequence<is_bitflag<E> ? bits : ArraySize>());
 
-      auto           str        = ConstStr;
-      constexpr auto StringSize = ConstStr.size();
+      auto str = ConstStr;
 
       constexpr auto enum_in_array_name = details::enum_in_array_name<E{}>();
       constexpr auto enum_in_array_len  = enum_in_array_name.size();
       // Ubuntu Clang 20 complains about using local constexpr variables in a local struct
-      using CharArray = std::array<char, StringSize + (NullTerminated + ArraySize) - (enum_in_array_len * ArraySize)>;
+      using CharArray = char[ConstStr.size() + (NullTerminated * ArraySize)];
       struct RetVal {
         struct ElemenetPair {
           E            value;
           std::uint8_t len;
         };
-        std::array<ElemenetPair, ArraySize> pairs{};
-        CharArray                           strings{};
-        std::size_t                         total_string_length = 0;
-        std::size_t                         valid_count         = 0;
+        ElemenetPair pairs[ArraySize]{};
+        CharArray    strings{};
+        std::size_t  total_string_length = 0;
+        std::size_t  valid_count         = 0;
       } ret;
 
 
-      // ((anonymous namespace)::A)0
-      // (anonymous namespace)::a
+// ((anonymous namespace)::A)0
+// (anonymous namespace)::a
 
-      // this is needed to determine whether the above are cast expression if 2 braces are
-      // next to eachother then it is a cast but only for anonymoused namespaced enums
+// this is needed to determine whether the above are cast expression if 2 braces are
+// next to eachother then it is a cast but only for anonymoused namespaced enums
+#if __clang_major__ > 12
       constexpr std::size_t index_check = !enum_in_array_name.empty() && enum_in_array_name.front() == '(' ? 1 : 0;
+#endif
       for (std::size_t index = 0; index < ArraySize; ++index) {
-        if (str[index_check] == '(') {
+#if __clang_major__ > 12
+        // check if cast (starts with '(')
+        if (str[index_check] == '(')
+#else
+        // check if it is a number or negative sign
+        if (str[0] == '-' || (str[0] >= '0' && str[0] <= '9'))
+#endif
+        {
+#if __clang_major__ > 12
           str.remove_prefix(SZC("(") + enum_in_array_len + SZC(")0")); // there is atleast 1 base 10 digit
-
+#endif
+          // https://clang.llvm.org/docs/LanguageExtensions.html#string-builtins
           //char* __builtin_char_memchr(const char* haystack, int needle, size_t size);
           if (const auto* commapos = __builtin_char_memchr(str.data(), ',', str.size()); commapos)
-            str.remove_prefix(static_cast<std::size_t>(commapos - str.data()) + 2);
+            str.remove_prefix(static_cast<std::size_t>(commapos - str.data()) + SZC(", "));
         }
         else {
           if constexpr (enum_in_array_len != 0) {
             str.remove_prefix(enum_in_array_len + SZC("::"));
           }
+
           if constexpr (details::prefix_length_or_zero<E> != 0) {
             str.remove_prefix(details::prefix_length_or_zero<E>);
           }
@@ -227,7 +236,7 @@ namespace details {
             else
               ret.pairs[ret.valid_count++] = {E(Min + static_cast<decltype(Min)>(index)), name_size};
 
-            __builtin_memcpy(ret.strings.data() + ret.total_string_length, name.data(), name_size);
+            __builtin_memcpy(ret.strings + ret.total_string_length, name.data(), name_size);
             ret.total_string_length += name_size + NullTerminated;
           }
           if (commapos != str.npos)
@@ -240,18 +249,23 @@ namespace details {
 
     std::array<Pair, elements.valid_count> ret;
     {
+      // intentionally >= 12, clang 11 does not support class non type template parameters
+#if __clang_major__ >= 12
       constexpr auto strings = [](const auto total_length, const char* data) {
         std::array<char, total_length.value> strings;
         __builtin_memcpy(strings.data(), data, total_length.value);
         return strings;
-      }(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings.data());
-
-      auto* const       ret_data  = ret.data();
-      const auto* const pair_data = elements.pairs.data();
-
+      }(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings);
       constexpr const auto* str = static_storage_for<strings>.data();
+#else
+      constexpr const auto* str = [elements]<std::size_t... Idx>(std::index_sequence<Idx...>) {
+        return static_storage_for_chars<elements.strings[Idx]...>.data();
+      }(std::make_index_sequence<elements.total_string_length>{});
+#endif
+
+      auto* const ret_data = ret.data();
       for (std::size_t i = 0, string_index = 0; i < elements.valid_count; ++i) {
-        const auto [e, length] = pair_data[i];
+        const auto [e, length] = elements.pairs[i];
         auto& [re, rs]         = ret_data[i];
         using StringView       = std::decay_t<decltype(rs)>;
         re                     = e;

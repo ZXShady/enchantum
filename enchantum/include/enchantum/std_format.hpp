@@ -1,11 +1,9 @@
 #pragma once
 
-#include "bitflags.hpp"
-#include "enchantum.hpp"
-
 #include <format>
 #include <string_view>
 #include "details/format_util.hpp"
+#include "common.hpp"
 
 template<enchantum::Enum E>
 struct std::formatter<E> : std::formatter<string_view> {

@@ -32,7 +32,7 @@ public:
   using base::base;
   using base::operator=;
 
-  [[nodiscard]] constexpr string to_string(const char sep = '|') const
+  [[nodiscard]] string to_string(const char sep = '|') const
   {
     string name;
     for (std::size_t i = 0; i < enchantum::count<E>; ++i) {
