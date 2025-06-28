@@ -81,11 +81,44 @@ inline constexpr auto max = entries<E>.back().first;
 template<Enum E>
 inline constexpr std::size_t count = entries<E>.size();
 
+
+template<typename>
+inline constexpr bool has_zero_flag = false;
+
+template<BitFlagEnum E>
+inline constexpr bool has_zero_flag<E> = []() {
+  for (const auto v : values<E>)
+    if (static_cast<std::underlying_type_t<E>>(v) == 0)
+      return true;
+  return false;
+}();
+
 template<typename>
 inline constexpr bool is_contiguous = false;
 
 template<Enum E>
-inline constexpr bool is_contiguous<E> = static_cast<std::size_t>(to_underlying(max<E>) - to_underlying(min<E>)) + 1 ==
+inline constexpr bool is_contiguous<E> = static_cast<std::size_t>(
+                                           enchantum::to_underlying(max<E>) - enchantum::to_underlying(min<E>)) +
+    1 ==
   count<E>;
+
+template<typename E>
+concept ContiguousEnum = Enum<E> && is_contiguous<E>;
+
+template<typename>
+inline constexpr bool is_contiguous_bitflag = false;
+
+template<BitFlagEnum E>
+inline constexpr bool is_contiguous_bitflag<E> = []() {
+  constexpr auto& enums = entries<E>;
+  using T               = std::underlying_type_t<E>;
+  for (auto i = std::size_t{has_zero_flag<E>}; i < enums.size() - 1; ++i)
+    if (T(enums[i].first) << 1 != T(enums[i + 1].first))
+      return false;
+  return true;
+}();
+
+template<typename E>
+concept ContiguousBitFlagEnum = BitFlagEnum<E> && is_contiguous_bitflag<E>;
 
 } // namespace enchantum
