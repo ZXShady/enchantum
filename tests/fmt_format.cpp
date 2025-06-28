@@ -1,13 +1,12 @@
-#define FMT_HEADER_ONLY
-#define FMT_UNICODE 0 // we don't need unicode
-#include <fmt/format.h>
-
 #include "test_utility.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <enchantum/bitflags.hpp>
 #include <enchantum/fmt_format.hpp>
 
 #include <catch2/catch_template_test_macros.hpp>
+
+// fmt/format.h is included in pch.hpp
+// FMT_UNICODE is defined in pch.hpp
 
 TEMPLATE_LIST_TEST_CASE("fmt::format", "[stringify][fmt_format]", AllEnumsTestTypes)
 {

@@ -1,4 +1,9 @@
 #pragma once
+// Only include pch.hpp when NDEBUG is not defined (i.e. not running single_header_test)
+// This is to prevent redefinition errors when pch.hpp is included by both test_utility.hpp and single_header.cpp
+#ifndef NDEBUG
+#include "pch.hpp"
+#endif // NDEBUG
 #include "case_insensitive.hpp"
 #include <catch2/catch_tostring.hpp>
 #include <cstdint>
