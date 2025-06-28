@@ -204,7 +204,7 @@ There are several enum reflection libraries out there — so why choose **enchan
 - Clean and Simple Functor based API `enchantum::to_string(E)` no `enchantum::to_string<E::V>()` since compile times are fast.
 - Features like disabling null termination if not needed and specifying common enum prefix for C style enums, and reflect '0' values for bit flag enums.
 - Supports all sort of enums (scoped,unscoped,C style unfixed underlying type,anonymous namespaced enums, enums with commas in their typename,etc...);
-- Efficient object binary size and executable size.
+- Most efficient object binary size and executable size.
 
 **Cons**
 - C++20 required
@@ -254,17 +254,17 @@ All times in **seconds** (lower is better). Compiled with `-O3` fir GCC and Clan
 
 Lower is better
 
-[A simple godbolt link for magic_enum vs enchantum](https://godbolt.org/#g:!((g:!((h:output,i:(editorid:1,fontScale:14,fontUsePx:'0',j:1,wrap:'1'),l:'5',n:'0',o:'Output+of+x86-64+clang+(trunk)+(Compiler+%231)',t:'0'),(h:compiler,i:(compiler:clang_trunk,filters:(b:'0',binary:'1',binaryObject:'1',commentOnly:'0',debugCalls:'1',demangle:'0',directives:'0',execute:'1',intel:'0',libraryCode:'0',trim:'1',verboseDemangling:'0'),flagsViewOpen:'1',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,libs:!(),options:'-O3+-DENCH%3D0+-std%3Dc%2B%2B20',overrides:!(),selection:(endColumn:1,endLineNumber:1,positionColumn:1,positionLineNumber:1,selectionStartColumn:1,selectionStartLineNumber:1,startColumn:1,startLineNumber:1),source:1),l:'5',n:'0',o:'+x86-64+clang+(trunk)+(Editor+%231)',t:'0'),(h:codeEditor,i:(filename:'1',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,selection:(endColumn:1,endLineNumber:6,positionColumn:1,positionLineNumber:6,selectionStartColumn:1,selectionStartLineNumber:6,startColumn:1,startLineNumber:6),source:'%23if+ENCH%0A%23include+%3Chttps://raw.githubusercontent.com/ZXShady/enchantum/refs/heads/main/single_include/enchantum_single_header.hpp%3E%0A%23define+magic_enum+enchantum%0A%23define+enum_name+to_string%0A%23else%0A%23include+%3Chttps://raw.githubusercontent.com/Neargye/magic_enum/refs/heads/master/include/magic_enum/magic_enum.hpp%3E%0A%23endif%0Aenum+class+A+%7Balong,b,c,e,d,f,glong%7D%3B%0Aextern+A+enm%3B%0A%0Aint+main()+%7B%0A++++return+magic_enum::enum_name(enm).size()%3B%0A%7D%0A'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),header:(),l:'4',m:100,n:'0',o:'',s:2,t:'0')),version:4)
+[A simple godbolt link for magic_enum vs enchantum](https://godbolt.org/#g:!((g:!((h:output,i:(editorid:1,fontScale:14,fontUsePx:'0',j:1,wrap:'1'),l:'5',n:'0',o:'Output+of+x86-64+clang+(trunk)+(Compiler+%231)',t:'0'),(h:compiler,i:(compiler:clang_trunk,filters:(b:'0',binary:'1',binaryObject:'1',commentOnly:'0',debugCalls:'1',demangle:'0',directives:'0',execute:'1',intel:'0',libraryCode:'0',trim:'1',verboseDemangling:'0'),flagsViewOpen:'1',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,libs:!(),options:'-O3+-DENCH%3D1+-std%3Dc%2B%2B20',overrides:!(),selection:(endColumn:1,endLineNumber:1,positionColumn:1,positionLineNumber:1,selectionStartColumn:1,selectionStartLineNumber:1,startColumn:1,startLineNumber:1),source:1),l:'5',n:'0',o:'+x86-64+clang+(trunk)+(Editor+%231)',t:'0'),(h:codeEditor,i:(filename:'1',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,selection:(endColumn:13,endLineNumber:10,positionColumn:13,positionLineNumber:10,selectionStartColumn:13,selectionStartLineNumber:10,startColumn:13,startLineNumber:10),source:'%23if+ENCH%0A%23include+%3Chttps://raw.githubusercontent.com/ZXShady/enchantum/refs/heads/main/single_include/enchantum_single_header.hpp%3E%0A%23define+magic_enum+enchantum%0A%23define+enum_name+to_string%0A%23else%0A%23include+%3Chttps://raw.githubusercontent.com/Neargye/magic_enum/refs/heads/master/include/magic_enum/magic_enum.hpp%3E%0A%23endif%0Aenum+class+A+%7Balong,b,c,e,d,f,glong%7D%3B%0Aextern+A+enm%3B%0Aextern+const+void*+volatile+p%3B%0Aint+main()+%7B%0A++++p+%3D+magic_enum::enum_name(enm).data()%3B%0A%7D%0A'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),header:(),l:'4',m:100,n:'0',o:'',s:2,t:'0')),version:4)
 
-Clang is only currently measured. But GCC produced same sizes almost
+Clang is only currently measured. 
 
 
 | Compiler    | Test Case   | `enchantum`  | `magic_enum` | `simple_enum` |
 |-------------|-------------|--------------| ------------ |---------------|
-| **Clang**   | Small       | 447  KB      |  1132 KB     |  3773  KB     |
-|             | Big         | 249  KB      |  1368 KB     | ~12000 KB     |
-|             | Large Range | 504  KB      |  Unknown     | ~96000 KB     |
-|             | Ideal Range | 465  KB      |  1091 KB     |  1253 KB      |
+| **Clang**   | Small       | 269  KB      |  716 KB      | ~12000 KB     |
+|             | Big         | 83   KB      |  1277 KB     |  3758  KB     |
+|             | Large Range | 269  KB      |  Unknown     | ~96000 KB     |
+|             | Ideal Range | 293  KB      |  1027 KB     |  1205  KB     |
 
 **Note**:
 The reason `simple_enum` is so big in object sizes is that it generates a huge table of all strings it does not do string optimizations like `enchantum` or `magic_enum` which leads to big object sizes there are a lot of useless strings in the binary but it also allows the library to do `O(1)` enum to string lookup for **any** enum, which I don't necessarily think is worth it and compile faster.
@@ -276,19 +276,16 @@ Compiled the object files into their own executable then ran `strip` over them.
 
 | Compiler    | Test Case   | `enchantum`  | `magic_enum` | `simple_enum` |
 |-------------|-------------|--------------| ------------ |---------------|
-| **Clang**   | Small       | 106  KB      |  106 KB      |  2996   KB    |
-|             | Big         | 182  KB      |  182  KB     |  959    KB    |
-|             | Large Range | 106  KB      |  Unknown     |  ~23000 KB    |
-|             | Ideal Range | 147  KB      |  147 KB      |  323    KB    |
-
-**Remarks**: although magic enum did not compile in the large range test, the executable size is expected to be the same as enchantum given it optimizes strings.
-
+| **Clang**   | Small       | 146  KB      |  199 KB      |  2996   KB    |
+|             | Big         | 171  KB      |  271 KB      |  959    KB    |
+|             | Large Range | 146  KB      |  Unknown     |  ~23000 KB    |
+|             | Ideal Range | 159  KB      |  237 KB      |  323    KB    |
 
 ---
 
 ## Summary
 
-**enchantum** significantly reduces compile times and object sizes in enum reflection projects. In my own project (which uses [libassert](https://github.com/jeremy-rifkin/libassert) and enum reflection for configuration), switching from `magic_enum` reduced full rebuild times from about 2 minutes to 1 minute and 26 seconds. I was surprised that `magic_enum` alone took 34 seconds.
+**enchantum** significantly reduces compile times and binary sizes in enum reflection projects. In my own project (which uses [libassert](https://github.com/jeremy-rifkin/libassert) and enum reflection for configuration), switching from `magic_enum` reduced full rebuild times from about 2 minutes to 1 minute and 26 seconds. I was surprised that `magic_enum` alone took 34 seconds.
 
 I also tried compiling my project using -2048,2048 as my range and it took 1 minute and 46 seconds! that's still less than `magic_enum` by default while having **16x** the default range.
 
