@@ -3,10 +3,11 @@
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <enchantum/enchantum.hpp>
+#include <enchantum/generators.hpp>
 
 TEMPLATE_LIST_TEST_CASE("array size checks", "[constants]", AllEnumsTestTypes)
 {
-  constexpr auto  count   = enchantum::count<TestType>;
+  constexpr auto count = enchantum::count<TestType>;
   //constexpr auto  min     = enchantum::min<TestType>;
   //constexpr auto  max     = enchantum::max<TestType>;
   constexpr auto& names   = enchantum::names<TestType>;
@@ -14,15 +15,36 @@ TEMPLATE_LIST_TEST_CASE("array size checks", "[constants]", AllEnumsTestTypes)
   constexpr auto& entries = enchantum::entries<TestType>;
 
 
-  SECTION("count<E>") { STATIC_CHECK(count == entries.size()); }
-  SECTION("names<E>") { STATIC_CHECK(names.size() == entries.size()); }
-  SECTION("values<E>") { STATIC_CHECK(values.size() == entries.size()); }
+  STATIC_CHECK(count == entries.size());
+  STATIC_CHECK(names.size() == entries.size());
+  STATIC_CHECK(values.size() == entries.size());
 
   SECTION("names<E> and values<E> equal to entries<E>")
   {
     for (std::size_t i = 0; i < count; ++i) {
       CHECK(values[i] == entries[i].first);
       CHECK(names[i] == entries[i].second);
+    }
+  }
+
+  SECTION("entries_generator<E> and entries<E> are equal")
+  {
+    for (std::size_t i = 0; i < count; ++i) {
+      CHECK(enchantum::entries_generator<TestType>[i] == entries[i]);
+    }
+  }
+
+  SECTION("names_generator<E> and names<E> are equal")
+  {
+    for (std::size_t i = 0; i < count; ++i) {
+      CHECK(enchantum::names_generator<TestType>[i] == names[i]);
+    }
+  }
+
+  SECTION("values_generator<E> and values<E> are equal")
+  {
+    for (std::size_t i = 0; i < count; ++i) {
+      CHECK(enchantum::values_generator<TestType>[i] == values[i]);
     }
   }
 
@@ -47,7 +69,6 @@ TEMPLATE_LIST_TEST_CASE("array size checks", "[constants]", AllEnumsTestTypes)
       CHECK(values[i] == enchantum::cast<TestType>(enchantum::to_string(values[i])));
     }
   }
-
 }
 
 

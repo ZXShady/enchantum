@@ -42,18 +42,14 @@ namespace details {
     [[nodiscard]] constexpr optional<E> operator()(const string_view name) const noexcept
     {
       const auto n = details::remove_scope_or_empty(name, type_name<E>);
-      if (n.empty())
-        return optional<E>();
-      return cast<E>(n);
+      return n.empty() ? optional<E>() : cast<E>(n);
     }
 
     template<std::predicate<string_view, string_view> BinaryPred>
     [[nodiscard]] constexpr optional<E> operator()(const string_view name, const BinaryPred binary_predicate) const noexcept
     {
       const auto n = details::remove_scope_or_empty(name, type_name<E>);
-      if (n.empty())
-        return optional<E>();
-      return cast<E>(n, binary_predicate);
+      return n.empty() ? optional<E>() : cast<E>(n, binary_predicate);
     }
   };
 
@@ -65,7 +61,7 @@ namespace details {
       if (const auto i = enchantum::enum_to_index(value)) {
         s += type_name<E>;
         s += "::";
-        s += names<E>[*i];
+        s += names_generator<E>[*i];
         return s;
       }
       return s;
@@ -116,14 +112,15 @@ template<BitFlagEnum E>
   T              check_value = 0;
   constexpr auto scope_name  = type_name<E>;
   for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
-    const auto& [v, s] = entries<E>[i];
-    if (T(v) == (T(value) & T(v))) {
+    const auto v = static_cast<T>(values_generator<E>[i]);
+    if (v == (static_cast<T>(value) & v)) {
       if (!name.empty())
         name.append(1, sep); // append separator if not the first value
       name.append(scope_name.data(), scope_name.size());
       name.append("::", 2);
+      const auto s = names_generator<E>[i];
       name.append(s.data(), s.size()); // not using operator += since this may not be std::string_view always
-      check_value |= static_cast<T>(v);
+      check_value |= v;
     }
   }
   if (check_value == static_cast<T>(value))

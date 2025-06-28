@@ -4,6 +4,7 @@
 #include "details/optional.hpp"
 #include "enchantum.hpp"
 #include <cstddef>
+#include "generators.hpp"
 
 namespace enchantum {
 namespace details {
@@ -17,7 +18,7 @@ namespace details {
 
       const auto index = static_cast<std::ptrdiff_t>(*enchantum::enum_to_index(value)) + (n * N);
       if (index >= 0 && index < static_cast<std::ptrdiff_t>(count<E>))
-        return optional<E>{values<E>[static_cast<std::size_t>(index)]};
+        return optional<E>{values_generator<E>[static_cast<std::size_t>(index)]};
       return optional<E>{};
     }
   };
@@ -30,7 +31,7 @@ namespace details {
       ENCHANTUM_ASSERT(enchantum::contains(value), "next/prev_value_circular requires 'value' to be a valid enum member", value);
       const auto     i     = static_cast<std::ptrdiff_t>(*enchantum::enum_to_index(value));
       constexpr auto count = static_cast<std::ptrdiff_t>(enchantum::count<E>);
-      return values<E>[static_cast<std::size_t>(((i + (n * N)) % count + count) % count)]; // handles wrap around and negative n
+      return values_generator<E>[static_cast<std::size_t>(((i + (n * N)) % count + count) % count)]; // handles wrap around and negative n
     }
   };
 } // namespace details
