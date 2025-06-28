@@ -5,6 +5,7 @@
 #include "details/string_view.hpp"
 #include "details/generate_arrays.hpp"
 #include "details/format_util.hpp"
+#include "generators.hpp"
 #include "algorithms.hpp"
 #include "array.hpp"
 #include "bitset.hpp"

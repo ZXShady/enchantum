@@ -26,8 +26,33 @@ template<Enum E>
 }
 #endif
 
-template<Enum E, typename Pair = std::pair<E, string_view>, bool ShouldNullTerminate = true>
-inline constexpr auto entries = details::reflect<std::remove_cv_t<E>, Pair, ShouldNullTerminate>();
+
+namespace details {
+  template<typename E, bool NullTerminated = true>
+  inline constexpr auto reflection_data = reflect<E, NullTerminated>();
+
+  template<typename E, bool NullTerminated = true>
+  inline constexpr auto reflection_string_indices = reflection_data<E, NullTerminated>.string_indices;
+} // namespace details
+
+
+template<Enum E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true>
+inline constexpr auto entries = []() {
+  const auto             reflected = details::reflection_data<std::remove_cv_t<E>, NullTerminated>;
+  constexpr auto         size      = sizeof(reflected.values) / sizeof(reflected.values[0]);
+  std::array<Pair, size> ret;
+  auto* const            ret_data = ret.data();
+
+
+  for (std::size_t i = 0; i < size; ++i) {
+    auto& [e, s]     = ret_data[i];
+    e                = reflected.values[i];
+    using StringView = std::remove_cvref_t<decltype(s)>;
+    s                = StringView(reflected.strings + reflected.string_indices[i],
+                   reflected.strings + reflected.string_indices[i + 1] - NullTerminated);
+  }
+  return ret;
+}();
 
 template<Enum E>
 inline constexpr auto values = []() {
@@ -55,5 +80,12 @@ inline constexpr auto max = entries<E>.back().first;
 
 template<Enum E>
 inline constexpr std::size_t count = entries<E>.size();
+
+template<typename>
+inline constexpr bool is_contiguous = false;
+
+template<Enum E>
+inline constexpr bool is_contiguous<E> = static_cast<std::size_t>(to_underlying(max<E>) - to_underlying(min<E>)) + 1 ==
+  count<E>;
 
 } // namespace enchantum

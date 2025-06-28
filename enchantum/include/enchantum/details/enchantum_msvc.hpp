@@ -43,8 +43,8 @@ namespace details {
   template<auto Enum>
   constexpr auto enum_in_array_name_size() noexcept
   {
-    string_view s = __FUNCSIG__ + SZC("auto __cdecl enchantum::details::enum_in_array_name_size<");
-    s.remove_suffix(SZC(">(void) noexcept"));
+    auto s = string_view{__FUNCSIG__ + SZC("auto __cdecl enchantum::details::enum_in_array_name_size<"),
+                         SZC(__FUNCSIG__) - SZC("auto __cdecl enchantum::details::enum_in_array_name_size<>(void) noexcept")};
 
     if constexpr (ScopedEnum<decltype(Enum)>) {
       if (s.front() == '(') {
@@ -94,7 +94,7 @@ namespace details {
   template<auto Copy>
   inline constexpr auto static_storage_for = Copy;
 
-  template<typename E, bool ShouldNullTerminate>
+  template<typename E, bool NullTerminated>
   constexpr auto get_elements()
   {
     constexpr auto Min = enum_traits<E>::min;
@@ -110,11 +110,12 @@ namespace details {
     constexpr auto enum_in_array_len = details::enum_in_array_name_size<E{}>();
 
     struct RetVal {
-      struct ElementPair {
-        E           value;
-        std::size_t string_length;
-      };
-      ElementPair pairs[ArraySize]{};
+      E values[ArraySize]{};
+
+      // We are making an assumption that no sane user will use an enum member name longer than 256 characters
+      // if you are not sane then I don't know what to do
+      std::uint8_t string_lengths[ArraySize]{};
+
       char        strings[StringSize - (details::Min(type_name_len, enum_in_array_len) * ArraySize)]{};
       std::size_t total_string_length = 0;
       std::size_t valid_count         = 0;
@@ -123,8 +124,7 @@ namespace details {
     // there is atleast 1 base 16 hex digit
     // MSVC adds an extra 0 prefix at front if the underlying type equals to 8 bytes.
     // Don't ask why
-    constexpr auto skip_if_cast_count = SZC("(enum ") + type_name_len + SZC(")0x0")
-        + (sizeof(E)==8);
+    constexpr auto skip_if_cast_count = SZC("(enum ") + type_name_len + SZC(")0x0") + (sizeof(E) == 8);
     // clang-format off
 #if ENCHANTUM_ENABLE_MSVC_SPEEDUP
     using Underlying = std::underlying_type_t<E>;
@@ -163,23 +163,23 @@ namespace details {
         if constexpr (details::prefix_length_or_zero<E> != 0)
           str.begin += details::prefix_length_or_zero<E>;
 
-        const auto commapos = str.find_comma();
+        const auto commapos = str.find_comma(); // never fails
 
-        ret.pairs[ret.valid_count++] = {ArrayData[index], commapos};
+        ret.values[ret.valid_count]           = ArrayData[index];
+        ret.string_lengths[ret.valid_count++] = static_cast<std::uint8_t>(commapos);
         for (std::size_t i = 0; i < commapos; ++i)
           ret.strings[ret.total_string_length++] = str.begin[i];
-        ret.total_string_length += ShouldNullTerminate;
-
+        ret.total_string_length += NullTerminated;
         str.begin += commapos + 1;
       }
     }
     return ret;
   }
 
-  template<typename E, typename Pair, bool ShouldNullTerminate>
+  template<typename E, bool NullTerminated>
   constexpr auto reflect() noexcept
   {
-    constexpr auto elements = details::get_elements<E, ShouldNullTerminate>();
+    constexpr auto elements = details::get_elements<E, NullTerminated>();
 
     constexpr auto strings = [](const auto total_length, const char* const name_data) {
       std::array<char, total_length> ret;
@@ -189,23 +189,32 @@ namespace details {
       return ret;
     }(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings);
 
-    std::array<Pair, elements.valid_count> ret;
-    auto* const                            ret_data = ret.data();
-    constexpr const auto*                  str      = static_storage_for<strings>.data();
-    for (std::size_t i = 0, string_index = 0; i < elements.valid_count; ++i) {
-      const auto& [e, length] = elements.pairs[i];
-      auto& [re, rs]          = ret_data[i];
-      re                      = e;
+    using StringLengthType = std::conditional_t<(elements.total_string_length < UINT8_MAX), std::uint8_t, std::uint16_t>;
 
-      rs = {str + string_index, str + string_index + length};
-      string_index += length + ShouldNullTerminate;
+    struct RetVal {
+      std::array<E, elements.valid_count> values{};
+      // +1 for easier iteration on on last string
+      std::array<StringLengthType, elements.valid_count + 1> string_indices{};
+      const char*                                            strings{};
+    } ret;
+    ret.strings                     = static_storage_for<strings>.data();
+    auto* const values_data         = ret.values.data();
+    auto* const string_indices_data = ret.string_indices.data();
+
+    std::size_t      i            = 0;
+    StringLengthType string_index = 0;
+    for (; i < elements.valid_count; ++i) {
+      values_data[i] = elements.values[i];
+      // "aabc"
+
+      string_indices_data[i] = string_index;
+      string_index += elements.string_lengths[i] + NullTerminated;
     }
+    ret.string_indices[i] = string_index;
 
     return ret;
   }
 } // namespace details
-
-
 } // namespace enchantum
 
 #undef SZC

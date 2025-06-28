@@ -4,6 +4,7 @@
 #include "details/optional.hpp"
 #include "details/string_view.hpp"
 #include "entries.hpp"
+#include "generators.hpp"
 #include <bit>
 #include <type_traits>
 #include <utility>
@@ -36,15 +37,6 @@ inline constexpr bool has_zero_flag<E> = []() {
       return true;
   return false;
 }();
-
-
-template<typename>
-inline constexpr bool is_contiguous = false;
-
-template<Enum E>
-inline constexpr bool is_contiguous<E> = static_cast<std::size_t>(to_underlying(max<E>) - to_underlying(min<E>)) + 1 ==
-  count<E>;
-
 
 template<typename E>
 concept ContiguousEnum = Enum<E> && is_contiguous<E>;
@@ -105,7 +97,7 @@ template<Enum E>
   if (const auto size = name.size(); size < minmax.first || size > minmax.second)
     return false;
 
-  for (const auto& s : names<E>)
+  for (const auto s : names_generator<E>)
     if (s == name)
       return true;
   return false;
@@ -115,7 +107,7 @@ template<Enum E>
 template<Enum E, std::predicate<string_view, string_view> BinaryPredicate>
 [[nodiscard]] constexpr bool contains(const string_view name, const BinaryPredicate binary_predicate) noexcept
 {
-  for (const auto& s : names<E>)
+  for (const auto s : names_generator<E>)
     if (binary_predicate(name, s))
       return true;
   return false;
@@ -187,7 +179,7 @@ namespace details {
         return a; // nullopt
 
       for (std::size_t i = 0; i < count<E>; ++i) {
-        if (names<E>[i] == name) {
+        if (names_generator<E>[i] == name) {
           a.emplace(values<E>[i]);
           return a;
         }
@@ -200,7 +192,7 @@ namespace details {
     {
       optional<E> a; // rvo not that it really matters
       for (std::size_t i = 0; i < count<E>; ++i) {
-        if (binary_predicate(name,names<E>[i])) {
+        if (binary_predicate(name, names_generator<E>[i])) {
           a.emplace(values<E>[i]);
           return a;
         }
@@ -226,7 +218,7 @@ namespace details {
     [[nodiscard]] constexpr string_view operator()(const E value) const noexcept
     {
       if (const auto i = enchantum::enum_to_index(value))
-        return names<E>[*i];
+        return names_generator<E>[*i];
       return string_view();
     }
   };

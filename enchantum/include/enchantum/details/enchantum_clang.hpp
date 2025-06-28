@@ -139,7 +139,7 @@ namespace details {
   template<auto Copy>
   inline constexpr auto static_storage_for = Copy;
 #endif
-  template<typename E, typename Pair, bool NullTerminated>
+  template<typename E, bool NullTerminated>
   constexpr auto reflect() noexcept
   {
     constexpr auto Min  = enum_traits<E>::min;
@@ -178,14 +178,15 @@ namespace details {
       // Ubuntu Clang 20 complains about using local constexpr variables in a local struct
       using CharArray = char[ConstStr.size() + (NullTerminated * ArraySize)];
       struct RetVal {
-        struct ElemenetPair {
-          E            value;
-          std::uint8_t len;
-        };
-        ElemenetPair pairs[ArraySize]{};
-        CharArray    strings{};
-        std::size_t  total_string_length = 0;
-        std::size_t  valid_count         = 0;
+        E values[ArraySize]{};
+
+        // We are making an assumption that no sane user will use an enum member name longer than 256 characters
+        // if you are not sane then I don't know what to do
+        std::uint8_t string_lengths[ArraySize]{};
+
+        CharArray   strings{};
+        std::size_t total_string_length = 0;
+        std::size_t valid_count         = 0;
       } ret;
 
 
@@ -232,10 +233,11 @@ namespace details {
           {
             const auto name_size = static_cast<std::uint8_t>(name.size());
             if constexpr (is_bitflag<E>)
-              ret.pairs[ret.valid_count++] = {index == 0 ? E() : E(Underlying{1} << (index - 1)), name_size};
+              ret.values[ret.valid_count] = {index == 0 ? E() : E(Underlying{1} << (index - 1))};
             else
-              ret.pairs[ret.valid_count++] = {E(Min + static_cast<decltype(Min)>(index)), name_size};
+              ret.values[ret.valid_count] = {E(Min + static_cast<decltype(Min)>(index))};
 
+            ret.string_lengths[ret.valid_count++] = name_size;
             __builtin_memcpy(ret.strings + ret.total_string_length, name.data(), name_size);
             ret.total_string_length += name_size + NullTerminated;
           }
@@ -247,32 +249,39 @@ namespace details {
     }();
 
 
-    std::array<Pair, elements.valid_count> ret;
-    {
-      // intentionally >= 12, clang 11 does not support class non type template parameters
+    // intentionally >= 12, clang 11 does not support class non type template parameters
+
+
+    using StringLengthType = std::conditional_t<(elements.total_string_length < UINT8_MAX), std::uint8_t, std::uint16_t>;
+
+    struct RetVal {
+      std::array<E, elements.valid_count> values{};
+      // +1 for easier iteration on on last string
+      std::array<StringLengthType, elements.valid_count + 1> string_indices{};
+      const char*                                            strings{};
+    } ret;
+    __builtin_memcpy(ret.values.data(), elements.values, sizeof(ret.values));
 #if __clang_major__ >= 12
-      constexpr auto strings = [](const auto total_length, const char* data) {
-        std::array<char, total_length.value> strings;
-        __builtin_memcpy(strings.data(), data, total_length.value);
-        return strings;
-      }(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings);
-      constexpr const auto* str = static_storage_for<strings>.data();
+    constexpr auto strings = [](const auto total_length, const char* data) {
+      std::array<char, total_length.value> strings;
+      __builtin_memcpy(strings.data(), data, total_length.value);
+      return strings;
+    }(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings);
+    ret.strings = static_storage_for<strings>.data();
 #else
-      constexpr const auto* str = [elements]<std::size_t... Idx>(std::index_sequence<Idx...>) {
-        return static_storage_for_chars<elements.strings[Idx]...>.data();
-      }(std::make_index_sequence<elements.total_string_length>{});
+    ret.strings = [elements]<std::size_t... Idx>(std::index_sequence<Idx...>) {
+      return static_storage_for_chars<elements.strings[Idx]...>.data();
+    }(std::make_index_sequence<elements.total_string_length>{});
 #endif
 
-      auto* const ret_data = ret.data();
-      for (std::size_t i = 0, string_index = 0; i < elements.valid_count; ++i) {
-        const auto [e, length] = elements.pairs[i];
-        auto& [re, rs]         = ret_data[i];
-        using StringView       = std::decay_t<decltype(rs)>;
-        re                     = e;
-        rs                     = StringView{str + string_index, length};
-        string_index += length + NullTerminated;
-      }
+    auto* const      string_indices_data = ret.string_indices.data();
+    std::size_t      i                   = 0;
+    StringLengthType string_index        = 0;
+    for (; i < elements.valid_count; ++i) {
+      string_indices_data[i] = string_index;
+      string_index += elements.string_lengths[i] + NullTerminated;
     }
+    ret.string_indices[i] = string_index;
     return ret;
   } // namespace details
 

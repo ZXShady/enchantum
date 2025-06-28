@@ -3,15 +3,15 @@
 #include "details/string.hpp"
 #include "details/string_view.hpp"
 #include "enchantum.hpp"
+#include "generators.hpp"
 
 namespace enchantum {
-
 
 template<BitFlagEnum E>
 inline constexpr E value_ors = [] {
   using T = std::underlying_type_t<E>;
   T ret{};
-  for (const auto val : values<E>)
+  for (const auto val : values_generator<E>)
     ret |= static_cast<T>(val);
   return static_cast<E>(ret);
 }();
@@ -30,7 +30,7 @@ template<BitFlagEnum E>
     T valid_bits = 0;
 
     for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
-      const auto v = static_cast<T>(values<E>[i]);
+      const auto v = static_cast<T>(values_generator<E>[i]);
       if ((value & v) == v)
         valid_bits |= v;
     }
@@ -76,18 +76,18 @@ template<typename String = string, BitFlagEnum E>
   using T = std::underlying_type_t<E>;
   if constexpr (has_zero_flag<E>)
     if (static_cast<T>(value) == 0)
-      return String(names<E>[0]);
+      return String(names_generator<E>[0]);
 
   String name;
   T      check_value = 0;
   for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
-    const auto& [v, s]  = entries<E>[i];
-    const auto casted_v = static_cast<T>(v);
-    if (casted_v == (static_cast<T>(value) & casted_v)) {
+    const auto v = static_cast<T>(values<E>[i]);
+    if (v == (static_cast<T>(value) & v)) {
+      const auto s = names_generator<E>[i];
       if (!name.empty())
         name.append(1, sep);           // append separator if not the first value
       name.append(s.data(), s.size()); // not using operator += since this may not be std::string_view always
-      check_value |= casted_v;
+      check_value |= v;
     }
   }
   if (check_value == static_cast<T>(value))

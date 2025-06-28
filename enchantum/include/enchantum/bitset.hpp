@@ -5,6 +5,7 @@
 #endif
 #include "bitflags.hpp"
 #include <stdexcept>
+#include "generators.hpp"
 
 namespace enchantum {
 
@@ -37,7 +38,7 @@ public:
     string name;
     for (std::size_t i = 0; i < enchantum::count<E>; ++i) {
       if (test(i)) {
-        const auto s = enchantum::names<E>[i];
+        const auto s = enchantum::names_generator<E>[i];
         if (!name.empty())
           name += sep;
         name.append(s.data(), s.size()); // not using operator += since this may not be std::string_view always

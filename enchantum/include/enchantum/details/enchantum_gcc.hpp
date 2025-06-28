@@ -69,7 +69,7 @@ namespace details {
   template<auto Copy>
   inline constexpr auto static_storage_for = Copy;
 
-  template<typename E, typename Pair, bool ShouldNullTerminate>
+  template<typename E, bool NullTerminated>
   constexpr auto reflect() noexcept
   {
     constexpr auto Min = enum_traits<E>::min;
@@ -91,15 +91,11 @@ namespace details {
       }(std::make_index_sequence<ArraySize - is_bitflag<E>>());
       auto str = ConstStr;
       struct RetVal {
-        struct ElementPair {
-          E           value;
-          std::size_t length;
-        };
-
-        ElementPair pairs[ArraySize];
-        char        strings[ConstStr.size()]{};
-        std::size_t total_string_length = 0;
-        std::size_t valid_count         = 0;
+        E            values[ArraySize];
+        std::uint8_t string_lengths[ArraySize];
+        char         strings[ConstStr.size()]{};
+        std::size_t  total_string_length = 0;
+        std::size_t  valid_count         = 0;
       } ret;
       constexpr auto enum_in_array_len = details::enum_in_array_name_size<E{}>();
       for (std::size_t index = 0; index < ArraySize; ++index) {
@@ -116,25 +112,25 @@ namespace details {
         else {
           if constexpr (enum_in_array_len != 0)
             str.remove_prefix(enum_in_array_len + SZC("::"));
-          if constexpr (details::prefix_length_or_zero<E> != 0) {
+          if constexpr (details::prefix_length_or_zero<E> != 0)
             str.remove_prefix(details::prefix_length_or_zero<E>);
-          }
+
           const auto commapos = str.find(',');
 
 
           {
             const auto        name      = str.substr(0, commapos);
-            const auto        name_size = name.size();
+            const auto        name_size = static_cast<std::uint8_t>(name.size());
             const auto* const name_data = name.data();
 
             if constexpr (is_bitflag<E>)
-              ret.pairs[ret.valid_count++] = {index == 0 ? E() : E(Underlying{1} << (index - 1)), name_size};
+              ret.values[ret.valid_count] = index == 0 ? E() : E(Underlying{1} << (index - 1));
             else
-              ret.pairs[ret.valid_count++] = {E(Min + static_cast<decltype(Min)>(index)), name_size};
-
+              ret.values[ret.valid_count] = E(Min + static_cast<decltype(Min)>(index));
+            ret.string_lengths[ret.valid_count++] = name_size;
             for (std::size_t i = 0; i < name_size; ++i)
               ret.strings[ret.total_string_length++] = name_data[i];
-            ret.total_string_length += ShouldNullTerminate;
+            ret.total_string_length += NullTerminated;
 
             if (commapos != str.npos)
               str.remove_prefix(commapos + 2);
@@ -152,16 +148,26 @@ namespace details {
       return ret;
     }(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings);
 
-    std::array<Pair, elements.valid_count> ret;
-    constexpr const auto*                  str = static_storage_for<strings>.data();
-    for (std::size_t i = 0, string_index = 0; i < elements.valid_count; ++i) {
-      const auto& [e, length] = elements.pairs[i];
-      auto& [re, rs]          = ret[i];
-      re                      = e;
+    using StringLengthType = std::conditional_t<(elements.total_string_length < UINT8_MAX), std::uint8_t, std::uint16_t>;
 
-      rs = {str + string_index, str + string_index + length};
-      string_index += length + ShouldNullTerminate;
+    struct RetVal {
+      std::array<E, elements.valid_count> values{};
+      // +1 for easier iteration on on last string
+      std::array<StringLengthType, elements.valid_count + 1> string_indices{};
+      const char*                                            strings{};
+    } ret;
+    ret.strings                     = static_storage_for<strings>.data();
+
+    std::size_t      i            = 0;
+    StringLengthType string_index = 0;
+    for (; i < elements.valid_count; ++i) {
+      ret.values[i] = elements.values[i];
+      // "aabc"
+
+      ret.string_indices[i] = string_index;
+      string_index += static_cast<StringLengthType>(elements.string_lengths[i] + NullTerminated);
     }
+    ret.string_indices[i] = string_index;
     return ret;
   }
 

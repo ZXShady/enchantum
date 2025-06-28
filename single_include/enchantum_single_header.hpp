@@ -413,7 +413,7 @@ namespace details {
   template<auto Copy>
   inline constexpr auto static_storage_for = Copy;
 #endif
-  template<typename E, typename Pair, bool NullTerminated>
+  template<typename E, bool NullTerminated>
   constexpr auto reflect() noexcept
   {
     constexpr auto Min  = enum_traits<E>::min;
@@ -452,14 +452,15 @@ namespace details {
       // Ubuntu Clang 20 complains about using local constexpr variables in a local struct
       using CharArray = char[ConstStr.size() + (NullTerminated * ArraySize)];
       struct RetVal {
-        struct ElemenetPair {
-          E            value;
-          std::uint8_t len;
-        };
-        ElemenetPair pairs[ArraySize]{};
-        CharArray    strings{};
-        std::size_t  total_string_length = 0;
-        std::size_t  valid_count         = 0;
+        E values[ArraySize]{};
+
+        // We are making an assumption that no sane user will use an enum member name longer than 256 characters
+        // if you are not sane then I don't know what to do
+        std::uint8_t string_lengths[ArraySize]{};
+
+        CharArray   strings{};
+        std::size_t total_string_length = 0;
+        std::size_t valid_count         = 0;
       } ret;
 
 // ((anonymous namespace)::A)0
@@ -505,10 +506,11 @@ namespace details {
           {
             const auto name_size = static_cast<std::uint8_t>(name.size());
             if constexpr (is_bitflag<E>)
-              ret.pairs[ret.valid_count++] = {index == 0 ? E() : E(Underlying{1} << (index - 1)), name_size};
+              ret.values[ret.valid_count] = {index == 0 ? E() : E(Underlying{1} << (index - 1))};
             else
-              ret.pairs[ret.valid_count++] = {E(Min + static_cast<decltype(Min)>(index)), name_size};
+              ret.values[ret.valid_count] = {E(Min + static_cast<decltype(Min)>(index))};
 
+            ret.string_lengths[ret.valid_count++] = name_size;
             __builtin_memcpy(ret.strings + ret.total_string_length, name.data(), name_size);
             ret.total_string_length += name_size + NullTerminated;
           }
@@ -519,32 +521,38 @@ namespace details {
       return ret;
     }();
 
-    std::array<Pair, elements.valid_count> ret;
-    {
-      // intentionally >= 12, clang 11 does not support class non type template parameters
+    // intentionally >= 12, clang 11 does not support class non type template parameters
+
+    using StringLengthType = std::conditional_t<(elements.total_string_length < UINT8_MAX), std::uint8_t, std::uint16_t>;
+
+    struct RetVal {
+      std::array<E, elements.valid_count> values{};
+      // +1 for easier iteration on on last string
+      std::array<StringLengthType, elements.valid_count + 1> string_indices{};
+      const char*                                            strings{};
+    } ret;
+    __builtin_memcpy(ret.values.data(), elements.values, sizeof(ret.values));
 #if __clang_major__ >= 12
-      constexpr auto strings = [](const auto total_length, const char* data) {
-        std::array<char, total_length.value> strings;
-        __builtin_memcpy(strings.data(), data, total_length.value);
-        return strings;
-      }(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings);
-      constexpr const auto* str = static_storage_for<strings>.data();
+    constexpr auto strings = [](const auto total_length, const char* data) {
+      std::array<char, total_length.value> strings;
+      __builtin_memcpy(strings.data(), data, total_length.value);
+      return strings;
+    }(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings);
+    ret.strings = static_storage_for<strings>.data();
 #else
-      constexpr const auto* str = [elements]<std::size_t... Idx>(std::index_sequence<Idx...>) {
-        return static_storage_for_chars<elements.strings[Idx]...>.data();
-      }(std::make_index_sequence<elements.total_string_length>{});
+    ret.strings = [elements]<std::size_t... Idx>(std::index_sequence<Idx...>) {
+      return static_storage_for_chars<elements.strings[Idx]...>.data();
+    }(std::make_index_sequence<elements.total_string_length>{});
 #endif
 
-      auto* const ret_data = ret.data();
-      for (std::size_t i = 0, string_index = 0; i < elements.valid_count; ++i) {
-        const auto [e, length] = elements.pairs[i];
-        auto& [re, rs]         = ret_data[i];
-        using StringView       = std::decay_t<decltype(rs)>;
-        re                     = e;
-        rs                     = StringView{str + string_index, length};
-        string_index += length + NullTerminated;
-      }
+    auto* const      string_indices_data = ret.string_indices.data();
+    std::size_t      i                   = 0;
+    StringLengthType string_index        = 0;
+    for (; i < elements.valid_count; ++i) {
+      string_indices_data[i] = string_index;
+      string_index += elements.string_lengths[i] + NullTerminated;
     }
+    ret.string_indices[i] = string_index;
     return ret;
   } // namespace details
 
@@ -627,7 +635,7 @@ namespace details {
   template<auto Copy>
   inline constexpr auto static_storage_for = Copy;
 
-  template<typename E, typename Pair, bool ShouldNullTerminate>
+  template<typename E, bool NullTerminated>
   constexpr auto reflect() noexcept
   {
     constexpr auto Min = enum_traits<E>::min;
@@ -648,15 +656,11 @@ namespace details {
       }(std::make_index_sequence<ArraySize - is_bitflag<E>>());
       auto str = ConstStr;
       struct RetVal {
-        struct ElementPair {
-          E           value;
-          std::size_t length;
-        };
-
-        ElementPair pairs[ArraySize];
-        char        strings[ConstStr.size()]{};
-        std::size_t total_string_length = 0;
-        std::size_t valid_count         = 0;
+        E            values[ArraySize];
+        std::uint8_t string_lengths[ArraySize];
+        char         strings[ConstStr.size()]{};
+        std::size_t  total_string_length = 0;
+        std::size_t  valid_count         = 0;
       } ret;
       constexpr auto enum_in_array_len = details::enum_in_array_name_size<E{}>();
       for (std::size_t index = 0; index < ArraySize; ++index) {
@@ -673,24 +677,24 @@ namespace details {
         else {
           if constexpr (enum_in_array_len != 0)
             str.remove_prefix(enum_in_array_len + SZC("::"));
-          if constexpr (details::prefix_length_or_zero<E> != 0) {
+          if constexpr (details::prefix_length_or_zero<E> != 0)
             str.remove_prefix(details::prefix_length_or_zero<E>);
-          }
+
           const auto commapos = str.find(',');
 
           {
             const auto        name      = str.substr(0, commapos);
-            const auto        name_size = name.size();
+            const auto        name_size = static_cast<std::uint8_t>(name.size());
             const auto* const name_data = name.data();
 
             if constexpr (is_bitflag<E>)
-              ret.pairs[ret.valid_count++] = {index == 0 ? E() : E(Underlying{1} << (index - 1)), name_size};
+              ret.values[ret.valid_count] = index == 0 ? E() : E(Underlying{1} << (index - 1));
             else
-              ret.pairs[ret.valid_count++] = {E(Min + static_cast<decltype(Min)>(index)), name_size};
-
+              ret.values[ret.valid_count] = E(Min + static_cast<decltype(Min)>(index));
+            ret.string_lengths[ret.valid_count++] = name_size;
             for (std::size_t i = 0; i < name_size; ++i)
               ret.strings[ret.total_string_length++] = name_data[i];
-            ret.total_string_length += ShouldNullTerminate;
+            ret.total_string_length += NullTerminated;
 
             if (commapos != str.npos)
               str.remove_prefix(commapos + 2);
@@ -708,16 +712,26 @@ namespace details {
       return ret;
     }(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings);
 
-    std::array<Pair, elements.valid_count> ret;
-    constexpr const auto*                  str = static_storage_for<strings>.data();
-    for (std::size_t i = 0, string_index = 0; i < elements.valid_count; ++i) {
-      const auto& [e, length] = elements.pairs[i];
-      auto& [re, rs]          = ret[i];
-      re                      = e;
+    using StringLengthType = std::conditional_t<(elements.total_string_length < UINT8_MAX), std::uint8_t, std::uint16_t>;
 
-      rs = {str + string_index, str + string_index + length};
-      string_index += length + ShouldNullTerminate;
+    struct RetVal {
+      std::array<E, elements.valid_count> values{};
+      // +1 for easier iteration on on last string
+      std::array<StringLengthType, elements.valid_count + 1> string_indices{};
+      const char*                                            strings{};
+    } ret;
+    ret.strings                     = static_storage_for<strings>.data();
+
+    std::size_t      i            = 0;
+    StringLengthType string_index = 0;
+    for (; i < elements.valid_count; ++i) {
+      ret.values[i] = elements.values[i];
+      // "aabc"
+
+      ret.string_indices[i] = string_index;
+      string_index += static_cast<StringLengthType>(elements.string_lengths[i] + NullTerminated);
     }
+    ret.string_indices[i] = string_index;
     return ret;
   }
 
@@ -769,8 +783,8 @@ namespace details {
   template<auto Enum>
   constexpr auto enum_in_array_name_size() noexcept
   {
-    string_view s = __FUNCSIG__ + SZC("auto __cdecl enchantum::details::enum_in_array_name_size<");
-    s.remove_suffix(SZC(">(void) noexcept"));
+    auto s = string_view{__FUNCSIG__ + SZC("auto __cdecl enchantum::details::enum_in_array_name_size<"),
+                         SZC(__FUNCSIG__) - SZC("auto __cdecl enchantum::details::enum_in_array_name_size<>(void) noexcept")};
 
     if constexpr (ScopedEnum<decltype(Enum)>) {
       if (s.front() == '(') {
@@ -820,7 +834,7 @@ namespace details {
   template<auto Copy>
   inline constexpr auto static_storage_for = Copy;
 
-  template<typename E, bool ShouldNullTerminate>
+  template<typename E, bool NullTerminated>
   constexpr auto get_elements()
   {
     constexpr auto Min = enum_traits<E>::min;
@@ -836,11 +850,12 @@ namespace details {
     constexpr auto enum_in_array_len = details::enum_in_array_name_size<E{}>();
 
     struct RetVal {
-      struct ElementPair {
-        E           value;
-        std::size_t string_length;
-      };
-      ElementPair pairs[ArraySize]{};
+      E values[ArraySize]{};
+
+      // We are making an assumption that no sane user will use an enum member name longer than 256 characters
+      // if you are not sane then I don't know what to do
+      std::uint8_t string_lengths[ArraySize]{};
+
       char        strings[StringSize - (details::Min(type_name_len, enum_in_array_len) * ArraySize)]{};
       std::size_t total_string_length = 0;
       std::size_t valid_count         = 0;
@@ -849,8 +864,7 @@ namespace details {
     // there is atleast 1 base 16 hex digit
     // MSVC adds an extra 0 prefix at front if the underlying type equals to 8 bytes.
     // Don't ask why
-    constexpr auto skip_if_cast_count = SZC("(enum ") + type_name_len + SZC(")0x0")
-        + (sizeof(E)==8);
+    constexpr auto skip_if_cast_count = SZC("(enum ") + type_name_len + SZC(")0x0") + (sizeof(E) == 8);
     // clang-format off
 #if ENCHANTUM_ENABLE_MSVC_SPEEDUP
     using Underlying = std::underlying_type_t<E>;
@@ -889,23 +903,23 @@ namespace details {
         if constexpr (details::prefix_length_or_zero<E> != 0)
           str.begin += details::prefix_length_or_zero<E>;
 
-        const auto commapos = str.find_comma();
+        const auto commapos = str.find_comma(); // never fails
 
-        ret.pairs[ret.valid_count++] = {ArrayData[index], commapos};
+        ret.values[ret.valid_count]           = ArrayData[index];
+        ret.string_lengths[ret.valid_count++] = static_cast<std::uint8_t>(commapos);
         for (std::size_t i = 0; i < commapos; ++i)
           ret.strings[ret.total_string_length++] = str.begin[i];
-        ret.total_string_length += ShouldNullTerminate;
-
+        ret.total_string_length += NullTerminated;
         str.begin += commapos + 1;
       }
     }
     return ret;
   }
 
-  template<typename E, typename Pair, bool ShouldNullTerminate>
+  template<typename E, bool NullTerminated>
   constexpr auto reflect() noexcept
   {
-    constexpr auto elements = details::get_elements<E, ShouldNullTerminate>();
+    constexpr auto elements = details::get_elements<E, NullTerminated>();
 
     constexpr auto strings = [](const auto total_length, const char* const name_data) {
       std::array<char, total_length> ret;
@@ -915,22 +929,32 @@ namespace details {
       return ret;
     }(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings);
 
-    std::array<Pair, elements.valid_count> ret;
-    auto* const                            ret_data = ret.data();
-    constexpr const auto*                  str      = static_storage_for<strings>.data();
-    for (std::size_t i = 0, string_index = 0; i < elements.valid_count; ++i) {
-      const auto& [e, length] = elements.pairs[i];
-      auto& [re, rs]          = ret_data[i];
-      re                      = e;
+    using StringLengthType = std::conditional_t<(elements.total_string_length < UINT8_MAX), std::uint8_t, std::uint16_t>;
 
-      rs = {str + string_index, str + string_index + length};
-      string_index += length + ShouldNullTerminate;
+    struct RetVal {
+      std::array<E, elements.valid_count> values{};
+      // +1 for easier iteration on on last string
+      std::array<StringLengthType, elements.valid_count + 1> string_indices{};
+      const char*                                            strings{};
+    } ret;
+    ret.strings                     = static_storage_for<strings>.data();
+    auto* const values_data         = ret.values.data();
+    auto* const string_indices_data = ret.string_indices.data();
+
+    std::size_t      i            = 0;
+    StringLengthType string_index = 0;
+    for (; i < elements.valid_count; ++i) {
+      values_data[i] = elements.values[i];
+      // "aabc"
+
+      string_indices_data[i] = string_index;
+      string_index += elements.string_lengths[i] + NullTerminated;
     }
+    ret.string_indices[i] = string_index;
 
     return ret;
   }
 } // namespace details
-
 } // namespace enchantum
 
 #undef SZC
@@ -951,8 +975,30 @@ template<Enum E>
 }
 #endif
 
-template<Enum E, typename Pair = std::pair<E, string_view>, bool ShouldNullTerminate = true>
-inline constexpr auto entries = details::reflect<std::remove_cv_t<E>, Pair, ShouldNullTerminate>();
+namespace details {
+  template<typename E, bool NullTerminated = true>
+  inline constexpr auto reflection_data = reflect<E, NullTerminated>();
+
+  template<typename E, bool NullTerminated = true>
+  inline constexpr auto reflection_string_indices = reflection_data<E, NullTerminated>.string_indices;
+} // namespace details
+
+template<Enum E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true>
+inline constexpr auto entries = []() {
+  const auto             reflected = details::reflection_data<std::remove_cv_t<E>, NullTerminated>;
+  constexpr auto         size      = sizeof(reflected.values) / sizeof(reflected.values[0]);
+  std::array<Pair, size> ret;
+  auto* const            ret_data = ret.data();
+
+  for (std::size_t i = 0; i < size; ++i) {
+    auto& [e, s]     = ret_data[i];
+    e                = reflected.values[i];
+    using StringView = std::remove_cvref_t<decltype(s)>;
+    s                = StringView(reflected.strings + reflected.string_indices[i],
+                   reflected.strings + reflected.string_indices[i + 1] - NullTerminated);
+  }
+  return ret;
+}();
 
 template<Enum E>
 inline constexpr auto values = []() {
@@ -980,6 +1026,184 @@ inline constexpr auto max = entries<E>.back().first;
 
 template<Enum E>
 inline constexpr std::size_t count = entries<E>.size();
+
+template<typename>
+inline constexpr bool is_contiguous = false;
+
+template<Enum E>
+inline constexpr bool is_contiguous<E> = static_cast<std::size_t>(to_underlying(max<E>) - to_underlying(min<E>)) + 1 ==
+  count<E>;
+
+} // namespace enchantum
+
+#include <compare>
+#include <cstddef>
+#include <cstdint>
+
+namespace enchantum {
+namespace details {
+
+  struct senitiel {};
+
+  template<typename CRTP,std::size_t Size>
+  struct sized_iterator {
+  private:
+    using IndexType = std::conditional_t<(Size < INT16_MAX), std::int8_t, std::int16_t>;
+  public:
+    IndexType                 index{};
+    constexpr CRTP& operator+=(const std::ptrdiff_t offset) & noexcept
+    {
+      index += static_cast<IndexType>(offset);
+      return static_cast<CRTP&>(*this);
+    }
+    constexpr CRTP& operator-=(const std::ptrdiff_t offset) & noexcept
+    {
+      index -= static_cast<IndexType>(offset);
+      return static_cast<CRTP&>(*this);
+    }
+
+    constexpr CRTP& operator++() & noexcept
+    {
+      ++index;
+      return static_cast<CRTP&>(*this);
+    }
+    constexpr CRTP& operator--() & noexcept
+    {
+      --index;
+      return static_cast<CRTP&>(*this);
+    }
+
+    constexpr CRTP operator++(int) & noexcept
+    {
+      auto copy = static_cast<CRTP&>(*this);
+      ++*this;
+      return copy;
+    }
+    constexpr sized_iterator& operator--(int) & noexcept
+    {
+      auto copy = static_cast<CRTP&>(*this);
+      --*this;
+      return copy;
+    }
+
+    constexpr friend CRTP operator+(CRTP it, const std::ptrdiff_t offset) noexcept
+    {
+      it += offset;
+      return it;
+    }
+
+    constexpr friend CRTP operator+(const std::ptrdiff_t offset, CRTP it) noexcept
+    {
+      it += offset;
+      return it;
+    }
+
+    constexpr friend CRTP operator-(CRTP it, const std::ptrdiff_t offset) noexcept
+    {
+      it -= offset;
+      return it;
+    }
+
+    constexpr friend CRTP operator-(const std::ptrdiff_t offset, CRTP it) noexcept
+    {
+      it -= offset;
+      return it;
+    }
+
+    constexpr friend std::ptrdiff_t operator-(const CRTP a, const CRTP b) noexcept
+    {
+      return a.index - b.index;
+    }
+
+    constexpr bool operator==(const CRTP that) const noexcept { return that.index == index; };
+    constexpr auto operator<=>(const CRTP that) const noexcept { return index <=> that.index; };
+    constexpr bool operator==(senitiel) const noexcept { return Size == index; }
+    constexpr auto operator<=>(senitiel) const noexcept { return index <=> Size; }
+  };
+
+#define SZARR(x) (sizeof(x) / sizeof(x[0]))
+  template<typename E, typename String = string_view, bool NullTerminated = true>
+  struct names_generator_t {
+    static constexpr auto size() noexcept { return count<E>; }
+
+    static_assert(size() < INT16_MAX, "Too many enum entries");
+
+    struct iterator : sized_iterator<iterator,size()> {
+      constexpr String operator*() const noexcept
+      {
+        const auto* const p       = reflection_string_indices<E, NullTerminated>.data();
+        const auto* const strings = reflection_data<E, NullTerminated>.strings;
+        return String(strings + p[this->index], strings + p[this->index + 1] - NullTerminated);
+      }
+
+      constexpr String operator[](const std::ptrdiff_t i) const noexcept { return *(*this + i); }
+    };
+
+    static constexpr auto begin() { return iterator{}; }
+    static constexpr auto end() { return senitiel{}; }
+
+    constexpr auto operator[](const std::size_t i) const noexcept {return *(begin()+static_cast<std::ptrdiff_t>(i)); }
+  };
+
+  template<typename E>
+  struct values_generator_t {
+    static constexpr auto size() noexcept { return count<E>; }
+
+    static_assert(size() < INT16_MAX, "Too many enum entries");
+
+    struct iterator : sized_iterator<iterator,size()> {
+    public:
+      constexpr E operator*() const noexcept
+      {
+        if constexpr (is_contiguous<E>)
+          return static_cast<E>(enchantum::to_underlying(min<E>) + this->index);
+        else
+          return values<E>[static_cast<std::size_t>(this->index)];
+      }
+      constexpr E operator[](const std::ptrdiff_t i) const noexcept { return *(*this + i); }
+    };
+
+    static constexpr auto begin() { return iterator{}; }
+    static constexpr auto end() { return senitiel{}; }
+
+    constexpr auto operator[](const std::size_t i) const noexcept { return *(begin() + static_cast<std::ptrdiff_t>(i)); }
+  };
+
+  template<typename E, typename Pair = std::pair<E, string_view>,bool NullTerminated=true>
+  struct entries_generator_t {
+    static constexpr auto size() noexcept { return count<E>; }
+
+    static_assert(size() < INT16_MAX, "Too many enum entries");
+
+    struct iterator : sized_iterator<iterator,size()> {
+    public:
+      constexpr Pair operator*() const noexcept
+      {
+        return Pair{
+          values_generator_t<E>{}[static_cast<std::size_t>(this->index)],
+          names_generator_t<E,string_view,NullTerminated>{}[static_cast<std::size_t>(this->index)],
+        };
+      }
+      constexpr Pair operator[](const std::ptrdiff_t i) const noexcept { 
+          return *(*this+i); }
+    };
+
+    static constexpr auto begin() { return iterator{}; }
+    static constexpr auto end() { return senitiel{}; }
+
+    constexpr auto operator[](const std::size_t i) const noexcept { return *(begin()+static_cast<std::ptrdiff_t>(i)); }
+  };
+
+} // namespace details
+
+template<Enum E,typename StringView = string_view,bool NullTerminated=true>
+inline constexpr details::names_generator_t<E, StringView, NullTerminated> names_generator{};
+
+template<Enum E>
+inline constexpr details::values_generator_t<E> values_generator{};
+
+template<Enum E, typename Pair = std::pair<E,string_view>, bool NullTerminated = true>
+inline constexpr details::entries_generator_t<E, Pair, NullTerminated> entries_generator{};
 
 } // namespace enchantum
 #include <bit>
@@ -1014,13 +1238,6 @@ inline constexpr bool has_zero_flag<E> = []() {
       return true;
   return false;
 }();
-
-template<typename>
-inline constexpr bool is_contiguous = false;
-
-template<Enum E>
-inline constexpr bool is_contiguous<E> = static_cast<std::size_t>(to_underlying(max<E>) - to_underlying(min<E>)) + 1 ==
-  count<E>;
 
 template<typename E>
 concept ContiguousEnum = Enum<E> && is_contiguous<E>;
@@ -1080,7 +1297,7 @@ template<Enum E>
   if (const auto size = name.size(); size < minmax.first || size > minmax.second)
     return false;
 
-  for (const auto& s : names<E>)
+  for (const auto s : names_generator<E>)
     if (s == name)
       return true;
   return false;
@@ -1089,7 +1306,7 @@ template<Enum E>
 template<Enum E, std::predicate<string_view, string_view> BinaryPredicate>
 [[nodiscard]] constexpr bool contains(const string_view name, const BinaryPredicate binary_predicate) noexcept
 {
-  for (const auto& s : names<E>)
+  for (const auto s : names_generator<E>)
     if (binary_predicate(name, s))
       return true;
   return false;
@@ -1159,7 +1376,7 @@ namespace details {
         return a; // nullopt
 
       for (std::size_t i = 0; i < count<E>; ++i) {
-        if (names<E>[i] == name) {
+        if (names_generator<E>[i] == name) {
           a.emplace(values<E>[i]);
           return a;
         }
@@ -1172,7 +1389,7 @@ namespace details {
     {
       optional<E> a; // rvo not that it really matters
       for (std::size_t i = 0; i < count<E>; ++i) {
-        if (binary_predicate(name,names<E>[i])) {
+        if (binary_predicate(name, names_generator<E>[i])) {
           a.emplace(values<E>[i]);
           return a;
         }
@@ -1197,7 +1414,7 @@ namespace details {
     [[nodiscard]] constexpr string_view operator()(const E value) const noexcept
     {
       if (const auto i = enchantum::enum_to_index(value))
-        return names<E>[*i];
+        return names_generator<E>[*i];
       return string_view();
     }
   };
@@ -1213,7 +1430,7 @@ template<BitFlagEnum E>
 inline constexpr E value_ors = [] {
   using T = std::underlying_type_t<E>;
   T ret{};
-  for (const auto val : values<E>)
+  for (const auto val : values_generator<E>)
     ret |= static_cast<T>(val);
   return static_cast<E>(ret);
 }();
@@ -1231,7 +1448,7 @@ template<BitFlagEnum E>
     T valid_bits = 0;
 
     for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
-      const auto v = static_cast<T>(values<E>[i]);
+      const auto v = static_cast<T>(values_generator<E>[i]);
       if ((value & v) == v)
         valid_bits |= v;
     }
@@ -1275,18 +1492,18 @@ template<typename String = string, BitFlagEnum E>
   using T = std::underlying_type_t<E>;
   if constexpr (has_zero_flag<E>)
     if (static_cast<T>(value) == 0)
-      return String(names<E>[0]);
+      return String(names_generator<E>[0]);
 
   String name;
   T      check_value = 0;
   for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
-    const auto& [v, s]  = entries<E>[i];
-    const auto casted_v = static_cast<T>(v);
-    if (casted_v == (static_cast<T>(value) & casted_v)) {
+    const auto v = static_cast<T>(values<E>[i]);
+    if (v == (static_cast<T>(value) & v)) {
+      const auto s = names_generator<E>[i];
       if (!name.empty())
         name.append(1, sep);           // append separator if not the first value
       name.append(s.data(), s.size()); // not using operator += since this may not be std::string_view always
-      check_value |= casted_v;
+      check_value |= v;
     }
   }
   if (check_value == static_cast<T>(value))
@@ -1524,7 +1741,7 @@ public:
     string name;
     for (std::size_t i = 0; i < enchantum::count<E>; ++i) {
       if (test(i)) {
-        const auto s = enchantum::names<E>[i];
+        const auto s = enchantum::names_generator<E>[i];
         if (!name.empty())
           name += sep;
         name.append(s.data(), s.size()); // not using operator += since this may not be std::string_view always
@@ -1733,7 +1950,7 @@ namespace details {
 
       const auto index = static_cast<std::ptrdiff_t>(*enchantum::enum_to_index(value)) + (n * N);
       if (index >= 0 && index < static_cast<std::ptrdiff_t>(count<E>))
-        return optional<E>{values<E>[static_cast<std::size_t>(index)]};
+        return optional<E>{values_generator<E>[static_cast<std::size_t>(index)]};
       return optional<E>{};
     }
   };
@@ -1746,7 +1963,7 @@ namespace details {
       ENCHANTUM_ASSERT(enchantum::contains(value), "next/prev_value_circular requires 'value' to be a valid enum member", value);
       const auto     i     = static_cast<std::ptrdiff_t>(*enchantum::enum_to_index(value));
       constexpr auto count = static_cast<std::ptrdiff_t>(enchantum::count<E>);
-      return values<E>[static_cast<std::size_t>(((i + (n * N)) % count + count) % count)]; // handles wrap around and negative n
+      return values_generator<E>[static_cast<std::size_t>(((i + (n * N)) % count + count) % count)]; // handles wrap around and negative n
     }
   };
 } // namespace details
