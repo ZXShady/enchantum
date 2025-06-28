@@ -43,6 +43,9 @@ Quick Reference
   - [entries](#entries)
   - [names](#names)
   - [values](#values)
+  - [entries_generator](#entries_generator)
+  - [names_generator](#names_generator)
+  - [values_generator](#values_generator)
   - [max](#max)
   - [min](#min)
   - [count](#count)
@@ -818,6 +821,83 @@ for (auto name : enchantum::names<Color>)
 // Outputs: "Red", "Green", "Blue"
 ```
 
+### `values_generator`
+
+```cpp
+// defined in header generators.hpp
+
+template<Enum E>
+inline constexpr /*implementation details*/ values_generator;
+```
+
+**Description**:  
+  Gives a generating iteratable object for enum values.
+  This is different than `values`, since it does not store the values it creates them on the fly.
+  In general if you don't need actual storage and addressability of the enum values but merely iterate on them use the `values_generator` variable instead it yeilds better binary sizes.
+
+> Example
+```cpp
+enum class Color { Red, Green, Blue };
+
+for (Color value : enchantum::values_generator<Color>)
+    std::cout << static_cast<int>(value) << std::endl;
+// Outputs: 0, 1, 2 (Red, Green, Blue)
+```
+
+### `names_generator`
+
+```cpp
+// defined in header generators.hpp
+
+template<typename E,typename String = std::string_view,NullTerminated = true>
+inline constexpr /*implementation details*/ names_generator;
+```
+
+**Description**:  
+  Gives a generating iteratable object for enum names.
+  This is different than `names`, since it does not store the names it creates them on the fly.
+  In general if you don't need actual storage and addressability of the enum names but merely iterate on them use the `names_generator` variable instead it yeilds better binary sizes.
+
+
+> Example
+```cpp
+enum class Color { Red, Green, Blue };
+
+for (std::string_view s : enchantum::names_generator<Color>)
+    std::cout << s << std::endl;
+// Outputs: 
+// Red 
+// Green
+// Blue
+```
+
+### `entries_generator`
+
+```cpp
+// defined in header generators.hpp
+
+template<typename E,typename Pair = std::pair<E,std::string_view>,NullTerminated = true>
+inline constexpr /*implementation details*/ entries_generator;
+```
+
+**Description**:  
+  Gives a generating iteratable object for enum names.
+  This is different than `entries`, since it does not store the entries it creates the them on the fly.
+  In general if you don't need actual storage and addressability of the enum entries but merely iterate on them use the `entries_generator` variable instead it yeilds better binary sizes.
+
+
+> Example
+```cpp
+enum class Color { Red, Green, Blue };
+
+for (auto [value,name] : enchantum::entries_generator<Color>)
+    std::cout << name << " = " << static_cast<int>(value) << std::endl;
+// Outputs: 
+// Red = 0
+// Green = 1
+// Blue = 2
+```
+
 ---
 
 ### `contains`
@@ -1030,7 +1110,7 @@ namespace details
 {
   template<Enum E>
   struct INDEX_TO_ENUM_FUNCTOR {
-    constexpr std::optional<E> operator()(E value) const noexcept;
+    constexpr std::optional<E> operator()(std::size_t i) const noexcept;
   };
 }
 
