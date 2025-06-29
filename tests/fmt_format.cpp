@@ -1,5 +1,3 @@
-#define FMT_HEADER_ONLY
-#define FMT_UNICODE 0 // we don't need unicode
 #include <fmt/format.h>
 
 #include "test_utility.hpp"
