@@ -38,7 +38,7 @@ template<Enum E>
   if (value < T(min<E>) || value > T(max<E>))
     return false;
 
-  if constexpr (is_bitflag<E>) {
+  if constexpr (is_contiguous_bitflag<E>) {
     if constexpr (has_zero_flag<E>)
       if (value == 0)
         return true;
