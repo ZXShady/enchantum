@@ -745,8 +745,9 @@ inline constexpr std::array<Pair,count<E>> entries;
 
 - **Description**:  
   Gives an array containing all the string names of the enum and the values, it is sorted in ascending order.
-
   **Notes**: This variable is overridable if needed for compile time performance, all other enchantum varaibles synthesize from `entries<E>`.
+
+  **Notes**: If you don't need the elements to have an address (you just want to iterate on them) use [`entries_generator`](#entries_generator) instead.
 
 - **Parameters**:
 
@@ -781,6 +782,8 @@ constexpr std::array<E,count<E>> values;
 **Description**:  
   Gives an array containing all the values of the enum type equalivent to taking the elements of `entries<E>` in sorted order.
 
+  **Notes**: If you don't need the elements to have an address (you just want to iterate on them) use [`values_generator`](#values_generator) instead.
+
 > Example
 ```cpp
 enum class Color { Red, Green, Blue };
@@ -804,6 +807,8 @@ inline constexpr std::array<String,count<E>> names;
 - **Description**:  
   Gives an array containing all the string names of the enum values equalivent to taking all the strings of `entries<E>`.
 
+  **Notes**: If you don't need the elements to have an address (you just want to iterate on them) use [`names_generator`](#names_generator) instead.
+  
 - **Parameters**:
 
   `E`: enum to generate value-string entries for.
