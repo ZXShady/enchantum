@@ -99,3 +99,9 @@ target_sources(tests PRIVATE
     type_name.cpp
     unscoped_test.cpp
 )
+
+# Exclude single_header.cpp from PCH as it tests the single header include
+set_source_files_properties(single_header.cpp PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+
+# Add the test executable to CTest
+add_test(NAME enchantum_tests COMMAND tests)
