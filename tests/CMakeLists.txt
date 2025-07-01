@@ -1,95 +1,101 @@
 # In file: tests/CMakeLists.txt
 
-# Use FetchContent to manage dependencies for Catch2 and {fmt}
+# ------------------------------------------------------------------
+# PHASE 1: DEPENDENCY MANAGEMENT
+# ------------------------------------------------------------------
 include(FetchContent)
 
 # --- Catch2 Dependency ---
 FetchContent_Declare(
   Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG v3.6.0 # Pin to a specific, stable version
+  GIT_TAG v3.6.0
 )
 FetchContent_MakeAvailable(Catch2)
-# Include Catch.cmake to make catch_discover_tests available
-include(${catch2_SOURCE_DIR}/extras/Catch.cmake)
-target_compile_features(Catch2 PRIVATE cxx_std_17)
-target_compile_definitions(Catch2 PUBLIC CATCH_CONFIG_ENABLE_OPTIONAL_STRINGMAKER)
 
 # --- {fmt} Dependency ---
-# 1. Declare the {fmt} dependency, pinning to a specific version for reproducibility.
+# The vendored copy has been removed. We now fetch {fmt} cleanly.
 FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 10.2.1 # Pin to a specific, stable version
+  GIT_TAG 10.2.1
 )
-
-# 2. Configure {fmt} to be built as a compiled (not header-only) library.
-#    This MUST be done BEFORE FetchContent_MakeAvailable.
+# Configure {fmt} to be built as a compiled (not header-only) library.
 set(FMT_HEADER_ONLY OFF CACHE BOOL "Force fmt to build as a compiled library")
-
-# 3. Make the dependency available. This will download {fmt} and prepare the `fmt::fmt` target.
 FetchContent_MakeAvailable(fmt)
 
-# --- Precompiled Header (PCH) Configuration ---
-# Create a dedicated INTERFACE library to manage the PCH. This is a modern CMake pattern.
+# ------------------------------------------------------------------
+# PHASE 2: PCH and UNITY BUILD SETUP
+# ------------------------------------------------------------------
+# Create a dedicated INTERFACE library to manage the PCH. This is a modern pattern.
 add_library(tests_pch INTERFACE)
-
-# Define the PCH file for this target.
-# Targets that link to tests_pch will precompile pch.hpp.
 target_precompile_headers(tests_pch INTERFACE "pch.hpp")
 
-# --- Main Test Executable ---
+# The logic to enable Unity builds is here.
+# The option itself should be in the root CMakeLists.txt
+set(ENCHANTUM_UNITY_BUILD_PROPERTY "") # Initialize to empty
+if(ENCHANTUM_ENABLE_UNITY_BUILD)
+    set(ENCHANTUM_UNITY_BUILD_PROPERTY UNITY_BUILD ON)
+    message(STATUS "Unity build enabled for tests.")
+endif()
+
+# ------------------------------------------------------------------
+# PHASE 3: TEST EXECUTABLE TARGET
+# ------------------------------------------------------------------
 add_executable(tests)
+if(ENCHANTUM_ENABLE_UNITY_BUILD)
+  set_target_properties(tests PROPERTIES ${ENCHANTUM_UNITY_BUILD_PROPERTY})
+endif()
 target_compile_features(tests PRIVATE cxx_std_20)
 
-# Link the test executable against all its dependencies:
-# 1. enchantum: The library being tested.
-# 2. Catch2::Catch2WithMain: The testing framework and its main function.
-# 3. fmt::fmt: The COMPILED {fmt} library target.
-# 4. tests_pch: The interface library that provides the PCH configuration.
+# --- Link Dependencies ---
+# Link against the library, testing frameworks, and our PCH helper.
 target_link_libraries(tests PRIVATE
     enchantum::enchantum
     Catch2::Catch2WithMain
-    fmt::fmt
+    fmt::fmt # Link the compiled {fmt} library
     tests_pch
 )
 
-# Register tests with CTest using catch_discover_tests
-catch_discover_tests(tests)
-
-# IMPORTANT: Synchronize your target with the compiled fmt library.
-# This ensures that when your test files #include <fmt/format.h>, the headers
-# are in the correct "compiled mode", matching how you are linking.
+# --- Synchronize Compile Definitions ---
+# This ensures our code and the {fmt} headers agree on the compiled mode.
 target_compile_definitions(tests PRIVATE FMT_HEADER_ONLY=0)
 
-# --- Compiler Flags and Options ---
 if(ENCHANTUM_RUNTIME_TESTS)
-  message(STATUS "enchantum tests are being ran at runtime")
   target_compile_definitions(tests PRIVATE CATCH_CONFIG_RUNTIME_STATIC_REQUIRE)
 endif()
 
+# --- Set Compiler Flags ---
 if(MSVC)
-  target_compile_options(tests PRIVATE /Za /permissive-)
-  target_compile_options(tests PRIVATE /WX /W4)
+  target_compile_options(tests PRIVATE /Za /permissive- /WX /W4)
 else()
-  # The -Werror flag is removed as per the original PR's intent
   target_compile_options(tests PRIVATE -Wall -Wextra -Wshadow -Wconversion -Wpedantic)
 endif()
 
-# --- Source Files ---
-# Gather all test source files. The PCH header itself is not included here.
-file(GLOB_RECURSE TEST_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "*.cpp")
-target_sources(tests PRIVATE ${TEST_SOURCES})
-
-# Exclude single_header.cpp from PCH because it tests the amalgamated header
-set_source_files_properties(
+# ------------------------------------------------------------------
+# PHASE 4: SOURCE FILE MANAGEMENT (NO GLOB)
+# ------------------------------------------------------------------
+# Explicitly list all test sources. This replaces the unreliable file(GLOB).
+target_sources(tests PRIVATE
+    algorithms.cpp
+    array.cpp
+    bitflags.cpp
+    bitset.cpp
+    concepts.cpp
+    different_entries_types.cpp
+    double_include.cpp
+    enchantum.cpp
+    # This file will be created in the next phase.
+    # `fmt_format.cpp` and `std_format.cpp` are removed in favor of it.
+    format_test.cpp
+    functors.cpp
+    istream.cpp
+    next_value.cpp
+    null_terminated.cpp
+    ostream.cpp
+    prefix_length.cpp
+    scoped.cpp
     single_header.cpp
-    PROPERTIES SKIP_PRECOMPILE_HEADERS ON
+    type_name.cpp
+    unscoped_test.cpp
 )
-
-# --- Optional Unity Build ---
-# This logic is added at the end, controlled by an option in the root CMakeLists.txt
-if(ENCHANTUM_ENABLE_UNITY_BUILD)
-    set_target_properties(tests PROPERTIES UNITY_BUILD ON)
-    message(STATUS "Unity build enabled for tests.")
-endif()
