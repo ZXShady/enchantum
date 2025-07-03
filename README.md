@@ -237,9 +237,9 @@ The enum members are from 0 to Count
 
 
 ### Compile Time
-All times in **seconds** (lower is better). Compiled with `-O3` fir GCC and Clang while `/Ox` for MSVC. 
+All times in seconds (lower is better). Compiled with `-O3` fir GCC and Clang while `/Ox` for MSVC. 
 
-**Note**: "Timeout" means it took more than 20 minutes and still did not finish
+"Timeout" means it took more than 20 minutes and still did not finish
 
 | Compiler    | Test Case   | `enchantum`  | `magic_enum` | `simple_enum` |
 |-------------|-------------|--------------| ------------ |---------------|
@@ -248,16 +248,15 @@ All times in **seconds** (lower is better). Compiled with `-O3` fir GCC and Clan
 |             | Large Range | 26.7         |  Timeout     | 313           |
 |             | Ideal Range | 3            |  8.1         | 2.7           |
 |                                                                         |
-| **Clang**   | Small       | 6.2          |  47          | 14            |
-|             | Big         | 3.5          |  18          | 4.4           |
-|             | Large Range | 22.3         |  Timeout     | 96.3          |
-|             | Ideal Range | 3            |  8.7         | 2.3           |
+| **Clang**   | Small       | 5.6          |  47          | 14            |
+|             | Big         | 2.3          |  18          | 4.4           |
+|             | Large Range | 14.8         |  Timeout     | 96.3          |
+|             | Ideal Range | 2.9          |  8.7         | 2.3           |
 |                                                                         |
 | **MSVC**    | Small       | 15.8         |  80          | 186           |
 |             | Big         | 8.8          |  37          | 32.1          |
 |             | Large Range | 85.3         |  Timeout     | Timeout       |
 |             | Ideal Range | 5.8          |  17.9        | 4.7           |
-
 
 ## Object File Sizes
 
@@ -266,41 +265,40 @@ Lower is better, all measurements are in kilobytes.
 [A simple godbolt link for magic_enum vs enchantum](https://godbolt.org/#g:!((g:!((h:output,i:(editorid:1,fontScale:14,fontUsePx:'0',j:1,wrap:'1'),l:'5',n:'0',o:'Output+of+x86-64+clang+(trunk)+(Compiler+%231)',t:'0'),(h:compiler,i:(compiler:clang_trunk,filters:(b:'0',binary:'1',binaryObject:'1',commentOnly:'0',debugCalls:'1',demangle:'0',directives:'0',execute:'1',intel:'0',libraryCode:'0',trim:'1',verboseDemangling:'0'),flagsViewOpen:'1',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,libs:!(),options:'-O3+-DENCH%3D1+-std%3Dc%2B%2B20',overrides:!(),selection:(endColumn:1,endLineNumber:1,positionColumn:1,positionLineNumber:1,selectionStartColumn:1,selectionStartLineNumber:1,startColumn:1,startLineNumber:1),source:1),l:'5',n:'0',o:'+x86-64+clang+(trunk)+(Editor+%231)',t:'0'),(h:codeEditor,i:(filename:'1',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,selection:(endColumn:13,endLineNumber:10,positionColumn:13,positionLineNumber:10,selectionStartColumn:13,selectionStartLineNumber:10,startColumn:13,startLineNumber:10),source:'%23if+ENCH%0A%23include+%3Chttps://raw.githubusercontent.com/ZXShady/enchantum/refs/heads/main/single_include/enchantum_single_header.hpp%3E%0A%23define+magic_enum+enchantum%0A%23define+enum_name+to_string%0A%23else%0A%23include+%3Chttps://raw.githubusercontent.com/Neargye/magic_enum/refs/heads/master/include/magic_enum/magic_enum.hpp%3E%0A%23endif%0Aenum+class+A+%7Balong,b,c,e,d,f,glong%7D%3B%0Aextern+A+enm%3B%0Aextern+const+void*+volatile+p%3B%0Aint+main()+%7B%0A++++p+%3D+magic_enum::enum_name(enm).data()%3B%0A%7D%0A'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),header:(),l:'4',m:100,n:'0',o:'',s:2,t:'0')),version:4)
 
 
+Clang is only currently measured.
+
 | Compiler    | Test Case   | `enchantum`  | `magic_enum` | `simple_enum` |
 |-------------|-------------|--------------| ------------ |---------------|
-| **GCC**     | Small       | 235          | 460          | 4168          |
-|             | Big         | 331          | 840          | 1322          |
-|             | Large Range | 235          | Unknown      | ~33000        |
-|             | Ideal Range | 276          | 671          | 433           |
-|                                                                         |
-| **Clang**   | Small       | 66           | 239          | 4933          |
-|             | Big         | 72           | 429          | 3758          |
-|             | Large Range | 67           | Unknown      | ~38000        |
-|             | Ideal Range | 68           | 343          | 515           |
+| **Clang**   | Small       | 275          | 732          | 12070         |
+|             | Big         | 84           | 1307         | 3847          |
+|             | Large Range | 275          | Unknown      | 98366         |
+|             | Ideal Range | 299          | 1051         | 1233          |
 
 
 **Note**:
-The reason `simple_enum` is so big in object sizes is that it generates a huge table of all strings it does not do string optimizations like `enchantum` or `magic_enum` which leads to big object sizes there are a lot of useless strings in the binary, and this gets worse as the main enum name gets longer (e.g by putting the enums in a namespace), butit also allows the library to do `O(1)` enum to string lookup for **any** enum, which I don't necessarily think is worth it and compile faster.
+The reason `simple_enum` is so big in object sizes is that it generates a huge table of all strings 
+it does not do string optimizations like `enchantum` or `magic_enum` which leads to big object sizes
+
+It stores this for example `"auto se::f() [enumeration = A_0::A_0_4]"`, the entire internal string instead of 
+only the part it needs (the "A_0_4" part)
+and this gets worse as the main enum name gets longer (e.g by putting the enums in a namespace), 
+but it also allows the library to do `O(1)` enum to string lookup for **any** enum, 
+which I don't necessarily think is worth it and compile faster.
 
 
 ### Executable Sizes
 
-Compiled the object files into their own executable then ran `strip` over them.
+Compiled the object files into their own executable.
 Lower is better, all measurements are in kilobytes.
 
 | Compiler    | Test Case   | enchantum     | magic_enum     | simple_enum     |
 |-------------|-------------|---------------|----------------|-----------------|
-| **GCC**     | Small       | 73            | 137            | 4255            |
-|             | Big         | 86            | 237            | 1367            |
-|             | Large Range | 73            | Unknown        | ~33655          |
-|             | Ideal Range | 77            | 194            | 443             |
+| **Clang**   | Small       | 40            | 95             | 2897            |
+|             | Big         | 56            | 168            | 944             |
+|             | Large Range | 40            | Unknown        | 23200           |
+|             | Ideal Range | 46            | 134            | 308             |
 
-| **Clang**   | Small       | 149           | 199            | 2996            |
-|             | Big         | 171           | 271            | 959             |
-|             | Large Range | 149           | Unknown        | Linker Crashed  |
-|             | Ideal Range | 160           | 237            | 323             |
 
-For `simple_enum` linking the object file caused `link.exe` to internally crash.
 
 
 ---
