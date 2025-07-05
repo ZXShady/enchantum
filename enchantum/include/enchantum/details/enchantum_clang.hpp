@@ -21,7 +21,6 @@
 
 namespace enchantum {
 
-
 #if __clang_major__ >= 20
 namespace details {
 
@@ -82,47 +81,17 @@ struct enum_traits<E> {
 #endif
 
 namespace details {
-#define SZC(x) (sizeof(x) - 1)
-  template<auto Enum>
-  constexpr auto enum_in_array_name() noexcept
+  constexpr auto enum_in_array_name(const std::string_view raw_type_name, const bool is_scoped_enum) noexcept
   {
-#if __clang_major__ <= 12
-    using E = decltype(Enum);
-    if constexpr (std::is_convertible_v<E, std::underlying_type_t<E>>) {
-      if (const auto pos = raw_type_name<E>.rfind(':'); pos != string_view::npos)
-        return raw_type_name<E>.substr(0, pos - 1);
-      return string_view();
-    }
-    else {
-      return raw_type_name<E>;
-    }
-#else
-    // constexpr auto f() [with auto _ = (
-    //constexpr auto f() [Enum = (Scoped)0]
-    auto s = string_view(__PRETTY_FUNCTION__ + SZC("auto enchantum::details::enum_in_array_name() [Enum = "),
-                         SZC(__PRETTY_FUNCTION__) - SZC("auto enchantum::details::enum_in_array_name() [Enum = ]"));
+    if (is_scoped_enum)
+      return raw_type_name;
 
-    if constexpr (ScopedEnum<decltype(Enum)>) {
-      if (s[s.size() - 2] == ')') {
-        s.remove_prefix(SZC("("));
-        s.remove_suffix(SZC(")0"));
-        return s;
-      }
-      else {
-        return s.substr(0, s.rfind("::"));
-      }
-    }
-    else {
-      if (s.size() != 1 && s[s.size() - 2] == ')') {
-        s.remove_prefix(SZC("("));
-        s.remove_suffix(SZC(")0"));
-      }
-      if (const auto pos = s.rfind(':'); pos != s.npos)
-        return s.substr(0, pos - 1);
-      return string_view();
-    }
-#endif
+    if (const auto pos = raw_type_name.rfind(':'); pos != string_view::npos)
+      return raw_type_name.substr(0, pos - 1);
+    return string_view();
   }
+
+#define SZC(x) (sizeof(x) - 1)
 
   template<auto... Vs>
   constexpr auto var_name() noexcept
@@ -165,15 +134,16 @@ namespace details {
       using Underlying = std::make_unsigned_t<std::conditional_t<std::is_same_v<bool, Under>, unsigned char, Under>>;
       constexpr auto ArraySize = is_bitflag<E> ? 1 + bits : (Max - Min) + 1;
       constexpr auto ConstStr  = []<std::size_t... Idx>(std::index_sequence<Idx...>) {
+        // dummy 0
         if constexpr (sizeof...(Idx) && is_bitflag<E>) // sizeof... to make contest dependant
-          return details::var_name<E{}, static_cast<E>(Underlying(1) << Idx)...>();
+          return details::var_name<E{}, static_cast<E>(Underlying(1) << Idx)..., 0>();
         else
-          return details::var_name<static_cast<E>(static_cast<decltype(Min)>(Idx) + Min)...>();
+          return details::var_name<static_cast<E>(static_cast<decltype(Min)>(Idx) + Min)..., 0>();
       }(std::make_index_sequence<is_bitflag<E> ? bits : ArraySize>());
 
-      auto str = ConstStr;
+      const auto* str = ConstStr.data();
 
-      constexpr auto enum_in_array_name = details::enum_in_array_name<E{}>();
+      constexpr auto enum_in_array_name = details::enum_in_array_name(raw_type_name<E>, ScopedEnum<E>);
       constexpr auto enum_in_array_len  = enum_in_array_name.size();
       // Ubuntu Clang 20 complains about using local constexpr variables in a local struct
       using CharArray = char[ConstStr.size() + (NullTerminated * ArraySize)];
@@ -208,48 +178,36 @@ namespace details {
 #endif
         {
 #if __clang_major__ > 12
-          str.remove_prefix(SZC("(") + enum_in_array_len + SZC(")0")); // there is atleast 1 base 10 digit
+          str += SZC("(") + enum_in_array_len + SZC(")0"); // there is atleast 1 base 10 digit
 #endif
+
           // https://clang.llvm.org/docs/LanguageExtensions.html#string-builtins
           //char* __builtin_char_memchr(const char* haystack, int needle, size_t size);
-          if (const auto* commapos = __builtin_char_memchr(str.data(), ',', str.size()); commapos)
-            str.remove_prefix(static_cast<std::size_t>(commapos - str.data()) + SZC(", "));
+          str += static_cast<std::size_t>(__builtin_char_memchr(str, ',', UINT8_MAX) - str) + SZC(", ");
         }
         else {
-          if constexpr (enum_in_array_len != 0) {
-            str.remove_prefix(enum_in_array_len + SZC("::"));
-          }
+          if constexpr (enum_in_array_len != 0)
+            str += enum_in_array_len + SZC("::");
 
-          if constexpr (details::prefix_length_or_zero<E> != 0) {
-            str.remove_prefix(details::prefix_length_or_zero<E>);
-          }
+          if constexpr (details::prefix_length_or_zero<E> != 0)
+            str += details::prefix_length_or_zero<E>;
 
-          const auto* commapos_ = __builtin_char_memchr(str.data(), ',', str.size());
-
-          const auto commapos = commapos_ ? std::size_t(commapos_ - str.data()) : str.npos;
-
-          const auto name = str.substr(0, commapos);
-
+          const auto name_size = static_cast<std::uint8_t>(__builtin_char_memchr(str, ',', UINT8_MAX) - str);
           {
-            const auto name_size = static_cast<std::uint8_t>(name.size());
             if constexpr (is_bitflag<E>)
               ret.values[ret.valid_count] = {index == 0 ? E() : E(Underlying{1} << (index - 1))};
             else
               ret.values[ret.valid_count] = {E(Min + static_cast<decltype(Min)>(index))};
 
             ret.string_lengths[ret.valid_count++] = name_size;
-            __builtin_memcpy(ret.strings + ret.total_string_length, name.data(), name_size);
+            __builtin_memcpy(ret.strings + ret.total_string_length, str, name_size);
             ret.total_string_length += name_size + NullTerminated;
           }
-          if (commapos != str.npos)
-            str.remove_prefix(commapos + SZC(", "));
+          str += name_size + SZC(", ");
         }
       }
       return ret;
     }();
-
-
-    // intentionally >= 12, clang 11 does not support class non type template parameters
 
 
     using StringLengthType = std::conditional_t<(elements.total_string_length < UINT8_MAX), std::uint8_t, std::uint16_t>;
@@ -261,6 +219,8 @@ namespace details {
       const char*                                            strings{};
     } ret;
     __builtin_memcpy(ret.values.data(), elements.values, sizeof(ret.values));
+
+    // intentionally >= 12, clang 11 does not support class non type template parameters
 #if __clang_major__ >= 12
     constexpr auto strings = [](const auto total_length, const char* data) {
       std::array<char, total_length.value> strings;
