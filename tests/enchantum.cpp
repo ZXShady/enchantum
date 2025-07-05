@@ -2,8 +2,8 @@
 #include <algorithm>
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
-#include <enchantum/enchantum.hpp>
-#include <enchantum/generators.hpp>
+#include <enchantum/enchantum.hpp> // Provides entries, names, values, count etc.
+#include <enchantum/generators.hpp> // Explicitly include for generator tests
 
 TEMPLATE_LIST_TEST_CASE("array size checks", "[constants]", AllEnumsTestTypes)
 {
@@ -27,30 +27,29 @@ TEMPLATE_LIST_TEST_CASE("array size checks", "[constants]", AllEnumsTestTypes)
     }
   }
 
-  // SECTION("entries_generator<E> and entries<E> are equal")
-  // {
-  //   // If generators are still to be tested, they need to be included directly
-  //   // and possibly called differently if their interface changed.
-  //   // For now, commenting out as enchantum.hpp no longer provides them directly.
-  //   // #include <enchantum/generators.hpp> // Would be needed here
-  //   for (std::size_t i = 0; i < count; ++i) {
-  //     // CHECK(enchantum::details::entries_generator_v<TestType>[i] == entries[i]); // Example if it moved to details
-  //   }
-  // }
+  SECTION("entries_generator<E> and entries<E> are equal")
+  {
+    // Requires <enchantum/generators.hpp> to be included
+    for (std::size_t i = 0; i < count; ++i) {
+      CHECK(enchantum::entries_generator<TestType>[i] == entries[i]);
+    }
+  }
 
-  // SECTION("names_generator<E> and names<E> are equal")
-  // {
-  //   for (std::size_t i = 0; i < count; ++i) {
-  //     // CHECK(enchantum::details::names_generator_v<TestType>[i] == names[i]);
-  //   }
-  // }
+  SECTION("names_generator<E> and names<E> are equal")
+  {
+    // Requires <enchantum/generators.hpp> to be included
+    for (std::size_t i = 0; i < count; ++i) {
+      CHECK(enchantum::names_generator<TestType>[i] == names[i]);
+    }
+  }
 
-  // SECTION("values_generator<E> and values<E> are equal")
-  // {
-  //   for (std::size_t i = 0; i < count; ++i) {
-  //     // CHECK(enchantum::details::values_generator_v<TestType>[i] == values[i]);
-  //   }
-  // }
+  SECTION("values_generator<E> and values<E> are equal")
+  {
+    // Requires <enchantum/generators.hpp> to be included
+    for (std::size_t i = 0; i < count; ++i) {
+      CHECK(enchantum::values_generator<TestType>[i] == values[i]);
+    }
+  }
 
   SECTION("enum_to_index identities")
   {
