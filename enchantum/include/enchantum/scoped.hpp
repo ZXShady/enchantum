@@ -61,7 +61,8 @@ namespace details {
       if (const auto i = enchantum::enum_to_index(value)) {
         s += type_name<E>;
         s += "::";
-        s += names_generator<E>[*i];
+        // Use enchantum::names<E> instead of names_generator
+        s.append(enchantum::names<E>[*i].data(), enchantum::names<E>[*i].size());
         return s;
       }
       return s;
@@ -108,19 +109,27 @@ template<BitFlagEnum E>
     if (static_cast<T>(value) == 0)
       return enchantum::scoped::to_string(value);
 
-  string         name;
-  T              check_value = 0;
-  constexpr auto scope_name  = type_name<E>;
-  for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
-    const auto v = static_cast<T>(values_generator<E>[i]);
-    if (v == (static_cast<T>(value) & v)) {
+  string          name;
+  T               check_value  = 0;
+  constexpr auto  scope_name   = type_name<E>;
+  constexpr auto& local_values = enchantum::values<E>;
+  constexpr auto& local_names  = enchantum::names<E, string_view>;
+
+  for (auto i = static_cast<std::size_t>(has_zero_flag<E> ? (static_cast<T>(value) == 0 ? 0 : 1) : 0); i < count<E>; ++i) {
+    const auto v = static_cast<T>(local_values[i]);
+    if ((static_cast<T>(value) & v) == v) { // Check if the flag 'v' is set in 'value'
+      if (v == 0 && static_cast<T>(value) != 0 && has_zero_flag<E>)
+        continue; // Skip zero flag if other flags are set
+
       if (!name.empty())
-        name.append(1, sep); // append separator if not the first value
+        name.append(1, sep);
       name.append(scope_name.data(), scope_name.size());
       name.append("::", 2);
-      const auto s = names_generator<E>[i];
-      name.append(s.data(), s.size()); // not using operator += since this may not be std::string_view always
+      const auto s = local_names[i];
+      name.append(s.data(), s.size());
       check_value |= v;
+      if (static_cast<T>(value) == v)
+        break; // Single flag optimization
     }
   }
   if (check_value == static_cast<T>(value))

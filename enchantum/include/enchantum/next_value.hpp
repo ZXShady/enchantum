@@ -2,9 +2,9 @@
 
 #include "common.hpp"
 #include "details/optional.hpp"
-#include "enchantum.hpp"
+#include "enchantum.hpp" // Provides values<E>, count<E>, enum_to_index, contains
 #include <cstddef>
-#include "generators.hpp"
+// #include "generators.hpp" // No longer needed
 
 namespace enchantum {
 namespace details {
@@ -18,7 +18,7 @@ namespace details {
 
       const auto index = static_cast<std::ptrdiff_t>(*enchantum::enum_to_index(value)) + (n * N);
       if (index >= 0 && index < static_cast<std::ptrdiff_t>(count<E>))
-        return optional<E>{values_generator<E>[static_cast<std::size_t>(index)]};
+        return optional<E>{enchantum::values<E>[static_cast<std::size_t>(index)]}; // Use enchantum::values
       return optional<E>{};
     }
   };
@@ -30,8 +30,9 @@ namespace details {
     {
       ENCHANTUM_ASSERT(enchantum::contains(value), "next/prev_value_circular requires 'value' to be a valid enum member", value);
       const auto     i     = static_cast<std::ptrdiff_t>(*enchantum::enum_to_index(value));
-      constexpr auto count = static_cast<std::ptrdiff_t>(enchantum::count<E>);
-      return values_generator<E>[static_cast<std::size_t>(((i + (n * N)) % count + count) % count)]; // handles wrap around and negative n
+      constexpr auto current_enum_count = static_cast<std::ptrdiff_t>(enchantum::count<E>); // Renamed to avoid conflict
+      // Use enchantum::values
+      return enchantum::values<E>[static_cast<std::size_t>(((i + (n * N)) % current_enum_count + current_enum_count) % current_enum_count)];
     }
   };
 } // namespace details

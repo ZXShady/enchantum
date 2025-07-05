@@ -36,9 +36,10 @@ public:
   [[nodiscard]] string to_string(const char sep = '|') const
   {
     string name;
+    constexpr auto& local_names = enchantum::names<E>; // Use direct access
     for (std::size_t i = 0; i < enchantum::count<E>; ++i) {
       if (test(i)) {
-        const auto s = enchantum::names_generator<E>[i];
+        const auto s = local_names[i]; // Use direct access
         if (!name.empty())
           name += sep;
         name.append(s.data(), s.size()); // not using operator += since this may not be std::string_view always
