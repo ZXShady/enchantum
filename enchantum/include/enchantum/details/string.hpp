@@ -18,3 +18,19 @@ using ::std::string;
 #endif
 
 } // namespace enchantum
+
+#include "string_view.hpp" // For enchantum::string_view
+
+namespace enchantum::details {
+
+// Helper to append a character to enchantum::string
+inline void append_char(enchantum::string& str, char ch) {
+    str += ch;
+}
+
+// Helper to append a string_view to enchantum::string
+inline void append_sv(enchantum::string& str, enchantum::string_view sv) {
+    str.append(sv.data(), sv.size());
+}
+
+} // namespace enchantum::details

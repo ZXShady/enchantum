@@ -1584,4 +1584,63 @@ The `__VA_ARGS__` at the end is more info in the macro for example local variabl
 #ifndef ENCHANTUM_THROW
 #define ENCHANTUM_THROW(exception,...) throw exception
 #endif
+
+
+### Reducing Compile Times with `extern template`
+For large projects that use enchantum's reflection capabilities across many .cpp files, you may notice an increase in compile times. This is a common issue with header-only template libraries, as the compiler must instantiate the same template code in every translation unit (.cpp file) that uses it.
+
+You can significantly reduce this overhead by using `extern template`, a C++11 feature that tells the compiler to skip instantiating a template in the current file and instead use an instantiation from another file.
+
+Here is how to apply this pattern in your project:
+
+1.  **Create a Dedicated Instantiation File**
+
+    In your project, create a single .cpp file (e.g., `my_enums_inst.cpp`) where you will explicitly instantiate the enchantum templates for your most commonly used enums.
+
+    ```cpp
+    // file: my_enums_inst.cpp
+    #include <enchantum/enchantum.hpp>
+    #include "my_project/my_common_enums.hpp" // Your enum definitions
+
+    // Explicitly instantiate all enchantum templates for a common enum.
+    // The compiler will generate the code for these templates only once.
+    template constexpr auto enchantum::entries<MyProject::Color>;
+    template constexpr auto enchantum::values<MyProject::Color>;
+    template constexpr auto enchantum::names<MyProject::Color>;
+    template constexpr auto enchantum::count<MyProject::Color>;
+    // If using the new hash map feature for cast:
+    template constexpr auto enchantum::hashes<MyProject::Color>;
+
+
+    // Repeat for other widely used enums...
+    // template constexpr auto enchantum::entries<MyProject::Status>;
+    // ...and so on for values, names, count, hashes for MyProject::Status
+    ```
+
+2.  **Declare the External Templates in a Common Header**
+
+    In a header file that is included by all other .cpp files (like a precompiled header or a project-wide utility header), declare these same templates as `extern`.
+
+    ```cpp
+    // file: my_project/common_includes.hpp
+    #pragma once
+    #include <enchantum/enchantum.hpp>
+    #include "my_project/my_common_enums.hpp"
+
+    // Promise the compiler that instantiations exist elsewhere.
+    // This prevents it from generating code in every file that includes this header.
+    extern template constexpr auto enchantum::entries<MyProject::Color>;
+    extern template constexpr auto enchantum::values<MyProject::Color>;
+    extern template constexpr auto enchantum::names<MyProject::Color>;
+    extern template constexpr auto enchantum::count<MyProject::Color>;
+    // If using the new hash map feature for cast:
+    extern template constexpr auto enchantum::hashes<MyProject::Color>;
+
+    // Repeat for other enums...
+    // extern template constexpr auto enchantum::entries<MyProject::Status>;
+    // ...and so on for values, names, count, hashes for MyProject::Status
+    ```
+
+By following these steps, you instruct the compiler to generate the code for enchantum's data arrays (including `values`, `names`, `hashes`, etc.) only once, which can lead to a noticeable improvement in build times and smaller object files.
+Remember to also explicitly instantiate and declare `extern template` for `enchantum::cast<MyEnum>` if you are heavily using specific instantiations of it, though the primary benefit comes from the data arrays (`entries`, `values`, `names`, `hashes`). The `enchantum::cast` variable template itself is small, but its underlying `details::cast_functor` will be instantiated per enum type. The `extern template` on the data arrays (`enchantum::values`, `enchantum::names`, `enchantum::hashes`) is the most crucial for compile time improvements related to reflection data.
 ```

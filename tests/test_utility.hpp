@@ -276,6 +276,20 @@ enum class Direction2D : std::uint8_t {
   South = Down
 };
 
+// Enum for testing cast with multiple members
+enum class TestShapes : int {
+  Circle,
+  Square,
+  Triangle,
+  Rectangle,
+  Pentagon,
+  Hexagon,
+  Octagon,
+  Star,
+  Cross,
+  Arrow
+};
+
 enum class Direction3D : std::int16_t {
   None  = 0,
   Left  = 1,
@@ -354,11 +368,11 @@ using namespace LongNamespaced::Namespace2;
 template<typename...>
 struct type_list {}; // not wanting to include tuple to detect if I am missing a header in tests
 
-template<typename... Ts,typename... Us>
-type_list<Ts..., Us...> concatter_func(type_list<Ts...>,type_list<Us...>);
+template<typename... Ts, typename... Us>
+type_list<Ts..., Us...> concatter_func(type_list<Ts...>, type_list<Us...>);
 
 template<typename A, typename B>
-using concat = decltype(::concatter_func(A{},B{}));
+using concat = decltype(::concatter_func(A{}, B{}));
 
 using AllFlagsTestTypes = type_list<StrongFlagsNoOverloadedOperators, ImGuiFreeTypeBuilderFlags, NonContigFlagsWithNoneCStyle, FlagsWithNone, Flags>;
 using AllEnumsTestTypes = concat<

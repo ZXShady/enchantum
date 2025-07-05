@@ -98,8 +98,10 @@ namespace details {
     struct iterator : sized_iterator<iterator, size()> {
       [[nodiscard]] constexpr String operator*() const noexcept
       {
-        const auto* const p       = reflection_string_indices<E, NullTerminated>.data();
-        const auto* const strings = reflection_data<E, NullTerminated>.strings;
+        // Access the raw reflected data through static_storage in details
+        constexpr auto& reflected = details::storage_v<E, NullTerminated>.reflected_raw;
+        const auto* const p       = reflected.string_indices.data(); // Or just reflected.string_indices
+        const auto* const strings = reflected.strings;
         return String(strings + p[this->index], strings + p[this->index + 1] - NullTerminated);
       }
 
