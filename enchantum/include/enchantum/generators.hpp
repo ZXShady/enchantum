@@ -53,17 +53,7 @@ namespace details {
       return copy;
     }
 
-    [[nodiscard]] constexpr friend CRTP operator+(CRTP it, const std::ptrdiff_t offset) noexcept
-    {
-      it += offset;
-      return it;
-    }
-
-    [[nodiscard]] constexpr friend CRTP operator+(const std::ptrdiff_t offset, CRTP it) noexcept
-    {
-      it += offset;
-      return it;
-    }
+    // operator+ definitions moved outside the class template.
 
     [[nodiscard]] constexpr friend CRTP operator-(CRTP it, const std::ptrdiff_t offset) noexcept
     {
@@ -87,6 +77,22 @@ namespace details {
     [[nodiscard]] constexpr bool operator==(senitiel) const noexcept { return Size == index; }
     [[nodiscard]] constexpr auto operator<=>(senitiel) const noexcept { return index <=> Size; }
   };
+
+  // External definitions for operator+ for sized_iterator based types
+  // CRTP_type is the actual iterator type (e.g., names_generator_t<X>::iterator)
+  template<typename CRTP_type>
+  [[nodiscard]] constexpr CRTP_type operator+(CRTP_type it, const std::ptrdiff_t offset) noexcept
+  {
+    it += offset; // Relies on CRTP_type having an accessible operator+=
+    return it;
+  }
+
+  template<typename CRTP_type>
+  [[nodiscard]] constexpr CRTP_type operator+(const std::ptrdiff_t offset, CRTP_type it) noexcept
+  {
+    it += offset; // Relies on CRTP_type having an accessible operator+=
+    return it;
+  }
 
   template<typename E, typename String = string_view, bool NullTerminated = true>
   struct names_generator_t {
