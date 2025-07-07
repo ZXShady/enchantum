@@ -666,7 +666,7 @@ constexpr inline std::string_view type_name = /*implementation detail";
 **Description**:  
   Gives an implementation defined null-terminated string representing the type name.
 
-**Notes**: `T` must not be a function, function pointer or a member function pointer otherwise a `static_assert` fires.
+**Notes**: `T` must not be a function, function pointer, member function pointer or a templated type otherwise a `static_assert` fires.
   
 
 **Example**:

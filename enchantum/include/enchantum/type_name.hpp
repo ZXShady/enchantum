@@ -51,6 +51,7 @@ namespace details {
   template<typename T>
   inline constexpr auto raw_type_name_func_var = raw_type_name_func<T>();
 
+
   template<typename T>
   constexpr auto type_name_func() noexcept
   {
@@ -59,6 +60,8 @@ namespace details {
                   "pointers");
 
     constexpr auto& array = raw_type_name_func_var<T>;
+    static_assert(array[array.size() - 2] != '>', "enchantum::type_name<T> does not work well with a templated type");
+
     constexpr auto  s     = details::extract_name_from_type_name(string_view(array.data(), array.size() - 1));
     std::array<char, s.size() + 1> ret{};
     for (std::size_t i = 0; i < s.size(); ++i)
