@@ -52,7 +52,7 @@ Quick Reference
   - [value_ors](#value_ors)
   - [type_name](#type_name)
   - [raw_type_name](#raw_type_name)
-
+  
 **Containers**:
   - [array](#array)
   - [bitset](#bitset)
@@ -61,7 +61,10 @@ Quick Reference
   - [ENCHANTUM_DEFINE_BITWISE_FOR](#enchantum_define_bitwise_for)
   - [ENCHANTUM_ASSERT](#enchantum_assert)
   - [ENCHANTUM_THROW](#enchantum_throw)
-
+  - [ENCHANTUM_ENABLE_MSVC_SPEEDUP](#enchantum_enable_msvc_speedup)
+  - [ENCHANTUM_OPTIONAL](#enchantum_optional)
+  - [ENCHANTUM_STRING](#enchantum_string)
+  - [ENCHANTUM_STRING_VIEW](#enchantum_string_view)
 
 
 # Concepts
@@ -1583,5 +1586,54 @@ The `__VA_ARGS__` at the end is more info in the macro for example local variabl
 // defined in header `common.hpp`
 #ifndef ENCHANTUM_THROW
 #define ENCHANTUM_THROW(exception,...) throw exception
+#endif
+```
+
+
+### ENCHANTUM_ENABLE_MSVC_SPEEDUP
+
+- **Description**: 
+A boolean macro that speeds up msvc compile times but may cause issues with extremely large enums ranges. it is on by default and can be overriden.
+
+```cpp
+// defined in header `entries.hpp`
+#ifndef ENCHANTUM_ENABLE_MSVC_SPEEDUP
+#define ENCHANTUM_ENABLE_MSVC_SPEEDUP 1
+#endif
+```
+
+### ENCHANTUM_OPTIONAL
+
+- **Description**: 
+A macro for customizing the optional type used in the library it is by default `std::optional`
+```cpp
+// in all headers
+#ifndef ENCHANTUM_OPTIONAL
+#include <optional>
+#define ENCHANTUM_OPTIONAL using std::optional;
+#endif
+```
+
+### ENCHANTUM_STRING
+
+- **Description**: 
+A macro for customizing the string type used in the library it is by default `std::string`
+```cpp
+// in all headers
+#ifndef ENCHANTUM_STRING
+#include <string>
+#define ENCHANTUM_STRING using std::string;
+#endif
+```
+
+### ENCHANTUM_STRING_VIEW
+
+- **Description**: 
+A macro for customizing the string view type used in the library it is by default `std::string_view`
+```cpp
+// in all headers
+#ifndef ENCHANTUM_STRING_VIEW
+#include <string_view>
+#define ENCHANTUM_STRING_VIEW using std::string_view;
 #endif
 ```
