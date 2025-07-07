@@ -58,8 +58,9 @@ template<Enum E>
 inline constexpr auto values = []() {
   constexpr auto&             enums = entries<E>;
   std::array<E, enums.size()> ret;
+  const auto* const           enums_data = enums.data();
   for (std::size_t i = 0; i < ret.size(); ++i)
-    ret[i] = enums[i].first;
+    ret[i] = enums_data[i].first;
   return ret;
 }();
 
@@ -67,8 +68,9 @@ template<Enum E, typename String = string_view, bool NullTerminated = true>
 inline constexpr auto names = []() {
   constexpr auto&                  enums = entries<E, std::pair<E, String>, NullTerminated>;
   std::array<String, enums.size()> ret;
+  const auto* const                enums_data = enums.data();
   for (std::size_t i = 0; i < ret.size(); ++i)
-    ret[i] = enums[i].second;
+    ret[i] = enums_data[i].second;
   return ret;
 }();
 
