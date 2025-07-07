@@ -255,6 +255,8 @@ template<typename E, typename Underlying>
 concept EnumOfUnderlying = Enum<E> && std::same_as<std::underlying_type_t<E>, Underlying>;
 ```
 
+constrains an enum to a specific underlying type.
+
 > Example usage:
 ```cpp
 #include <enchantum/common.hpp>
@@ -333,7 +335,7 @@ template<typename T>
 struct enum_traits;
 
 template<Enum E>
-struct enum_traits // default
+struct enum_traits<E> // default
 {
   constexpr static auto prefix_length = 0;
   constexpr static auto min = ENCHANTUM_MIN_RANGE;
@@ -893,7 +895,6 @@ inline constexpr /*implementation details*/ entries_generator;
   This is different than `entries`, since it does not store the entries it creates the them on the fly.
   In general if you don't need actual storage and addressability of the enum entries but merely iterate on them use the `entries_generator` variable instead it yeilds better binary sizes.
 
-
 > Example
 ```cpp
 enum class Color { Red, Green, Blue };
@@ -1165,7 +1166,7 @@ constexpr inline details::ENUM_TO_INDEX_FUNCTOR enum_to_index;
   Converts an enum to its corresponding index value.
 
 - **Parameters**:
-  - `e`: The enum to convert to an index value.
+  - `value`: The enum to convert to an index value.
 
 - **Returns**:  
   The index value corresponding to the provided enum. if the enum is not a value in `values<E>` `std::nullopt` is returned.
@@ -1222,7 +1223,7 @@ The circular variants require `value` to be a valid enum otherwise an assertion 
 They are functors and not templated functions which allows passing  them to higher order functions.
 
 - **Parameters**:
-  - `e`: The enum to convert to an index value.
+  - `value`: The enum to convert to an index value.
 
 - **Returns**:  
 `next_value` and `prev_value` return a std::optional<E> representing the next or previous enum value, or std::nullopt if the value is out of range or invalid.
@@ -1239,15 +1240,15 @@ std::optional<Direction> next = enchantum::next_value(Direction::East);
 std::cout << (next.has_value() ? "Found next value" : "No next value") << std::endl;  
 // Outputs: Found next value
 
-auto nextCircular = enchantum::next_value_circular(Direction::West);  
+Direction nextCircular = enchantum::next_value_circular(Direction::West);  
 std::cout << "Circular next value: " << static_cast<int>(nextCircular) << std::endl;  
 // Outputs: Circular next value: 0 (North)
 
-auto prev = enchantum::prev_value(Direction::South);  
+std::optional<Direction> prev = enchantum::prev_value(Direction::South);  
 std::cout << (prev.has_value() ? "Found previous value" : "No previous value") << std::endl;  
 // Outputs: Found previous value
 
-auto prevCircular = enchantum::prev_value_circular(Direction::North);  
+Direction prevCircular = enchantum::prev_value_circular(Direction::North);  
 std::cout << "Circular previous value: " << static_cast<int>(prevCircular) << std::endl;  
 // Outputs: Circular previous value: 3 (West)
 
@@ -1483,7 +1484,7 @@ public:
   using base::base;
   using base::operator=;
 
-  [[nodiscard]] constexpr string to_string(char sep = '|') const;
+  [[nodiscard]] constexpr std::string to_string(char sep = '|') const;
 
   [[nodiscard]] constexpr auto to_string(char zero,char one) const;
 
@@ -1628,4 +1629,33 @@ A macro for customizing the string view type used in the library it is by defaul
 #include <string_view>
 #define ENCHANTUM_STRING_VIEW using std::string_view;
 #endif
+```
+
+
+### ENCHANTUM_CONFIG_FILE
+
+- **Description**: 
+A macro for customizing a file that will be included in all enchantum files
+
+```cpp
+// in all headers
+#ifdef ENCHANTUM_CONFIG_FILE
+#include ENCHANTUM_CONFIG_FILE
+#endif
+```
+
+> Example:
+
+```cpp
+#define ENCHANTUM_CONFIG_FILE "my_enchantum_config.hpp"
+#include <enchantum/enchantum.hpp>
+```
+
+where `my_enchantum_config.hpp` is 
+
+```cpp
+#include "my_optional.hpp"
+#define  ENCHANTUM_OPTIONAL template<typename T> using optional = my_optional<T>;
+#include "my_string.hpp"
+#define  ENCHANTUM_STRING using string = my_string;
 ```
