@@ -38,16 +38,7 @@ public:
       ++value_it;
     }
 
-    // Use std::sort for a more robust and potentially faster compile-time sort
-    // The bubble sort provided in the prompt is O(N^2) and might be slow for large enums.
-    // std::sort is generally O(N log N).
-    // Note: std::sort is constexpr in C++20. If C++17 is targeted,
-    // a constexpr-friendly sort like the bubble sort might be necessary,
-    // or a more optimized constexpr sorting algorithm.
-    // For now, let's assume C++20 or that the provided bubble sort is acceptable
-    // if std::sort isn't constexpr in the target environment.
-    // Reverting to bubble sort as per prompt's direct instruction for simplicity
-    // and to avoid potential C++ standard version issues without confirmation.
+    // Simple constexpr bubble sort (as per original prompt)
     for (std::size_t i = 0; i < count<E>; ++i) {
       for (std::size_t j = i + 1; j < count<E>; ++j) {
         if (sorted_pairs_[j] < sorted_pairs_[i]) {

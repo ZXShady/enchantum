@@ -13,7 +13,17 @@
 
 namespace enchantum {
 
-// Forward-declare helper functions that might be used by details structs before global objects are ready
+// Phase A: Forward Declarations
+namespace details {
+  constexpr std::pair<std::size_t, std::size_t> minmax_string_size(const string_view* begin, const string_view* const end);
+  template<Enum E>
+  struct index_to_enum_functor;
+  struct enum_to_index_functor;
+  struct to_string_functor;
+  template<Enum E>
+  struct cast_functor;
+} // namespace details
+
 template<Enum E>
 [[nodiscard]] constexpr bool contains(const std::underlying_type_t<E> value) noexcept;
 template<Enum E>
@@ -22,7 +32,9 @@ template<Enum E>
 [[nodiscard]] constexpr bool contains(const string_view name) noexcept;
 template<Enum E, std::predicate<string_view, string_view> BinaryPredicate>
 [[nodiscard]] constexpr bool contains(const string_view name, const BinaryPredicate binary_predicate) noexcept;
+// End of Phase A
 
+// Phase B: Full definitions of `details` structs and `details` helpers.
 namespace details {
 
   constexpr std::pair<std::size_t, std::size_t> minmax_string_size(const string_view* begin, const string_view* const end)
@@ -37,7 +49,7 @@ namespace details {
     return minmax;
   }
 
-  template<typename E>
+  template<Enum E>
   struct index_to_enum_functor {
     [[nodiscard]] constexpr optional<E> operator()(const std::size_t index) const noexcept
     {
@@ -48,20 +60,18 @@ namespace details {
     }
   };
 
-  // enum_to_index_functor depends on ::enchantum::contains (forward-declared)
-  // and ::enchantum::values_generator (global constexpr variable)
-  struct enum_to_index_functor { // Original definition
+  struct enum_to_index_functor {
     template<Enum E_ETI>
     [[nodiscard]] constexpr optional<std::size_t> operator()(const E_ETI e) const noexcept
     {
       using T = std::underlying_type_t<E_ETI>;
       if constexpr (is_contiguous<E_ETI>) {
-        if (::enchantum::contains(e)) {
+        if (::enchantum::contains(e)) { // Calls fwd-declared ::enchantum::contains
           return optional<std::size_t>(std::size_t(T(e) - T(min<E_ETI>)));
         }
       }
       else if constexpr (is_contiguous_bitflag<E_ETI>) {
-        if (::enchantum::contains(e)) {
+        if (::enchantum::contains(e)) { // Calls fwd-declared ::enchantum::contains
           constexpr bool has_zero = has_zero_flag<E_ETI>;
           if constexpr (has_zero)
             if (static_cast<T>(e) == 0)
@@ -81,28 +91,23 @@ namespace details {
     }
   };
 
-  // to_string_functor depends on details::enum_to_index_functor (locally instantiated)
-  // and ::enchantum::names_generator
-  struct to_string_functor { // Original definition
+  struct to_string_functor {
     template<Enum E_TSF>
     [[nodiscard]] constexpr string_view operator()(const E_TSF value) const noexcept
     {
-      constexpr details::enum_to_index_functor get_index_func; // Local instantiation
-      if (const auto i = get_index_func(value))                // ADL for E_TSF with get_index_func.operator()
+      constexpr details::enum_to_index_functor get_index_func;
+      if (const auto i = get_index_func(value))
         return ::enchantum::names_generator<E_TSF>[*i];
       return string_view();
     }
   };
 
-  // cast_functor depends on details::to_string_functor (locally instantiated)
-  // and ::enchantum::contains (forward-declared)
-  // and helpers from cast_helper.hpp (details::fnv1a_32, etc.)
   template<Enum E>
   struct cast_functor {
     [[nodiscard]] constexpr optional<E> operator()(const std::underlying_type_t<E> value) const noexcept
     {
       optional<E> a;
-      if (!::enchantum::contains<E>(value))
+      if (!::enchantum::contains<E>(value)) // Calls fwd-declared ::enchantum::contains
         return a;
       a.emplace(static_cast<E>(value));
       return a;
@@ -121,8 +126,8 @@ namespace details {
       if (it != pairs.end() && it->hash == name_hash) {
         auto current_it = it;
         while (current_it != pairs.end() && current_it->hash == name_hash) {
-          constexpr details::to_string_functor get_name_func; // Local instantiation
-          if (get_name_func(current_it->value) == name) {     // ADL for E with get_name_func.operator()
+          constexpr details::to_string_functor get_name_func;
+          if (get_name_func(current_it->value) == name) {
             return optional<E>{current_it->value};
           }
           ++current_it;
@@ -146,15 +151,15 @@ namespace details {
   };
 } // namespace details
 
-// Phase C: Define Global `enchantum` Functor Objects
+// Phase C: Full definitions of global `enchantum` objects.
 template<Enum E>
 inline constexpr details::index_to_enum_functor<E> index_to_enum{};
-inline constexpr details::enum_to_index_functor    enum_to_index{}; // Uses the placeholder alias
-inline constexpr details::to_string_functor        to_string{};     // Uses the placeholder alias
+inline constexpr details::enum_to_index_functor    enum_to_index{};
+inline constexpr details::to_string_functor        to_string{};
 template<Enum E>
 inline constexpr details::cast_functor<E> cast{};
 
-// Phase D: Define `enchantum::contains` functions
+// Phase D: Full definitions of `enchantum::contains` functions.
 template<Enum E>
 [[nodiscard]] constexpr bool contains(const std::underlying_type_t<E> value) noexcept
 {
@@ -191,8 +196,6 @@ template<Enum E>
                                                         ::enchantum::names<E>.data() + ::enchantum::names<E>.size());
   if (const auto size = name.size(); size < minmax_s.first || size > minmax_s.second)
     return false;
-  // This previously called enchantum::cast<E>(name).has_value();
-  // Reverting to original loop to avoid circular dependency if cast itself uses contains.
   for (const auto s : ::enchantum::names_generator<E>)
     if (s == name)
       return true;
