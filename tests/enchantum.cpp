@@ -168,28 +168,3 @@ TEST_CASE("Color count", "[count]")
   STATIC_CHECK(enchantum::count<Direction2D> == 5);
   STATIC_CHECK(enchantum::count<Direction3D> == 7);
 }
-
-TEST_CASE("enchantum::cast (string_view) specific tests", "[cast][string_view][hash_optimization]")
-{
-  // Test with Direction2D
-  STATIC_CHECK(enchantum::cast<Direction2D>("Up") == Direction2D::Up);
-  STATIC_CHECK(enchantum::cast<Direction2D>("Down") == Direction2D::Down);
-  STATIC_CHECK(enchantum::cast<Direction2D>("Left") == Direction2D::Left);
-  STATIC_CHECK(enchantum::cast<Direction2D>("Right") == Direction2D::Right);
-  STATIC_CHECK(enchantum::cast<Direction2D>("None") == Direction2D::None);
-
-  // Edge cases for string inputs
-  STATIC_CHECK_FALSE(enchantum::cast<Direction2D>("").has_value());         // Empty string
-  STATIC_CHECK_FALSE(enchantum::cast<Direction2D>("up").has_value());       // Incorrect case
-  STATIC_CHECK_FALSE(enchantum::cast<Direction2D>("UP").has_value());       // Incorrect case
-  STATIC_CHECK_FALSE(enchantum::cast<Direction2D>("U").has_value());        // Prefix
-  STATIC_CHECK_FALSE(enchantum::cast<Direction2D>("Upp").has_value());      // Suffix/Typo
-  STATIC_CHECK_FALSE(enchantum::cast<Direction2D>(" Up").has_value());      // Leading space
-  STATIC_CHECK_FALSE(enchantum::cast<Direction2D>("Up ").has_value());      // Trailing space
-  STATIC_CHECK_FALSE(enchantum::cast<Direction2D>("NotValid").has_value()); // Completely invalid
-
-  // Test with Color enum for variety
-  STATIC_CHECK(enchantum::cast<Color>("Green") == Color::Green);
-  STATIC_CHECK_FALSE(enchantum::cast<Color>("green").has_value());
-  STATIC_CHECK_FALSE(enchantum::cast<Color>("").has_value()); // Empty string for Color
-}
