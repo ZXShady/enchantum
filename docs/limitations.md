@@ -110,9 +110,9 @@ So don't use GCC 10 with enums inside templates.
 
 This is fixable but requires much work. if heavily wanted though I will make it.
 
-## Unscoped Enums
+## Unnamed Enums
 
-unnamed unscoped enums are not supported except on msvc
+unnamed enums are not supported except on msvc
 
 ```cpp
 enum {
@@ -132,3 +132,31 @@ typedef enum {
 ```
 
 just give it a name.
+
+
+## Scoped Enums in templated classes are not supported on NVC++
+
+Unscoped enums seem to work however.
+
+```cpp
+template<typename T>
+struct Nest {
+    enum class A {a,b,c};
+};
+
+enchantum::entries<Nest<int>::A>; // fails
+```
+
+There is no workaround.
+
+
+## Aliased enums are not supported on NVC++
+
+```cpp
+enum class A {
+    a,b,c
+};
+using B = A;
+enchantum::entries<B>; // fails
+```
+

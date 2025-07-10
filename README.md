@@ -49,9 +49,12 @@ Tested locally on Windows 10 with:
 - Clang 20.1.2
 
 Compiler Support: (Look at [CI](https://github.com/ZXShady/enchantum/actions))
-- GCC >= 11 (GCC 10 Partial no support for enums in templates)
-- Clang >= 10
-- MSVC >= 19.31 (Tested through godbolt)
+  - GCC >= 11 (GCC 10 Partial no support for enums in templates)
+  - Clang >= 10
+  - MSVC >= 19.31 (Tested through godbolt)
+
+Tested through basic tests on godbolt since I could not install it on CI
+  - NVC++ >= 22.7 (minimum on godbolt [test link](https://godbolt.org/z/xr7xr6Y6v))
 
 ---
 
@@ -262,7 +265,7 @@ All times in seconds (lower is better). Compiled with `-O3` fir GCC and Clang wh
 
 Lower is better, all measurements are in kilobytes.
 
-[A simple godbolt link for magic_enum vs enchantum](https://godbolt.org/#g:!((g:!((h:output,i:(editorid:1,fontScale:14,fontUsePx:'0',j:1,wrap:'1'),l:'5',n:'0',o:'Output+of+x86-64+clang+(trunk)+(Compiler+%231)',t:'0'),(h:compiler,i:(compiler:clang_trunk,filters:(b:'0',binary:'1',binaryObject:'1',commentOnly:'0',debugCalls:'1',demangle:'0',directives:'0',execute:'1',intel:'0',libraryCode:'0',trim:'1',verboseDemangling:'0'),flagsViewOpen:'1',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,libs:!(),options:'-O3+-DENCH%3D1+-std%3Dc%2B%2B20',overrides:!(),selection:(endColumn:1,endLineNumber:1,positionColumn:1,positionLineNumber:1,selectionStartColumn:1,selectionStartLineNumber:1,startColumn:1,startLineNumber:1),source:1),l:'5',n:'0',o:'+x86-64+clang+(trunk)+(Editor+%231)',t:'0'),(h:codeEditor,i:(filename:'1',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,selection:(endColumn:13,endLineNumber:10,positionColumn:13,positionLineNumber:10,selectionStartColumn:13,selectionStartLineNumber:10,startColumn:13,startLineNumber:10),source:'%23if+ENCH%0A%23include+%3Chttps://raw.githubusercontent.com/ZXShady/enchantum/refs/heads/main/single_include/enchantum_single_header.hpp%3E%0A%23define+magic_enum+enchantum%0A%23define+enum_name+to_string%0A%23else%0A%23include+%3Chttps://raw.githubusercontent.com/Neargye/magic_enum/refs/heads/master/include/magic_enum/magic_enum.hpp%3E%0A%23endif%0Aenum+class+A+%7Balong,b,c,e,d,f,glong%7D%3B%0Aextern+A+enm%3B%0Aextern+const+void*+volatile+p%3B%0Aint+main()+%7B%0A++++p+%3D+magic_enum::enum_name(enm).data()%3B%0A%7D%0A'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),header:(),l:'4',m:100,n:'0',o:'',s:2,t:'0')),version:4)
+[A simple godbolt link for magic_enum vs enchantum difference in binary sizes](https://godbolt.org/#g:!((g:!((h:output,i:(editorid:1,fontScale:14,fontUsePx:'0',j:1,wrap:'1'),l:'5',n:'0',o:'Output+of+x86-64+clang+(trunk)+(Compiler+%231)',t:'0'),(h:compiler,i:(compiler:clang_trunk,filters:(b:'0',binary:'1',binaryObject:'1',commentOnly:'0',debugCalls:'1',demangle:'0',directives:'0',execute:'1',intel:'0',libraryCode:'0',trim:'1',verboseDemangling:'0'),flagsViewOpen:'1',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,libs:!(),options:'-O3+-DENCH%3D1+-std%3Dc%2B%2B20',overrides:!(),selection:(endColumn:1,endLineNumber:1,positionColumn:1,positionLineNumber:1,selectionStartColumn:1,selectionStartLineNumber:1,startColumn:1,startLineNumber:1),source:1),l:'5',n:'0',o:'+x86-64+clang+(trunk)+(Editor+%231)',t:'0'),(h:codeEditor,i:(filename:'1',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,selection:(endColumn:13,endLineNumber:10,positionColumn:13,positionLineNumber:10,selectionStartColumn:13,selectionStartLineNumber:10,startColumn:13,startLineNumber:10),source:'%23if+ENCH%0A%23include+%3Chttps://raw.githubusercontent.com/ZXShady/enchantum/refs/heads/main/single_include/enchantum_single_header.hpp%3E%0A%23define+magic_enum+enchantum%0A%23define+enum_name+to_string%0A%23else%0A%23include+%3Chttps://raw.githubusercontent.com/Neargye/magic_enum/refs/heads/master/include/magic_enum/magic_enum.hpp%3E%0A%23endif%0Aenum+class+A+%7Balong,b,c,e,d,f,glong%7D%3B%0Aextern+A+enm%3B%0Aextern+const+void*+volatile+p%3B%0Aint+main()+%7B%0A++++p+%3D+magic_enum::enum_name(enm).data()%3B%0A%7D%0A'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),header:(),l:'4',m:100,n:'0',o:'',s:2,t:'0')),version:4)
 
 
 Clang is only currently measured.
@@ -297,8 +300,6 @@ Lower is better, all measurements are in kilobytes.
 |             | Big         | 56            | 168            | 944             |
 |             | Large Range | 40            | Unknown        | 23200           |
 |             | Ideal Range | 46            | 134            | 308             |
-
-
 
 
 ---
