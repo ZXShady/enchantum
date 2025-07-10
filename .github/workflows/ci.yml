@@ -44,7 +44,7 @@ jobs:
           #- { name: Ubuntu Clang 11,  os: ubuntu-22.04, compiler: clang, version: 11, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           #- { name: Ubuntu Clang 12,  os: ubuntu-22.04, compiler: clang, version: 12, flags: "-DCMAKE_CXX_COMPILER=clang++" }
 #
-          - { name: Ubuntu NVC++ Latest,  os: ubuntu-22.04, compiler: nvc, flags: "-DCMAKE_CXX_COMPILER=nvc++" }
+          - { name: Ubuntu NVCC Latest,  os: ubuntu-22.04, compiler: clang, version: 13, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           #- { name: Ubuntu Clang 13,  os: ubuntu-22.04, compiler: clang, version: 13, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           #- { name: Ubuntu Clang 14,  os: ubuntu-22.04, compiler: clang, version: 14, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           #- { name: Ubuntu Clang 15,  os: ubuntu-22.04, compiler: clang, version: 15, flags: "-DCMAKE_CXX_COMPILER=clang++" }
@@ -84,7 +84,8 @@ jobs:
         with:
           compiler: gcc-${{matrix.platform.version}}
 
-      - name: Setup NVCC
+      - name: Setup NVC++
+        if: matrix.platform.compiler == 'nvc'
         uses: Jimver/cuda-toolkit@v0.2.24
         id: cuda-toolkit
         with:
@@ -94,19 +95,8 @@ jobs:
 
       - run: echo "Cuda install location: ${{steps.cuda-toolkit.outputs.CUDA_PATH}}"
 
-      - run: nvc++ -V
+      - run: nvcc -V
 
-      - name: Set Environment for NVC++
-        if: matrix.platform.compiler == 'nvc'
-        run: |
-          echo "NVHPC_HOME=/opt/nvidia/hpc_sdk" >> $GITHUB_ENV
-          echo "PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/25.5/compilers/bin:$PATH" >> $GITHUB_ENV
-          echo "LD_LIBRARY_PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/25.5/compilers/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-
-      - name: Check NVC++ Version
-        if: matrix.platform.compiler == 'nvc'
-        run: nvc++ --version
-        
       - name: Configure CMake (Debug)
         run: >
           cmake -B build
