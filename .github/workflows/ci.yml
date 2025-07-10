@@ -89,6 +89,10 @@ jobs:
         with:
           cuda: '12.5.0'
 
+      - name: Test NVCC
+        run: >
+          nvc++ --version
+          
       - name: Configure CMake (Debug)
         run: >
           cmake -B build
