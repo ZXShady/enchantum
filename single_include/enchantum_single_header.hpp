@@ -763,17 +763,17 @@ namespace details {
     constexpr auto elements = []() {
       constexpr auto length_of_enum_in_template_array_casting = details::length_of_enum_in_template_array_if_casting<E>();
       constexpr auto ArraySize = 1 + std::size_t{is_bitflag<E> ? (sizeof(E) * CHAR_BIT - std::is_signed_v<E>) : Max - Min};
-      //constexpr auto Array    = details::generate_arrays<E, Min, Max>();
       using Under      = std::underlying_type_t<E>;
       using Underlying = std::make_unsigned_t<std::conditional_t<std::is_same_v<bool, Under>, unsigned char, Under>>;
 
       constexpr auto ConstStr = []<std::size_t... Idx>(std::index_sequence<Idx...>) {
+        // __builtin_bit_cast used to silence errors when casting out of unscoped enums range
+        // dummy 0
         if constexpr (sizeof...(Idx) && is_bitflag<E>) // sizeof... to make contest dependant
-          return details::var_name<E{}, __builtin_bit_cast(E, static_cast<Under>(Underlying(1) << Idx))..., 0>();
+          return details::var_name<E{}, __builtin_bit_cast(E, static_cast<Under>(Underlying(1) << Idx))...,0>();
         else
-          return details::var_name<__builtin_bit_cast(E, static_cast<Under>(static_cast<decltype(Min)>(Idx) + Min))..., 0>();
+          return details::var_name<__builtin_bit_cast(E, static_cast<Under>(static_cast<decltype(Min)>(Idx) + Min))...,0>();
       }(std::make_index_sequence<ArraySize - is_bitflag<E>>());
-      auto str = ConstStr;
       struct RetVal {
         E            values[ArraySize];
         std::uint8_t string_lengths[ArraySize];
@@ -782,35 +782,36 @@ namespace details {
         std::size_t  valid_count         = 0;
       } ret;
       constexpr auto enum_in_array_len = details::enum_in_array_name_size<E{}>();
+      const auto* str = ConstStr.data();
       for (std::size_t index = 0; index < ArraySize; ++index) {
-        if (str.front() == '(') {
-          str.remove_prefix(SZC("(") + length_of_enum_in_template_array_casting + SZC(")0")); // there is atleast 1 base 10 digit
-                                                                                              //if(!str.empty())
+        if (*str == '(') {
+          str += SZC("(") + length_of_enum_in_template_array_casting + SZC(")0"); // there is atleast 1 base 10 digit
+          //if(!str.empty())
           //	std::cout << "after str \"" << str << '"' << '\n';
 
-          str.remove_prefix(str.find(',') + 2);
+          str += static_cast<std::size_t>(std::char_traits<char>::find(str,UINT8_MAX,',') -str) + SZC(", ");
 
           //std::cout << "strsize \"" << str.size() << '"' << '\n';
         }
         else {
           if constexpr (enum_in_array_len != 0)
-            str.remove_prefix(enum_in_array_len + SZC("::"));
+            str += enum_in_array_len + SZC("::");
           if constexpr (details::prefix_length_or_zero<E> != 0)
-            str.remove_prefix(details::prefix_length_or_zero<E>);
+            str += details::prefix_length_or_zero<E>;
 
-          const auto        name_size = str.find(',');
-          const auto* const name_data = str.data();
-
+          // although gcc implementation of std::char_traits::find is using a for loop internally
+          // copying the code of the function makes it way slower to compile, this was surprising.
+          const auto commapos = static_cast<std::size_t>(std::char_traits<char>::find(str,UINT8_MAX,',') - str);
+          const auto name_size = static_cast<std::uint8_t>(commapos);
           if constexpr (is_bitflag<E>)
             ret.values[ret.valid_count] = index == 0 ? E() : E(Underlying{1} << (index - 1));
           else
             ret.values[ret.valid_count] = E(Min + static_cast<decltype(Min)>(index));
           ret.string_lengths[ret.valid_count++] = name_size;
           for (std::size_t i = 0; i < name_size; ++i)
-            ret.strings[ret.total_string_length++] = name_data[i];
+            ret.strings[ret.total_string_length++] = str[i];
           ret.total_string_length += NullTerminated;
-
-          str.remove_prefix(name_size + SZC(", "));
+          str += commapos + SZC(", ");
         }
       }
       return ret;
@@ -832,7 +833,7 @@ namespace details {
       std::array<StringLengthType, elements.valid_count + 1> string_indices{};
       const char*                                            strings{};
     } ret;
-    ret.strings = static_storage_for<strings>.data();
+    ret.strings                     = static_storage_for<strings>.data();
 
     std::size_t      i            = 0;
     StringLengthType string_index = 0;
@@ -1111,7 +1112,7 @@ inline constexpr auto entries = []() {
     "enchantum failed to reflect this enum.\n"
     "Please read https://github.com/ZXShady/enchantum/blob/main/docs/limitations.md before opening an issue\n"
     "with your enum type with all its namespace/classes it is defined inside to help the creator debug the issues.");
-  std::array<Pair, size> ret;
+  std::array<Pair, size> ret{};
   auto* const            ret_data = ret.data();
 
   for (std::size_t i = 0; i < size; ++i) {
@@ -1127,7 +1128,7 @@ inline constexpr auto entries = []() {
 template<Enum E>
 inline constexpr auto values = []() {
   constexpr auto&             enums = entries<E>;
-  std::array<E, enums.size()> ret;
+  std::array<E, enums.size()> ret{};
   const auto* const           enums_data = enums.data();
   for (std::size_t i = 0; i < ret.size(); ++i)
     ret[i] = enums_data[i].first;
@@ -1137,7 +1138,7 @@ inline constexpr auto values = []() {
 template<Enum E, typename String = string_view, bool NullTerminated = true>
 inline constexpr auto names = []() {
   constexpr auto&                  enums = entries<E, std::pair<E, String>, NullTerminated>;
-  std::array<String, enums.size()> ret;
+  std::array<String, enums.size()> ret{};
   const auto* const                enums_data = enums.data();
   for (std::size_t i = 0; i < ret.size(); ++i)
     ret[i] = enums_data[i].second;
