@@ -30,6 +30,8 @@ jobs:
 
           #- { name: MacOS Clang Latest, os: macos-latest, compiler: clang, flags: "-DCMAKE_CXX_COMPILER=clang++" }
 
+          - { name: Ubuntu NVCC,     os: ubuntu-22.04,  compiler: nvc, flags: "-DCMAKE_CXX_COMPILER=nvc++" }
+
           # Sadly Disabled Due to weird quirks :(
           #- { name: Ubuntu GCC 9,     os: ubuntu-22.04,  compiler: gcc, version: 9, flags: "-DENCHANTUM_RUNTIME_TESTS=ON -DCMAKE_CXX_COMPILER=g++" }
           #- { name: Ubuntu GCC 10,    os: ubuntu-22.04,  compiler: gcc, version: 10, flags: "-DENCHANTUM_RUNTIME_TESTS=ON  -DCMAKE_CXX_COMPILER=g++" }
@@ -44,7 +46,6 @@ jobs:
           #- { name: Ubuntu Clang 11,  os: ubuntu-22.04, compiler: clang, version: 11, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           #- { name: Ubuntu Clang 12,  os: ubuntu-22.04, compiler: clang, version: 12, flags: "-DCMAKE_CXX_COMPILER=clang++" }
 #
-          - { name: Ubuntu NVCC Latest,  os: ubuntu-22.04, compiler: nvc, flags: "-DCMAKE_CXX_COMPILER=nvc++" }
           #- { name: Ubuntu Clang 13,  os: ubuntu-22.04, compiler: clang, version: 13, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           #- { name: Ubuntu Clang 14,  os: ubuntu-22.04, compiler: clang, version: 14, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           #- { name: Ubuntu Clang 15,  os: ubuntu-22.04, compiler: clang, version: 15, flags: "-DCMAKE_CXX_COMPILER=clang++" }
@@ -84,17 +85,16 @@ jobs:
         with:
           compiler: gcc-${{matrix.platform.version}}
 
-      - name: Setup NVC++
-        if: matrix.platform.compiler == 'nvc'
-        uses: Jimver/cuda-toolkit@v0.2.24
+
+      - uses: Jimver/cuda-toolkit@v0.2.24
         id: cuda-toolkit
         with:
           cuda: '12.5.0'
-
+      
       - run: echo "Installed cuda version is: ${{steps.cuda-toolkit.outputs.cuda}}"
-
+      
       - run: echo "Cuda install location: ${{steps.cuda-toolkit.outputs.CUDA_PATH}}"
-
+      
       - run: nvcc -V
 
       - name: Configure CMake (Debug)
