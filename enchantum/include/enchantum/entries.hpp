@@ -2,12 +2,16 @@
 
 #include "details/string_view.hpp"
 
-#if defined(__clang__)
+#if defined(__NVCOMPILER)
+  #include "details/enchantum_nvcc.hpp"
+#elif defined(__clang__)
   #include "details/enchantum_clang.hpp"
 #elif defined(__GNUC__) || defined(__GNUG__)
   #include "details/enchantum_gcc.hpp"
 #elif defined(_MSC_VER)
   #include "details/enchantum_msvc.hpp"
+#else
+  #error unsupported compiler please open an issue for enchantum
 #endif
 
 #include "common.hpp"
@@ -38,8 +42,14 @@ namespace details {
 
 template<Enum E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true>
 inline constexpr auto entries = []() {
+  
+#if defined(__NVCOMPILER) 
+  // nvc++ had issues with that and did not allow it. it just did not work after testing in godbolt and I don't know why
+  const auto             reflected = details::reflection_data<E, NullTerminated>;
+#else
   const auto             reflected = details::reflection_data<std::remove_cv_t<E>, NullTerminated>;
-  constexpr auto         size      = sizeof(reflected.values) / sizeof(reflected.values[0]);
+#endif
+constexpr auto         size      = sizeof(reflected.values) / sizeof(reflected.values[0]);
   std::array<Pair, size> ret;
   auto* const            ret_data = ret.data();
 

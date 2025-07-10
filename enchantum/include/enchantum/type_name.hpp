@@ -17,8 +17,11 @@ namespace details {
   template<typename T>
   constexpr auto raw_type_name_func() noexcept
   {
-
-#if defined(__clang__)
+#if defined(__NVCOMPILER)
+    constexpr std::size_t prefix = 0;
+    constexpr auto s = string_view(__PRETTY_FUNCTION__ + SZC("constexpr auto enchantum::details::raw_type_name_func() noexcept [with T = "),
+            SZC(__PRETTY_FUNCTION__) - SZC("constexpr auto enchantum::details::raw_type_name_func() noexcept [with T = ]"));
+#elif defined(__clang__)
     constexpr std::size_t prefix = 0;
     constexpr auto s = string_view(__PRETTY_FUNCTION__ + SZC("auto enchantum::details::raw_type_name_func() [_ = "),
                                    SZC(__PRETTY_FUNCTION__) - SZC("auto enchantum::details::raw_type_name_func() [_ = ]"));
