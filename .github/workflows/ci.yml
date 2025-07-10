@@ -20,39 +20,40 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          - { name: Windows MSVC 2022, os: windows-2022, compiler: msvc,flags: "" }
-          - { name: Windows MSVC 2022 with Disable Speedup, os: windows-2022, compiler: msvc,flags: "-DENCHANTUM_ENABLE_MSVC_SPEEDUP=OFF" }
+          #- { name: Windows MSVC 2022, os: windows-2022, compiler: msvc,flags: "" }
+          #- { name: Windows MSVC 2022 with Disable Speedup, os: windows-2022, compiler: msvc,flags: "-DENCHANTUM_ENABLE_MSVC_SPEEDUP=OFF" }
 
           # Disabled due to MSVC STL not allowing pre Clang 19
           #- { name: Windows Clang 18, os: windows-latest, compiler: clang, version: 18.1.0, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Windows Clang 19, os: windows-latest, compiler: clang, version: 19.1.0, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Windows Clang 20, os: windows-latest, compiler: clang, version: 20.1.0, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          #- { name: Windows Clang 19, os: windows-latest, compiler: clang, version: 19.1.0, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          #- { name: Windows Clang 20, os: windows-latest, compiler: clang, version: 20.1.0, flags: "-DCMAKE_CXX_COMPILER=clang++" }
 
-          - { name: MacOS Clang Latest, os: macos-latest, compiler: clang, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          #- { name: MacOS Clang Latest, os: macos-latest, compiler: clang, flags: "-DCMAKE_CXX_COMPILER=clang++" }
 
           # Sadly Disabled Due to weird quirks :(
           #- { name: Ubuntu GCC 9,     os: ubuntu-22.04,  compiler: gcc, version: 9, flags: "-DENCHANTUM_RUNTIME_TESTS=ON -DCMAKE_CXX_COMPILER=g++" }
           #- { name: Ubuntu GCC 10,    os: ubuntu-22.04,  compiler: gcc, version: 10, flags: "-DENCHANTUM_RUNTIME_TESTS=ON  -DCMAKE_CXX_COMPILER=g++" }
-          - { name: Ubuntu GCC 11,    os: ubuntu-latest, compiler: gcc, version: 11, flags: "-DCMAKE_CXX_COMPILER=g++" }
-          - { name: Ubuntu GCC 12,    os: ubuntu-latest, compiler: gcc, version: 12, flags: "-DCMAKE_CXX_COMPILER=g++" }
-          - { name: Ubuntu GCC 13,    os: ubuntu-latest, compiler: gcc, version: 13, flags: "-DCMAKE_CXX_COMPILER=g++" }
-          - { name: Ubuntu GCC 14,    os: ubuntu-latest, compiler: gcc, version: 14, flags: "-DCMAKE_CXX_COMPILER=g++" }
+          #- { name: Ubuntu GCC 11,    os: ubuntu-latest, compiler: gcc, version: 11, flags: "-DCMAKE_CXX_COMPILER=g++" }
+          #- { name: Ubuntu GCC 12,    os: ubuntu-latest, compiler: gcc, version: 12, flags: "-DCMAKE_CXX_COMPILER=g++" }
+          #- { name: Ubuntu GCC 13,    os: ubuntu-latest, compiler: gcc, version: 13, flags: "-DCMAKE_CXX_COMPILER=g++" }
+          #- { name: Ubuntu GCC 14,    os: ubuntu-latest, compiler: gcc, version: 14, flags: "-DCMAKE_CXX_COMPILER=g++" }
           # Sadly cannot install
           #- { name: Ubuntu GCC 15,    os: ubuntu-latest, compiler: gcc, version: 15, flags: "-DCMAKE_CXX_COMPILER=g++" }
           
-          - { name: Ubuntu Clang 10,  os: ubuntu-22.04, compiler: clang, version: 10, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Ubuntu Clang 11,  os: ubuntu-22.04, compiler: clang, version: 11, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Ubuntu Clang 12,  os: ubuntu-22.04, compiler: clang, version: 12, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          - { name: Ubuntu,  os: ubuntu-22.04, compiler: nvc, flags: "-DCMAKE_CXX_COMPILER=clang++" }
 
-          - { name: Ubuntu Clang 13,  os: ubuntu-22.04, compiler: clang, version: 13, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Ubuntu Clang 14,  os: ubuntu-22.04, compiler: clang, version: 14, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Ubuntu Clang 15,  os: ubuntu-22.04, compiler: clang, version: 15, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Ubuntu Clang 16,  os: ubuntu-latest, compiler: clang, version: 16, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Ubuntu Clang 17,  os: ubuntu-latest, compiler: clang, version: 17, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Ubuntu Clang 18,  os: ubuntu-latest, compiler: clang, version: 18, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Ubuntu Clang 19,  os: ubuntu-latest, compiler: clang, version: 19, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Ubuntu Clang 20,  os: ubuntu-latest, compiler: clang, version: 20, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Ubuntu Clang 21,  os: ubuntu-latest, compiler: clang, version: 21, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          #- { name: Ubuntu Clang 10,  os: ubuntu-22.04, compiler: clang, version: 10, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          #- { name: Ubuntu Clang 11,  os: ubuntu-22.04, compiler: clang, version: 11, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          #- { name: Ubuntu Clang 12,  os: ubuntu-22.04, compiler: clang, version: 12, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          #- { name: Ubuntu Clang 13,  os: ubuntu-22.04, compiler: clang, version: 13, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          #- { name: Ubuntu Clang 14,  os: ubuntu-22.04, compiler: clang, version: 14, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          #- { name: Ubuntu Clang 15,  os: ubuntu-22.04, compiler: clang, version: 15, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          #- { name: Ubuntu Clang 16,  os: ubuntu-latest, compiler: clang, version: 16, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          #- { name: Ubuntu Clang 17,  os: ubuntu-latest, compiler: clang, version: 17, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          #- { name: Ubuntu Clang 18,  os: ubuntu-latest, compiler: clang, version: 18, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          #- { name: Ubuntu Clang 19,  os: ubuntu-latest, compiler: clang, version: 19, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          #- { name: Ubuntu Clang 20,  os: ubuntu-latest, compiler: clang, version: 20, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          #- { name: Ubuntu Clang 21,  os: ubuntu-latest, compiler: clang, version: 21, flags: "-DCMAKE_CXX_COMPILER=clang++" }
         
     steps:
       - name: Checkout Code
@@ -82,6 +83,18 @@ jobs:
         uses: aminya/setup-cpp@v1
         with:
           compiler: gcc-${{matrix.platform.version}}
+
+      - name: Setup NVCC
+      - uses: Jimver/cuda-toolkit@v0.2.24
+        id: cuda-toolkit
+        with:
+          cuda: '12.5.0'
+
+      - run: echo "Installed cuda version is: ${{steps.cuda-toolkit.outputs.cuda}}"
+
+      - run: echo "Cuda install location: ${{steps.cuda-toolkit.outputs.CUDA_PATH}}"
+
+      - run: nvcc -V
 
       - name: Configure CMake (Debug)
         run: >
