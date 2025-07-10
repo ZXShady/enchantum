@@ -498,11 +498,11 @@ enum class Status { Ok = 0, Error = 1, Unknown = 2 };
 assert(enchantum::cast<Status>(1).has_value());
 assert(!enchantum::cast<Status>(300).has_value());
 
-assert(enchantum::cast<Color>("Unknown").has_value());
+assert(enchantum::cast<Status>("Unknown").has_value());
 
-assert(!enchantum::cast<Color>("UnKnoWn").has_value());
+assert(!enchantum::cast<Status>("UnKnoWn").has_value());
 
-assert(enchantum::cast<Color>("UnKnOwn",[](std::string_view a,std::string_view b){
+assert(enchantum::cast<Status>("UnKnOwn",[](std::string_view a,std::string_view b){
   return std::ranges::equal(a,b,[](unsigned char x,unsigned char y){
     return std::tolower(x) == std::tolower(y);
   })
