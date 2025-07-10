@@ -44,7 +44,7 @@ jobs:
           #- { name: Ubuntu Clang 11,  os: ubuntu-22.04, compiler: clang, version: 11, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           #- { name: Ubuntu Clang 12,  os: ubuntu-22.04, compiler: clang, version: 12, flags: "-DCMAKE_CXX_COMPILER=clang++" }
 #
-          - { name: Ubuntu NVCC Latest,  os: ubuntu-22.04, compiler: clang, version: 13, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          - { name: Ubuntu NVCC Latest,  os: ubuntu-22.04, compiler: nvc, flags: "-DCMAKE_CXX_COMPILER=nvc++" }
           #- { name: Ubuntu Clang 13,  os: ubuntu-22.04, compiler: clang, version: 13, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           #- { name: Ubuntu Clang 14,  os: ubuntu-22.04, compiler: clang, version: 14, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           #- { name: Ubuntu Clang 15,  os: ubuntu-22.04, compiler: clang, version: 15, flags: "-DCMAKE_CXX_COMPILER=clang++" }
