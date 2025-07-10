@@ -4,7 +4,9 @@
 #include <cstdint>
 #include <type_traits>
 #include <utility>
-
+#include "../common.hpp"
+#include "../type_name.hpp"
+#include "generate_arrays.hpp"
 namespace enchantum {
 
 namespace details {
@@ -102,7 +104,10 @@ namespace details {
               ret.values[ret.valid_count] = {E(Min + static_cast<decltype(Min)>(index))};
 
             ret.string_lengths[ret.valid_count++] = name_size;
-            __builtin_memcpy(ret.strings + ret.total_string_length, str, name_size);
+            
+            for(std::size_t i =0;i<name_size;++i)
+              ret.strings[i+ret.total_string_length] = str[i];
+            // __builtin_memcpy(ret.strings + ret.total_string_length, str, name_size);
             ret.total_string_length += name_size + NullTerminated;
           }
           str += name_size + SZC("; ");
@@ -119,11 +124,16 @@ namespace details {
       std::array<StringLengthType, elements.valid_count + 1> string_indices{};
       const char*                                            strings{};
     } ret;
-    __builtin_memcpy(ret.values.data(), elements.values, sizeof(ret.values));
+    for(std::size_t i=0;i<elements.valid_count;++i)
+      ret.values[i] = elements.values[i];
+
+    // __builtin_memcpy(ret.values.data(), elements.values, sizeof(ret.values));
 
     constexpr auto strings = [](const auto total_length, const char* data) {
       std::array<char, total_length.value> strings{};
-      __builtin_memcpy(strings.data(), data, total_length.value);
+      for(std::size_t i = 0;i<total_length.value;++i)
+        strings[i] = data[i];
+        // __builtin_memcpy(strings.data(), data, total_length.value);
       return strings;
     }(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings);
     ret.strings = static_storage_for<strings>.data();
