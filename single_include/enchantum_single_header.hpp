@@ -33,8 +33,11 @@ namespace details {
   template<typename T>
   constexpr auto raw_type_name_func() noexcept
   {
-
-#if defined(__clang__)
+#if defined(__NVCOMPILER)
+    constexpr std::size_t prefix = 0;
+    constexpr auto s = string_view(__PRETTY_FUNCTION__ + SZC("constexpr auto enchantum::details::raw_type_name_func() noexcept [with T = "),
+            SZC(__PRETTY_FUNCTION__) - SZC("constexpr auto enchantum::details::raw_type_name_func() noexcept [with T = ]"));
+#elif defined(__clang__)
     constexpr std::size_t prefix = 0;
     constexpr auto s = string_view(__PRETTY_FUNCTION__ + SZC("auto enchantum::details::raw_type_name_func() [_ = "),
                                    SZC(__PRETTY_FUNCTION__) - SZC("auto enchantum::details::raw_type_name_func() [_ = ]"));
@@ -384,7 +387,10 @@ namespace details {
               ret.values[ret.valid_count] = {E(Min + static_cast<decltype(Min)>(index))};
 
             ret.string_lengths[ret.valid_count++] = name_size;
-            __builtin_memcpy(ret.strings + ret.total_string_length, str, name_size);
+            
+            for(std::size_t i =0;i<name_size;++i)
+              ret.strings[i+ret.total_string_length] = str[i];
+            // __builtin_memcpy(ret.strings + ret.total_string_length, str, name_size);
             ret.total_string_length += name_size + NullTerminated;
           }
           str += name_size + SZC("; ");
@@ -401,11 +407,16 @@ namespace details {
       std::array<StringLengthType, elements.valid_count + 1> string_indices{};
       const char*                                            strings{};
     } ret;
-    __builtin_memcpy(ret.values.data(), elements.values, sizeof(ret.values));
+    for(std::size_t i=0;i<elements.valid_count;++i)
+      ret.values[i] = elements.values[i];
+
+    // __builtin_memcpy(ret.values.data(), elements.values, sizeof(ret.values));
 
     constexpr auto strings = [](const auto total_length, const char* data) {
       std::array<char, total_length.value> strings{};
-      __builtin_memcpy(strings.data(), data, total_length.value);
+      for(std::size_t i = 0;i<total_length.value;++i)
+        strings[i] = data[i];
+        // __builtin_memcpy(strings.data(), data, total_length.value);
       return strings;
     }(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings);
     ret.strings = static_storage_for<strings>.data();
@@ -1088,8 +1099,14 @@ namespace details {
 
 template<Enum E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true>
 inline constexpr auto entries = []() {
+  
+#if defined(__NVCOMPILER) 
+  // nvc++ had issues with that and did not allow it. it just did not work after testing in godbolt and I don't know why
+  const auto             reflected = details::reflection_data<E, NullTerminated>;
+#else
   const auto             reflected = details::reflection_data<std::remove_cv_t<E>, NullTerminated>;
-  constexpr auto         size      = sizeof(reflected.values) / sizeof(reflected.values[0]);
+#endif
+constexpr auto         size      = sizeof(reflected.values) / sizeof(reflected.values[0]);
   std::array<Pair, size> ret;
   auto* const            ret_data = ret.data();
 
