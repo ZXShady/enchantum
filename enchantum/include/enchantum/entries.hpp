@@ -54,7 +54,7 @@ inline constexpr auto entries = []() {
     "enchantum failed to reflect this enum.\n"
     "Please read https://github.com/ZXShady/enchantum/blob/main/docs/limitations.md before opening an issue\n"
     "with your enum type with all its namespace/classes it is defined inside to help the creator debug the issues.");
-  std::array<Pair, size> ret;
+  std::array<Pair, size> ret{};
   auto* const            ret_data = ret.data();
 
 
@@ -71,7 +71,7 @@ inline constexpr auto entries = []() {
 template<Enum E>
 inline constexpr auto values = []() {
   constexpr auto&             enums = entries<E>;
-  std::array<E, enums.size()> ret;
+  std::array<E, enums.size()> ret{};
   const auto* const           enums_data = enums.data();
   for (std::size_t i = 0; i < ret.size(); ++i)
     ret[i] = enums_data[i].first;
@@ -81,7 +81,7 @@ inline constexpr auto values = []() {
 template<Enum E, typename String = string_view, bool NullTerminated = true>
 inline constexpr auto names = []() {
   constexpr auto&                  enums = entries<E, std::pair<E, String>, NullTerminated>;
-  std::array<String, enums.size()> ret;
+  std::array<String, enums.size()> ret{};
   const auto* const                enums_data = enums.data();
   for (std::size_t i = 0; i < ret.size(); ++i)
     ret[i] = enums_data[i].second;
