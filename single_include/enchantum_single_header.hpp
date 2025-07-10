@@ -1106,7 +1106,11 @@ inline constexpr auto entries = []() {
 #else
   const auto             reflected = details::reflection_data<std::remove_cv_t<E>, NullTerminated>;
 #endif
-constexpr auto         size      = sizeof(reflected.values) / sizeof(reflected.values[0]);
+  constexpr auto         size      = sizeof(reflected.values) / sizeof(reflected.values[0]);
+  static_assert(size != 0,
+    "enchantum failed to reflect this enum.\n"
+    "Please read https://github.com/ZXShady/enchantum/blob/main/docs/limitations.md before opening an issue\n"
+    "with your enum type with all its namespace/classes it is defined inside to help the creator debug the issues.");
   std::array<Pair, size> ret;
   auto* const            ret_data = ret.data();
 
