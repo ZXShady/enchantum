@@ -117,7 +117,7 @@ TEST_CASE("Color enum cast from underlying type", "[cast]")
 
 TEST_CASE("NonContigFlagsWithNoneCStyle contains", "[contains]")
 {
-  STATIC_CHECK_FALSE(enchantum::contains(NonContigFlagsWithNoneCStyle(1 << 3))); 
+  STATIC_CHECK_FALSE(enchantum::contains(NonContigFlagsWithNoneCStyle(1 << 3)));
   STATIC_CHECK_FALSE(enchantum::contains(NonContigFlagsWithNoneCStyle(1 << 4)));
   STATIC_CHECK_FALSE(enchantum::contains(NonContigFlagsWithNoneCStyle(1 << 5)));
   STATIC_CHECK_FALSE(enchantum::contains(NonContigFlagsWithNoneCStyle(1 << 7)));
