@@ -103,7 +103,7 @@ enum ImGuiFreeTypeBuilderFlags {
 template<>
 struct enchantum::enum_traits<ImGuiFreeTypeBuilderFlags> {
   static constexpr std::size_t prefix_length = sizeof("ImGuiFreeTypeBuilderFlags_") - 1;
-  static constexpr auto        min           = ENCHANTUM_MIN_RANGE;
+  static constexpr auto        min           = 0;
   static constexpr auto        max           = ENCHANTUM_MAX_RANGE;
 };
 template<>
@@ -289,7 +289,7 @@ enum class Direction3D : std::int16_t {
 };
 
 
-enum CStyleLetters {
+enum CStyleFromA_To_G {
   a,
   b,
   c,
@@ -385,7 +385,7 @@ using AllEnumsTestTypes = concat<
     Direction2D,
     Direction3D,
     Letters,
-    CStyleLetters,
+    CStyleFromA_To_G,
     Outer::Inner::Anon,
     Outer::Inner::CStyleAnon>>;
 
