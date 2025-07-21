@@ -95,8 +95,7 @@ namespace enchantum {
 			for (std::size_t index = 0; index < array_size; ++index) {
 				
 				if (*str == '(') {
-					str += least_length_when_casting;
-					str += static_cast<std::size_t>(std::char_traits<char>::find(str, UINT8_MAX, ',') - str) + SZC(", ");
+					str = std::char_traits<char>::find(str + least_length_when_casting, UINT8_MAX, ',') + SZC(", ");
 				}
 				else {
 					str += least_length_when_value;
