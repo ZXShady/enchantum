@@ -41,18 +41,21 @@ endif()
 
 install(TARGETS enchantum
     EXPORT enchantumTargets
+    COMPONENT enchantum
 )
 
 include(GNUInstallDirs)
 
 install(DIRECTORY ${INCDIR}/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    COMPONENT enchantum
     FILES_MATCHING PATTERN "*.hpp"
 )
 
 install(EXPORT enchantumTargets
     NAMESPACE enchantum::
     DESTINATION ${CMAKE_INSTALL_DATADIR}/enchantum/cmake
+    COMPONENT enchantum
 )
 
 include(CMakePackageConfigHelpers)
@@ -73,6 +76,7 @@ install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/enchantumConfig.cmake"
     "${CMAKE_CURRENT_BINARY_DIR}/enchantumConfigVersion.cmake"
     DESTINATION cmake
+    COMPONENT enchantum
 )
 
 export(
