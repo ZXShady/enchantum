@@ -3,9 +3,11 @@
 // Clang <= 12 outputs "NUMBER" if casting
 // Clang > 12 outputs "(E)NUMBER".
 
-#if defined __has_warning && __has_warning("-Wenum-constexpr-conversion")
-  #pragma clang diagnostic push
-  #pragma clang diagnostic ignored "-Wenum-constexpr-conversion"
+#if defined __has_warning 
+  #if __has_warning("-Wenum-constexpr-conversion")
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wenum-constexpr-conversion"
+  #endif
 #endif
 
 #include "../common.hpp"
@@ -183,7 +185,7 @@ namespace details {
 
           // https://clang.llvm.org/docs/LanguageExtensions.html#string-builtins
           //char* __builtin_char_memchr(const char* haystack, int needle, size_t size);
-          str += static_cast<std::size_t>(__builtin_char_memchr(str, ',', UINT8_MAX) - str) + SZC(", ");
+          str = __builtin_char_memchr(str, ',', UINT8_MAX) + SZC(", ");
         }
         else {
           if constexpr (enum_in_array_len != 0)
@@ -195,9 +197,9 @@ namespace details {
           const auto name_size = static_cast<std::uint8_t>(__builtin_char_memchr(str, ',', UINT8_MAX) - str);
           {
             if constexpr (is_bitflag<E>)
-              ret.values[ret.valid_count] = {index == 0 ? E() : E(Underlying{1} << (index - 1))};
+              ret.values[ret.valid_count] = index == 0 ? E() : static_cast<E>(Underlying{1} << (index - 1));
             else
-              ret.values[ret.valid_count] = {E(Min + static_cast<decltype(Min)>(index))};
+              ret.values[ret.valid_count] = static_cast<E>(Min + static_cast<decltype(Min)>(index));
 
             ret.string_lengths[ret.valid_count++] = name_size;
             __builtin_memcpy(ret.strings + ret.total_string_length, str, name_size);
@@ -254,7 +256,9 @@ namespace details {
 
 } // namespace enchantum
 
-#if defined __has_warning && __has_warning("-Wenum-constexpr-conversion")
-  #pragma clang diagnostic pop
+#if defined __has_warning
+  #if __has_warning("-Wenum-constexpr-conversion")
+    #pragma clang diagnostic pop
+  #endif
 #endif
 #undef SZC
