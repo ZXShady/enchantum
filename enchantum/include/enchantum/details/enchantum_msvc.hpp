@@ -21,25 +21,12 @@
 #endif
 namespace enchantum {
 
-struct simple_string_view {
-  const char*           begin;
-  const char*           end;
-  constexpr std::size_t find(const char c) const noexcept
-  {
-    for (auto copy = begin; copy != end; ++copy)
-      if (*copy == c)
-        return std::size_t(copy - begin);
-  }
-  constexpr std::size_t find_comma() const noexcept
-  {
-    for (auto copy = begin; copy != end; ++copy)
-      if (*copy == ',')
-        return std::size_t(copy - begin);
-  }
-};
+
+
 
 #define SZC(x) (sizeof(x) - 1)
 namespace details {
+
   template<auto Enum>
   constexpr auto enum_in_array_name_size() noexcept
   {
@@ -71,8 +58,8 @@ namespace details {
     //auto __cdecl f<class std::array<enum `anonymous namespace'::UnscopedAnon,32>{enum `anonymous-namespace'::UnscopedAnon
 
     std::size_t    funcsig_off   = SZC("auto __cdecl enchantum::details::var_name<class ");
-    funcsig_off += raw_type_name<decltype(Array)>.size();
-    funcsig_off += SZC("{enum ") + raw_type_name<typename decltype(Array)::value_type>.size();
+    funcsig_off += details::raw_type_name_func<decltype(Array)>().size() - 1;
+    funcsig_off += SZC("{enum ") + details::raw_type_name_func<typename decltype(Array)::value_type>().size() - 1;
     return string_view(__FUNCSIG__ + funcsig_off, SZC(__FUNCSIG__) - funcsig_off - SZC("}>(void) noexcept"));
   }
 
@@ -90,8 +77,8 @@ namespace details {
     constexpr auto ConstStr          = var_name<Array>();
     constexpr auto StringSize        = ConstStr.size();
     constexpr auto ArraySize         = Array.size() - 1;
-    auto           str               = simple_string_view(ConstStr.data(), ConstStr.data() + ConstStr.size());
-    constexpr auto type_name_len     = raw_type_name<E>.size();
+    const auto*    str               = ConstStr.data();
+    constexpr auto type_name_len     = details::raw_type_name_func<E>().size()-1;
     constexpr auto enum_in_array_len = details::enum_in_array_name_size<E{}>();
 
     struct RetVal {
@@ -126,36 +113,35 @@ namespace details {
     // clang-format on
 
     for (std::size_t index = 0; index < ArraySize; ++index) {
-      if (*str.begin == '(') {
+      if (*str == '(') {
 #if ENCHANTUM_ENABLE_MSVC_SPEEDUP
         if constexpr (skip_work_if_neg != 0) {
           const auto i = static_cast<std::underlying_type_t<E>>(ArrayData[index]);
-          str.begin += skip_if_cast_count + ((i < 0) * skip_work_if_neg);
+          str += skip_if_cast_count + ((i < 0) * skip_work_if_neg);
         }
         else {
-          str.begin += skip_if_cast_count;
+          str += skip_if_cast_count;
         }
 #else
-        str.begin += skip_if_cast_count;
+        str += skip_if_cast_count;
 #endif
-
-        str.begin += str.find_comma() + 1;
+        while(*str++ != ',')
+          /*intentionally empty*/;
       }
       else {
         if constexpr (enum_in_array_len != 0)
-          str.begin += enum_in_array_len + SZC("::");
+          str += enum_in_array_len + SZC("::");
 
         if constexpr (details::prefix_length_or_zero<E> != 0)
-          str.begin += details::prefix_length_or_zero<E>;
-
-        const auto commapos = str.find_comma(); // never fails
+          str += details::prefix_length_or_zero<E>;
 
         ret.values[ret.valid_count]           = ArrayData[index];
-        ret.string_lengths[ret.valid_count++] = static_cast<std::uint8_t>(commapos);
-        for (std::size_t i = 0; i < commapos; ++i)
-          ret.strings[ret.total_string_length++] = str.begin[i];
+        std::size_t i = 0;
+        while (str[i] != ',')
+          ret.strings[ret.total_string_length++] = str[i++];
+        ret.string_lengths[ret.valid_count++] = static_cast<std::uint8_t>(i);
         ret.total_string_length += NullTerminated;
-        str.begin += commapos + 1;
+        str += i + 1;
       }
     }
     return ret;
