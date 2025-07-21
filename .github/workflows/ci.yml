@@ -52,7 +52,9 @@ jobs:
           - { name: Ubuntu Clang 18,  os: ubuntu-latest, compiler: clang, version: 18, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           - { name: Ubuntu Clang 19,  os: ubuntu-latest, compiler: clang, version: 19, flags: "-DCMAKE_CXX_COMPILER=clang++" }
           - { name: Ubuntu Clang 20,  os: ubuntu-latest, compiler: clang, version: 20, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Ubuntu Clang 21,  os: ubuntu-latest, compiler: clang, version: 21, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          
+          #  Disabled since it cannot be installed ATM
+          #- { name: Ubuntu Clang 21,  os: ubuntu-latest, compiler: clang, version: 21, flags: "-DCMAKE_CXX_COMPILER=clang++" }
         
     steps:
       - name: Checkout Code
