@@ -66,28 +66,13 @@ namespace details {
   }
 
   template<auto Array>
-  constexpr auto var_name() noexcept
+  constexpr auto __cdecl var_name() noexcept
   {
     //auto __cdecl f<class std::array<enum `anonymous namespace'::UnscopedAnon,32>{enum `anonymous-namespace'::UnscopedAnon
 
-    using T                      = typename decltype(Array)::value_type;
-    std::size_t    funcsig_off   = SZC("auto __cdecl enchantum::details::var_name<class std::array<enum ");
-    constexpr auto type_name_len = raw_type_name<T>.size();
-    funcsig_off += type_name_len + SZC(",");
-    constexpr auto Size = Array.size();
-    // clang-format off
-    funcsig_off += Size < 10 ? 1
-    : Size < 100 ? 2
-    : Size < 1000 ? 3
-    : Size < 10000 ? 4
-    : Size < 100000 ? 5
-    : Size < 1000000 ? 6
-    : Size < 10000000 ? 7
-    : Size < 100000000 ? 8
-    : Size < 1000000000 ? 9
-    : 10;
-    // clang-format on
-    funcsig_off += SZC(">{enum ") + type_name_len;
+    std::size_t    funcsig_off   = SZC("auto __cdecl enchantum::details::var_name<class ");
+    funcsig_off += raw_type_name<decltype(Array)>.size();
+    funcsig_off += SZC("{enum ") + raw_type_name<typename decltype(Array)::value_type>.size();
     return string_view(__FUNCSIG__ + funcsig_off, SZC(__FUNCSIG__) - funcsig_off - SZC("}>(void) noexcept"));
   }
 
