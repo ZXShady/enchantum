@@ -5,6 +5,42 @@
 #include <enchantum/enchantum.hpp>
 #include <enchantum/generators.hpp>
 
+
+template<typename T>
+auto names_of = []() {
+	static_assert(0==sizeof(T));
+	};
+
+template<> std::array<std::string_view, 5> names_of<Color> = { "Aqua", "Purple", "Green", "Red", "Blue" };
+template<> std::array<std::string_view, 7> names_of<Flags> = { "Flag0", "Flag1", "Flag2", "Flag3", "Flag4", "Flag5", "Flag6" };
+template<> std::array<std::string_view, 5> names_of<UnscopedColor> = { "Aqua", "Purple", "Green", "Red", "Blue" };
+template<> std::array<std::string_view, 3> names_of<BlockType> = { "Dirt", "Stone", "Obsidian" };
+template<> std::array<std::string_view, 7> names_of<StrongFlagsNoOverloadedOperators> = { "Flag0", "Flag1", "Flag2", "Flag3", "Flag4", "Flag5", "Flag6" };
+template<> std::array<std::string_view, 10> names_of<ImGuiFreeTypeBuilderFlags> = { "NoHinting", "NoAutoHint", "ForceAutoHint", "LightHinting", "MonoHinting", "Bold", "Oblique", "Monochrome", "LoadColor", "Bitmap" };
+template<> std::array<std::string_view, 10> names_of<ContigNonZero> = { "_0", "_1", "_2", "_3", "_4", "_5", "_6", "_7", "_8", "_9" };
+template<> std::array<std::string_view, 10> names_of<ContigNonZeroCStyle> = { "ContigNonZeroCStyle_0", "ContigNonZeroCStyle_1", "ContigNonZeroCStyle_2", "ContigNonZeroCStyle_3", "ContigNonZeroCStyle_4", "ContigNonZeroCStyle_5", "ContigNonZeroCStyle_6", "ContigNonZeroCStyle_7", "ContigNonZeroCStyle_8", "ContigNonZeroCStyle_9" };
+template<> std::array<std::string_view, 10> names_of<ContigNonZeroStartWith5CStyle> = { "ContigNonZeroStartWith5CStyle_0", "ContigNonZeroStartWith5CStyle_1", "ContigNonZeroStartWith5CStyle_2", "ContigNonZeroStartWith5CStyle_3", "ContigNonZeroStartWith5CStyle_4", "ContigNonZeroStartWith5CStyle_5", "ContigNonZeroStartWith5CStyle_6", "ContigNonZeroStartWith5CStyle_7", "ContigNonZeroStartWith5CStyle_8", "ContigNonZeroStartWith5CStyle_9" };
+template<> std::array<std::string_view, 10> names_of<UnderlyingTypeWChar_t> = { "_0", "_1", "_2", "_3", "_4", "_5", "_6", "_7", "_8", "_9" };
+#ifdef __cpp_char8_t
+template<> std::array<std::string_view, 10> names_of<UnderlyingTypeChar8_t> = { "_0", "_1", "_2", "_3", "_4", "_5", "_6", "_7", "_8", "_9" };
+#endif
+template<> std::array<std::string_view, 10> names_of<UnderlyingTypeChar16_t> = { "_0", "_1", "_2", "_3", "_4", "_5", "_6", "_7", "_8", "_9" };
+template<> std::array<std::string_view, 10> names_of<UnderlyingTypeChar32_t> = { "_0", "_1", "_2", "_3", "_4", "_5", "_6", "_7", "_8", "_9" };
+template<> std::array<std::string_view, 26> names_of<Letters> = { "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z" };
+template<> std::array<std::string_view, 5> names_of<NonContigFlagsWithNoneCStyle> = { "None", "Flag0", "Flag1", "Flag2", "Flag6" };
+template<> std::array<std::string_view, 9> names_of<FlagsWithNone> = { "None", "Flag0", "Flag1", "Flag2", "Flag3", "Flag4", "Flag5", "Flag6", "Flag7" };
+template<> std::array<std::string_view, 5> names_of<Direction2D> = { "None","Left","Up","Right","Down"};
+template<> std::array<std::string_view, 7> names_of<Direction3D> = { "None", "Left", "Up", "Right", "Down", "Front", "Back" };
+template<> std::array<std::string_view, 7> names_of<CStyleFromA_To_G> = { "a", "b", "c", "e", "d", "f", "g" };
+template<> std::array<std::string_view, 2> names_of<MinMaxValues> = { "min","max"};
+template<> std::array<std::string_view, 2> names_of<MinMaxValuesCStyle> = { "MinMaxValuesCStyle_min","MinMaxValuesCStyle_max" };
+
+template<> std::array<std::string_view, 7> names_of<Outer::Inner::Anon> = { "_0", "_1", "_2", "_3", "_4", "_5", "_6" };
+template<> std::array<std::string_view, 7> names_of<Outer::Inner::CStyleAnon> = { "CStyleAnon_0", "CStyleAnon_1", "CStyleAnon_2", "CStyleAnon_3", "CStyleAnon_4", "CStyleAnon_5", "CStyleAnon_6" };
+template<> std::array<std::string_view, 5> names_of<UnscopedCStyle> = { "Unscoped_CStyle_Val0", "Unscoped_CStyle_Value1", "Unscoped_CStyle_Value4", "Unscoped_CStyle_Value3", "Unscoped_CStyle_Value2" };
+template<> std::array<std::string_view, 2> names_of<BoolEnum> = { "False", "True" };
+template<> std::array<std::string_view, 2> names_of<BoolEnumCStyle> = { "BoolEnumCStyle_False", "BoolEnumCStyle_True" };
+
 TEMPLATE_LIST_TEST_CASE("array size checks", "[constants]", AllEnumsTestTypes)
 {
 	constexpr auto count = enchantum::count<TestType>;
@@ -68,6 +104,21 @@ TEMPLATE_LIST_TEST_CASE("array size checks", "[constants]", AllEnumsTestTypes)
 		for (std::size_t i = 0; i < count; ++i) {
 			CHECK(values[i] == enchantum::cast<TestType>(enchantum::to_string(values[i])));
 		}
+	}
+
+	SECTION("expected names")
+	{
+		auto comp = [](auto x, auto y)
+			{
+				CAPTURE(enchantum::raw_type_name<decltype(x)>);
+				CAPTURE(enchantum::raw_type_name<decltype(y)>);
+				CAPTURE(enchantum::raw_type_name<TestType>);
+
+				REQUIRE(x.size() == y.size());
+				for (std::size_t i = 0; i < x.size(); ++i)
+					CHECK(x[i] == y[i]);
+			};
+		comp(names_of<TestType>, enchantum::names<TestType>);
 	}
 }
 
