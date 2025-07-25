@@ -23,65 +23,6 @@
 
 namespace enchantum {
 
-#if __clang_major__ >= 20
-namespace details {
-
-  template<typename T, auto V, typename = void>
-  inline constexpr bool is_valid_cast = false;
-
-  template<typename T, auto V>
-  inline constexpr bool is_valid_cast<T, V, std::void_t<std::integral_constant<T, static_cast<T>(V)>>> = true;
-
-  template<typename T, std::underlying_type_t<T> range, decltype(range) old_range>
-  constexpr auto valid_cast_range_recurse() noexcept
-  {
-    // this tests whether `static_cast`ing range is valid
-    // because C style enums stupidly is like a bit field
-    // `enum E { a,b,c,d = 3};` is like a bitfield `struct E { int val : 2;}`
-    // which means giving E.val a larger than 2 bit value is UB so is it for enums
-    // and gcc and msvc ignore this (for good)
-    // while clang makes it a subsituation failure which we can check for
-    // using std::inegral_constant makes sure this is a constant expression situation
-    // for SFINAE to occur
-    if constexpr (is_valid_cast<T, range>)
-      return valid_cast_range_recurse<T, range * 2, range>();
-    else
-      return old_range > 0 ? old_range * 2 - 1 : old_range;
-  }
-  template<typename T, std::underlying_type_t<T> max_range = 1>
-  constexpr auto valid_cast_range()
-  {
-    using L = std::numeric_limits<decltype(max_range)>;
-    if constexpr (max_range > 0 && is_valid_cast<T, (L::max())>)
-      return L::max();
-    else if constexpr (max_range < 0 && is_valid_cast<T, (L::min())>)
-      return L::min();
-    else
-      return valid_cast_range_recurse<T, max_range, 0>();
-  }
-
-
-} // namespace details
-
-template<UnscopedEnum E>
-  requires SignedEnum<E> && (!EnumFixedUnderlying<E>)
-struct enum_traits<E> {
-private:
-  using T = std::underlying_type_t<E>;
-public:
-  static constexpr auto max = details::Min(details::valid_cast_range<E>(), static_cast<T>(ENCHANTUM_MAX_RANGE));
-  static constexpr decltype(max) min = details::Max(details::valid_cast_range<E, -1>(), static_cast<T>(ENCHANTUM_MIN_RANGE));
-};
-
-template<UnscopedEnum E>
-  requires UnsignedEnum<E> && (!EnumFixedUnderlying<E>)
-struct enum_traits<E> {
-  static constexpr auto          max = details::Min(details::valid_cast_range<E>(),
-                                           static_cast<std::underlying_type_t<E>>(ENCHANTUM_MAX_RANGE));
-  static constexpr decltype(max) min = 0;
-};
-#endif
-
 namespace details {
   constexpr auto enum_in_array_name(const std::string_view raw_type_name, const bool is_scoped_enum) noexcept
   {
@@ -123,7 +64,7 @@ namespace details {
         return (sizeof(E) * CHAR_BIT) - std::is_signed_v<E>;
       }
       else {
-        auto        v = valid_cast_range<E>();
+        auto        v = Max;
         std::size_t r = 1;
         while (v >>= 1)
           r++;

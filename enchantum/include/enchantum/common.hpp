@@ -25,6 +25,7 @@
 
 namespace enchantum {
 
+
 template<typename T>
 concept Enum = std::is_enum_v<T>;
 
@@ -58,41 +59,91 @@ concept BitFlagEnum = Enum<T> && is_bitflag<T>;
 template<typename T>
 concept EnumFixedUnderlying = Enum<T> && requires { T{0}; };
 
-template<typename T>
-struct enum_traits;
+namespace details {
+  template<typename T, typename U>
+  constexpr auto Max(T a, U b)
+  {
+    return a < b ? b : a;
+  }
+  template<typename T, typename U>
+  constexpr auto Min(T a, U b)
+  {
+    return a > b ? b : a;
+  }
+#if !defined(__NVCOMPILER) && defined(__clang__) && __clang_major__ >= 20
+  template<typename E, auto V, typename = void>
+  inline constexpr bool is_valid_cast = false;
 
-template<SignedEnum E>
-struct enum_traits<E> {
-private:
-  using U = std::underlying_type_t<E>;
-  using L = std::numeric_limits<U>;
-public:
-  static constexpr std::size_t prefix_length = 0;
+  template<typename E, auto V>
+  inline constexpr bool is_valid_cast<E, V, std::void_t<std::integral_constant<E, static_cast<E>(V)>>> = true;
 
-  static constexpr auto min = (L::min)() > ENCHANTUM_MIN_RANGE ? (L::min)() : ENCHANTUM_MIN_RANGE;
-  static constexpr auto max = (L::max)() < ENCHANTUM_MAX_RANGE ? (L::max)() : ENCHANTUM_MAX_RANGE;
-};
+  template<typename E, std::underlying_type_t<E> range, decltype(range) old_range>
+  constexpr auto valid_cast_range_recurse() noexcept
+  {
+    // this tests whether `static_cast`ing range is valid
+    // because C style enums stupidly is like a bit field
+    // `enum E { a,b,c,d = 3};` is like a bitfield `struct E { int val : 2;}`
+    // which means giving E.val a larger than 2 bit value is UB so is it for enums
+    // and gcc and msvc ignore this (for good)
+    // while clang makes it a subsituation failure which we can check for
+    // using std::inegral_constant makes sure this is a constant expression situation
+    // for SFINAE to occur
+    if constexpr (is_valid_cast<E, range>)
+      return valid_cast_range_recurse<E, range * 2, range>();
+    else
+      return old_range > 0 ? old_range * 2 - 1 : old_range;
+  }
+  template<typename E, int max_range>
+  constexpr auto valid_cast_range() noexcept
+  {
+    using T = std::underlying_type_t<E>;
+    using L = std::numeric_limits<T>;
 
-template<UnsignedEnum E>
-struct enum_traits<E> {
+    if constexpr (max_range == 0)
+      return T{0};
+    else if constexpr (max_range > 0 && is_valid_cast<E, (L::max)()>)
+      return L::max();
+    else if constexpr (max_range < 0 && is_valid_cast<E, (L::min)()>)
+      return L::min();
+    else
+      return details::valid_cast_range_recurse<E, max_range, 0>();
+  }
+
+#endif
+
+  template<typename E>
+  constexpr auto enum_range_of(const int max_range)
+  {
+    using T = std::underlying_type_t<E>;
+    using L = std::numeric_limits<T>;
+#if !defined(__NVCOMPILER) && defined(__clang__) && __clang_major__ >= 20
+    constexpr auto Max = EnumFixedUnderlying<E> ? (L::max)() : details::valid_cast_range<E, 1>();
+    constexpr auto Min = EnumFixedUnderlying<E> ? (L::min)() : details::valid_cast_range<E, std::is_signed_v<T> ? -1 : 0>();
+#else
+    constexpr auto Max = (L::max)();
+    constexpr auto Min = (L::min)();
+#endif
+
+    if constexpr (std::is_signed_v<T>) {
+      return max_range > 0 ? details::Min(ENCHANTUM_MAX_RANGE, Max) : details::Max(ENCHANTUM_MIN_RANGE, Min);
+    }
+    else {
+      if constexpr (std::is_same_v<bool, T>)
+        return max_range > 0;
+      else
+        return max_range > 0 ? details::Min(static_cast<unsigned int>(ENCHANTUM_MAX_RANGE), Max) : 0;
+    }
+  }
+} // namespace details
+
+
+template<typename E>
+struct enum_traits {
 private:
   using T = std::underlying_type_t<E>;
-  using L = std::numeric_limits<T>;
 public:
-  static constexpr std::size_t prefix_length = 0;
-
-  static constexpr auto min = []() {
-    if constexpr (std::is_same_v<T, bool>)
-      return false;
-    else
-      return (ENCHANTUM_MIN_RANGE) < 0 ? 0 : (ENCHANTUM_MIN_RANGE);
-  }();
-  static constexpr auto max = []() {
-    if constexpr (std::is_same_v<T, bool>)
-      return true;
-    else
-      return (L::max)() < (ENCHANTUM_MAX_RANGE) ? (L::max)() : (ENCHANTUM_MAX_RANGE);
-  }();
+  static constexpr auto          max = details::enum_range_of<E>(1);
+  static constexpr decltype(max) min = details::enum_range_of<E>(-1);
 };
 
 } // namespace enchantum

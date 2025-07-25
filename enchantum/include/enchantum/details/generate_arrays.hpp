@@ -6,16 +6,7 @@
 #include <type_traits>
 
 namespace enchantum::details {
-template<typename T>
-constexpr T Max(T a, T b)
-{
-  return a < b ? b : a;
-}
-template<typename T>
-constexpr T Min(T a, T b)
-{
-  return a > b ? b : a;
-}
+
 
 template<typename E, typename = void>
 inline constexpr std::size_t prefix_length_or_zero = 0;
@@ -27,7 +18,7 @@ inline constexpr auto prefix_length_or_zero<E, decltype((void)enum_traits<E>::pr
 template<typename Enum, auto Min, decltype(Min) Max>
 constexpr auto generate_arrays()
 {
-  if constexpr (BitFlagEnum<Enum>) {
+  if constexpr (is_bitflag<Enum>) {
     constexpr std::size_t                             bits = sizeof(Enum) * CHAR_BIT;
     std::array<Enum, bits + 1 + 1 /*1 here to make*/> ret{}; // 0 value reflected
     for (std::size_t i = 0; i < bits; ++i)

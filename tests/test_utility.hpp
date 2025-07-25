@@ -104,7 +104,7 @@ template<>
 struct enchantum::enum_traits<ImGuiFreeTypeBuilderFlags> {
   static constexpr std::size_t prefix_length = sizeof("ImGuiFreeTypeBuilderFlags_") - 1;
   static constexpr auto        min           = 0;
-  static constexpr auto        max           = ENCHANTUM_MAX_RANGE;
+  static constexpr auto        max           = int(ImGuiFreeTypeBuilderFlags_Bitmap);
 };
 template<>
 inline constexpr bool enchantum::is_bitflag<ImGuiFreeTypeBuilderFlags> = true;
@@ -266,8 +266,8 @@ ENCHANTUM_DEFINE_BITWISE_FOR(FlagsWithNone)
 enum class Direction2D : std::uint8_t {
   None  = 0,
   Left  = 1,
-  Right = 3,
   Up    = 2,
+  Right = 3,
   Down  = 4,
 
   East  = Right,
@@ -288,6 +288,11 @@ enum class Direction3D : std::int16_t {
   Top = Up,
 };
 
+template<>
+struct enchantum::enum_traits<Direction3D> {
+  static constexpr auto min = -1000;
+  static constexpr auto max = 1000;
+};
 
 enum CStyleFromA_To_G {
   a,
@@ -354,11 +359,11 @@ using namespace LongNamespaced::Namespace2;
 template<typename...>
 struct type_list {}; // not wanting to include tuple to detect if I am missing a header in tests
 
-template<typename... Ts,typename... Us>
-type_list<Ts..., Us...> concatter_func(type_list<Ts...>,type_list<Us...>);
+template<typename... Ts, typename... Us>
+type_list<Ts..., Us...> concatter_func(type_list<Ts...>, type_list<Us...>);
 
 template<typename A, typename B>
-using concat = decltype(::concatter_func(A{},B{}));
+using concat = decltype(::concatter_func(A{}, B{}));
 
 using AllFlagsTestTypes = type_list<StrongFlagsNoOverloadedOperators, ImGuiFreeTypeBuilderFlags, NonContigFlagsWithNoneCStyle, FlagsWithNone, Flags>;
 using AllEnumsTestTypes = concat<
@@ -388,6 +393,7 @@ using AllEnumsTestTypes = concat<
     CStyleFromA_To_G,
     Outer::Inner::Anon,
     Outer::Inner::CStyleAnon>>;
+
 
 template<enchantum::Enum E>
 struct Catch::StringMaker<E> {
