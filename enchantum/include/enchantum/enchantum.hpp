@@ -43,7 +43,7 @@ template<Enum E>
       if (value == 0)
         return true;
 
-    return std::popcount(static_cast<std::make_unsigned_t<T>>(value)) == 1;
+    return std::has_single_bit(static_cast<std::make_unsigned_t<T>>(value));
   }
   else if constexpr (is_contiguous<E>) {
     return true;
