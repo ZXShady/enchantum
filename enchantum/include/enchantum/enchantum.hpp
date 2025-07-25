@@ -2,6 +2,7 @@
 
 #include "common.hpp"
 #include "details/optional.hpp"
+#include "details/string_switch.hpp"
 #include "details/string_view.hpp"
 #include "entries.hpp"
 #include "generators.hpp"
@@ -147,19 +148,8 @@ namespace details {
 
     [[nodiscard]] constexpr optional<E> operator()(const string_view name) const noexcept
     {
-      optional<E> a; // rvo not that it really matters
-
-      constexpr auto minmax = details::minmax_string_size(names<E>.data(), names<E>.data() + names<E>.size());
-      if (const auto size = name.size(); size < minmax.first || size > minmax.second)
-        return a; // nullopt
-
-      for (std::size_t i = 0; i < count<E>; ++i) {
-        if (names_generator<E>[i] == name) {
-          a.emplace(values_generator<E>[i]);
-          return a;
-        }
-      }
-      return a; // nullopt
+      // The entire implementation is now just a call to our metaprogramming helper.
+      return details::string_to_enum_impl<E>(name, std::make_index_sequence<::enchantum::count<E>>{});
     }
 
     template<ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(std::predicate<string_view, string_view>) BinaryPred>
