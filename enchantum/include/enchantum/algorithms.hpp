@@ -1,7 +1,6 @@
 #pragma once
 
 #include "enchantum.hpp"
-#include <concepts>
 #include <utility>
 
 namespace enchantum {
@@ -75,7 +74,7 @@ namespace details {
 
 } // namespace details
 
-template<Enum E, typename Func>
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E), typename Func>
 constexpr void for_each(Func f) // intentional not const
 {
   details::for_each<E>(f, std::make_index_sequence<count<E>>{});

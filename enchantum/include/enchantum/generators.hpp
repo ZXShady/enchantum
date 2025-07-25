@@ -15,40 +15,43 @@ namespace details {
   template<typename CRTP, std::size_t Size>
   struct sized_iterator {
   private:
+    constexpr CRTP&       to_base() noexcept { return static_cast<CRTP&>(*this); }
+    constexpr const CRTP& to_base() const noexcept { return static_cast<const CRTP&>(*this); }
+
     using IndexType = std::conditional_t<(Size < INT16_MAX), std::int8_t, std::int16_t>;
   public:
     IndexType       index{};
     constexpr CRTP& operator+=(const std::ptrdiff_t offset) & noexcept
     {
       index += static_cast<IndexType>(offset);
-      return static_cast<CRTP&>(*this);
+      return to_base();
     }
     constexpr CRTP& operator-=(const std::ptrdiff_t offset) & noexcept
     {
       index -= static_cast<IndexType>(offset);
-      return static_cast<CRTP&>(*this);
+      return to_base();
     }
 
     constexpr CRTP& operator++() & noexcept
     {
       ++index;
-      return static_cast<CRTP&>(*this);
+      return to_base();
     }
     constexpr CRTP& operator--() & noexcept
     {
       --index;
-      return static_cast<CRTP&>(*this);
+      return to_base();
     }
 
     [[nodiscard]] constexpr CRTP operator++(int) & noexcept
     {
-      auto copy = static_cast<CRTP&>(*this);
+      auto copy = to_base();
       ++*this;
       return copy;
     }
     [[nodiscard]] constexpr CRTP operator--(int) & noexcept
     {
-      auto copy = static_cast<CRTP&>(*this);
+      auto copy = to_base();
       --*this;
       return copy;
     }
@@ -56,36 +59,65 @@ namespace details {
     [[nodiscard]] constexpr friend CRTP operator+(CRTP it, const std::ptrdiff_t offset) noexcept
     {
       it += offset;
-      return it;
+      return it.to_base();
     }
 
     [[nodiscard]] constexpr friend CRTP operator+(const std::ptrdiff_t offset, CRTP it) noexcept
     {
       it += offset;
-      return it;
+      return it.to_base();
     }
 
     [[nodiscard]] constexpr friend CRTP operator-(CRTP it, const std::ptrdiff_t offset) noexcept
     {
       it -= offset;
-      return it;
+      return it.to_base();
     }
 
-    [[nodiscard]] constexpr friend CRTP operator-(const std::ptrdiff_t offset, CRTP it) noexcept
-    {
-      it -= offset;
-      return it;
-    }
-
-    [[nodiscard]] constexpr friend std::ptrdiff_t operator-(const CRTP a, const CRTP b) noexcept
+    [[nodiscard]] constexpr friend std::ptrdiff_t operator-(const sized_iterator a, const sized_iterator b) noexcept
     {
       return a.index - b.index;
     }
 
-    [[nodiscard]] constexpr bool operator==(const CRTP that) const noexcept { return that.index == index; };
-    [[nodiscard]] constexpr auto operator<=>(const CRTP that) const noexcept { return index <=> that.index; };
+    [[nodiscard]] constexpr bool operator==(const sized_iterator that) const noexcept { return that.index == index; };
     [[nodiscard]] constexpr bool operator==(senitiel) const noexcept { return Size == index; }
+
+#ifdef __cpp_impl_three_way_comparison
+    [[nodiscard]] constexpr auto operator<=>(const sized_iterator that) const noexcept { return index <=> that.index; };
     [[nodiscard]] constexpr auto operator<=>(senitiel) const noexcept { return index <=> Size; }
+#else
+
+    [[nodiscard]] constexpr bool operator!=(const sized_iterator that) const noexcept { return that.index != index; };
+    [[nodiscard]] constexpr bool operator!=(senitiel) const noexcept { return Size != index; }
+
+    [[nodiscard]] friend constexpr bool operator==(const sized_iterator it, senitiel) const noexcept { return Size == it.index; }
+
+
+    [[nodiscard]] friend constexpr bool operator!=(const sized_iterator a, const sized_iterator b) noexcept
+    {
+      return a.index != b.index;
+    };
+    [[nodiscard]] friend constexpr bool operator!=(const sized_iterator it, senitiel) const noexcept
+    {
+      return Size != it.index;
+    }
+
+    [[nodiscard]] constexpr bool operator<(const  sized_iterator that) const noexcept { return index < that.index; };
+    [[nodiscard]] constexpr bool operator>(const  sized_iterator that) const noexcept { return index < that.index; };
+    [[nodiscard]] constexpr bool operator<=(const sized_iterator that) const noexcept { return index <= that.index; };
+    [[nodiscard]] constexpr bool operator>=(const sized_iterator that) const noexcept { return index >= that.index; };
+
+    [[nodiscard]] constexpr bool operator<(senitiel) const noexcept { return index < Size; };
+    [[nodiscard]] constexpr bool operator>(senitiel) const noexcept { return index < Size; };
+    [[nodiscard]] constexpr bool operator<=(senitiel) const noexcept { return index <= Size; };
+    [[nodiscard]] constexpr bool operator>=(senitiel) const noexcept { return index >= Size; };
+
+    [[nodiscard]] friend constexpr bool operator<(senitiel,  const sized_iterator it) noexcept { return Size < it.index; };
+    [[nodiscard]] friend constexpr bool operator>(senitiel,  const sized_iterator it) noexcept { return Size < it.index; };
+    [[nodiscard]] friend constexpr bool operator<=(senitiel, const sized_iterator it) noexcept { return Size <= it.index; };
+    [[nodiscard]] friend constexpr bool operator>=(senitiel, const sized_iterator it) noexcept { return Size >= it.index; };
+
+#endif
   };
 
   template<typename E, typename String = string_view, bool NullTerminated = true>
@@ -184,14 +216,23 @@ namespace details {
 
 } // namespace details
 
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+inline constexpr details::values_generator_t<E> values_generator{};
+
+#ifdef __cpp_concepts
 template<Enum E, typename StringView = string_view, bool NullTerminated = true>
 inline constexpr details::names_generator_t<E, StringView, NullTerminated> names_generator{};
-
-template<Enum E>
-inline constexpr details::values_generator_t<E> values_generator{};
 
 template<Enum E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true>
 inline constexpr details::entries_generator_t<E, Pair, NullTerminated> entries_generator{};
 
+#else
+template<typename E, typename StringView = string_view, bool NullTerminated = true, std::enable_if_t<std::is_enum_v<E>, int> = 0>
+inline constexpr details::names_generator_t<E, StringView, NullTerminated> names_generator{};
+
+template<typename E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true, std::enable_if_t<std::is_enum_v<E>, int> = 0>
+inline constexpr details::entries_generator_t<E, Pair, NullTerminated> entries_generator{};
+
+#endif
 
 } // namespace enchantum

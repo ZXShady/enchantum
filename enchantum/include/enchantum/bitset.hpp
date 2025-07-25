@@ -4,8 +4,8 @@
   #include <bitset>
 #endif
 #include "bitflags.hpp"
-#include <stdexcept>
 #include "generators.hpp"
+#include <stdexcept>
 
 namespace enchantum {
 
@@ -17,9 +17,11 @@ namespace details {
 #endif
 } // namespace details
 
-template<Enum E,typename Container = details::bitset<count<E>>>
+template<typename E, typename Container = details::bitset<count<E>>>
 class bitset : public Container {
+  static_assert(std::is_enum_v<E>);
 public:
+
   using container_type = Container;
   using typename Container::reference;
 
@@ -46,7 +48,7 @@ public:
     return name;
   }
 
-  [[nodiscard]] constexpr auto to_string(const char zero,const char one) const
+  [[nodiscard]] constexpr auto to_string(const char zero, const char one) const
   {
     return Container::to_string(zero, one);
   }

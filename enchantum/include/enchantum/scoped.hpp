@@ -22,14 +22,14 @@ namespace details {
   }
 } // namespace details
 
-template<Enum E>
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 [[nodiscard]] constexpr bool contains(const string_view name) noexcept
 {
   const auto n = details::remove_scope_or_empty(name, type_name<E>);
   return !n.empty() && enchantum::contains<E>(n);
 }
 
-template<Enum E, std::predicate<string_view, string_view> BinaryPredicate>
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E), ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(std::predicate<string_view, string_view>) BinaryPredicate>
 [[nodiscard]] constexpr bool contains(const string_view name, const BinaryPredicate binary_predicate) noexcept
 {
   const auto n = details::remove_scope_or_empty(name, type_name<E>);
@@ -37,7 +37,7 @@ template<Enum E, std::predicate<string_view, string_view> BinaryPredicate>
 }
 
 namespace details {
-  template<Enum E>
+  template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
   struct scoped_cast_functor {
     [[nodiscard]] constexpr optional<E> operator()(const string_view name) const noexcept
     {
@@ -54,7 +54,7 @@ namespace details {
   };
 
   struct to_scoped_string_functor {
-    template<Enum E>
+    template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
     [[nodiscard]] constexpr string operator()(const E value) const noexcept
     {
       string s;
@@ -72,10 +72,11 @@ namespace details {
 
 inline constexpr details::to_scoped_string_functor to_string;
 
-template<Enum E>
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 inline constexpr details::scoped_cast_functor<E> cast;
 
-template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
+template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E),
+         ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(std::predicate<string_view, string_view>) BinaryPred>
 [[nodiscard]] constexpr bool contains_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
 {
   std::size_t pos = 0;
@@ -87,7 +88,7 @@ template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
   return enchantum::scoped::contains<E>(s.substr(pos), binary_pred);
 }
 
-template<BitFlagEnum E>
+template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 [[nodiscard]] constexpr bool contains_bitflag(const string_view s, const char sep = '|') noexcept
 {
   std::size_t pos = 0;
@@ -100,7 +101,7 @@ template<BitFlagEnum E>
 }
 
 
-template<BitFlagEnum E>
+template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 [[nodiscard]] constexpr string to_string_bitflag(const E value, const char sep = '|')
 {
   using T = std::underlying_type_t<E>;
@@ -129,7 +130,8 @@ template<BitFlagEnum E>
 }
 
 
-template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
+template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E),
+         ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(std::predicate<string_view, string_view>) BinaryPred>
 [[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
 {
   using T = std::underlying_type_t<E>;
@@ -148,7 +150,7 @@ template<BitFlagEnum E, std::predicate<string_view, string_view> BinaryPred>
   return optional<E>();
 }
 
-template<BitFlagEnum E>
+template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 [[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep = '|') noexcept
 {
   return enchantum::scoped::cast_bitflag<E>(s, sep, [](const auto& a, const auto& b) { return a == b; });

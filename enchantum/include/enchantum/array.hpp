@@ -5,13 +5,14 @@
 
 namespace enchantum {
 
-template<Enum E, typename V,typename Container = std::array<V,count<E>>>
+template<typename E, typename V, typename Container = std::array<V, count<E>>>
 class array : public Container {
+  static_assert(std::is_enum_v<E>);
 public:
   using container_type = Container;
-  using index_type = E;
-  using typename Container::reference;
+  using index_type     = E;
   using typename Container::const_reference;
+  using typename Container::reference;
 
   using Container::at;
   using Container::operator[];

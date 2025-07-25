@@ -3,20 +3,20 @@
 #include "bitflags.hpp"
 #include "details/format_util.hpp"
 #include "enchantum.hpp"
-#include <concepts>
 #include <iostream>
 #include <string>
 
 namespace enchantum::iostream_operators {
-template<typename Traits, Enum E>
+template<typename Traits, ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 std::basic_ostream<char, Traits>& operator<<(std::basic_ostream<char, Traits>& os, const E e)
 {
   return os << details::format(e);
 }
 
-template<typename Traits, Enum E>
-  requires std::assignable_from<E&, E>
-std::basic_istream<char, Traits>& operator>>(std::basic_istream<char, Traits>& is, E& value)
+template<typename Traits, ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+auto operator>>(std::basic_istream<char, Traits>& is, E& value)
+  -> decltype((value = E{}, is))
+    // sfinae to check whether value is assignable
 {
   std::basic_string<char, Traits> s;
   is >> s;

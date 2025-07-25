@@ -5,8 +5,14 @@
 #include "enchantum.hpp"
 #include <fmt/format.h>
 
+#ifdef __cpp_concepts
 template<enchantum::Enum E>
-struct fmt::formatter<E> : fmt::formatter<string_view> {
+struct fmt::formatter<E>
+#else
+template<typename E>
+struct fmt::formatter<E, char, std::enable_if_t<std::is_enum_v<E>>>
+#endif
+: fmt::formatter<string_view> {
   template<typename FmtContext>
   constexpr auto format(const E e, FmtContext& ctx) const
   {

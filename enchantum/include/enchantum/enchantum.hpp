@@ -30,7 +30,7 @@ namespace details {
 
 
 
-template<Enum E>
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 [[nodiscard]] constexpr bool contains(const std::underlying_type_t<E> value) noexcept
 {
   using T = std::underlying_type_t<E>;
@@ -42,8 +42,10 @@ template<Enum E>
     if constexpr (has_zero_flag<E>)
       if (value == 0)
         return true;
+    const auto u = static_cast<std::make_unsigned_t<T>>(value);
 
-    return std::has_single_bit(static_cast<std::make_unsigned_t<T>>(value));
+    // std::has_single_bit
+    return u != 0 && (u & (u - 1)) == 0;
   }
   else if constexpr (is_contiguous<E>) {
     return true;
@@ -56,13 +58,13 @@ template<Enum E>
   }
 }
 
-template<Enum E>
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 [[nodiscard]] constexpr bool contains(const E value) noexcept
 {
   return enchantum::contains<E>(static_cast<std::underlying_type_t<E>>(value));
 }
 
-template<Enum E>
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 [[nodiscard]] constexpr bool contains(const string_view name) noexcept
 {
   constexpr auto minmax = details::minmax_string_size(names<E>.data(), names<E>.data() + names<E>.size());
@@ -76,7 +78,8 @@ template<Enum E>
 }
 
 
-template<Enum E, std::predicate<string_view, string_view> BinaryPredicate>
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E), 
+    std::predicate<string_view, string_view> BinaryPredicate>
 [[nodiscard]] constexpr bool contains(const string_view name, const BinaryPredicate binary_predicate) noexcept
 {
   for (const auto s : names_generator<E>)
@@ -87,7 +90,7 @@ template<Enum E, std::predicate<string_view, string_view> BinaryPredicate>
 
 
 namespace details {
-  template<typename E>
+  template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
   struct index_to_enum_functor {
     [[nodiscard]] constexpr optional<E> operator()(const std::size_t index) const noexcept
     {
@@ -99,7 +102,7 @@ namespace details {
   };
 
   struct enum_to_index_functor {
-    template<Enum E>
+    template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
     [[nodiscard]] constexpr optional<std::size_t> operator()(const E e) const noexcept
     {
       using T = std::underlying_type_t<E>;
@@ -131,7 +134,7 @@ namespace details {
   };
 
 
-  template<Enum E>
+  template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
   struct cast_functor {
     [[nodiscard]] constexpr optional<E> operator()(const std::underlying_type_t<E> value) const noexcept
     {
@@ -159,7 +162,7 @@ namespace details {
       return a; // nullopt
     }
 
-    template<std::predicate<string_view, string_view> BinaryPred>
+    template<ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(std::predicate<string_view, string_view>) BinaryPred>
     [[nodiscard]] constexpr optional<E> operator()(const string_view name, const BinaryPred binary_predicate) const noexcept
     {
       optional<E> a; // rvo not that it really matters
@@ -175,18 +178,18 @@ namespace details {
 
 } // namespace details
 
-template<Enum E>
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 inline constexpr details::index_to_enum_functor<E> index_to_enum{};
 
 inline constexpr details::enum_to_index_functor enum_to_index{};
 
-template<Enum E>
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 inline constexpr details::cast_functor<E> cast{};
 
 
 namespace details {
   struct to_string_functor {
-    template<Enum E>
+    template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
     [[nodiscard]] constexpr string_view operator()(const E value) const noexcept
     {
       if (const auto i = enchantum::enum_to_index(value))
