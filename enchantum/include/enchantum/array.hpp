@@ -5,17 +5,16 @@
 
 namespace enchantum {
 
-template<Enum E, typename V>
-class array : public std::array<V, count<E>> {
-private:
-  using base = std::array<V, count<E>>;
+template<Enum E, typename V,typename Container = std::array<V,count<E>>>
+class array : public Container {
 public:
+  using container_type = Container;
   using index_type = E;
-  using typename base::reference;
-  using typename base::const_reference;
+  using typename Container::reference;
+  using typename Container::const_reference;
 
-  using base::at;
-  using base::operator[];
+  using Container::at;
+  using Container::operator[];
 
   [[nodiscard]] constexpr reference at(const E index)
   {

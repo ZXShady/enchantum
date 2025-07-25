@@ -17,21 +17,20 @@ namespace details {
 #endif
 } // namespace details
 
-template<Enum E>
-class bitset : public details::bitset<count<E>> {
-private:
-  using base = details::bitset<count<E>>;
+template<Enum E,typename Container = details::bitset<count<E>>>
+class bitset : public Container {
 public:
-  using typename base::reference;
+  using container_type = Container;
+  using typename Container::reference;
 
-  using base::operator[];
-  using base::flip;
-  using base::reset;
-  using base::set;
-  using base::test;
+  using Container::operator[];
+  using Container::flip;
+  using Container::reset;
+  using Container::set;
+  using Container::test;
 
-  using base::base;
-  using base::operator=;
+  using Container::Container;
+  using Container::operator=;
 
   [[nodiscard]] string to_string(const char sep = '|') const
   {
@@ -49,7 +48,7 @@ public:
 
   [[nodiscard]] constexpr auto to_string(const char zero,const char one) const
   {
-    return base::to_string(zero,one);
+    return Container::to_string(zero, one);
   }
 
   constexpr bitset(const std::initializer_list<E> values) noexcept
