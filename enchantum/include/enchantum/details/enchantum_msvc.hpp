@@ -33,7 +33,7 @@ namespace details {
     auto s = string_view{__FUNCSIG__ + SZC("auto __cdecl enchantum::details::enum_in_array_name_size<"),
                          SZC(__FUNCSIG__) - SZC("auto __cdecl enchantum::details::enum_in_array_name_size<>(void) noexcept")};
 
-    if constexpr (ScopedEnum<decltype(Enum)>) {
+    if constexpr (is_scoped_enum<decltype(Enum)>) {
       if (s.front() == '(') {
         s.remove_prefix(SZC("(enum "));
         s.remove_suffix(SZC(")0x0"));
@@ -74,7 +74,7 @@ namespace details {
 
     constexpr auto Array             = details::generate_arrays<E, Min, Max>();
     const E* const ArrayData         = Array.data();
-    constexpr auto ConstStr          = var_name<Array>();
+    constexpr auto ConstStr          = details::var_name<Array>();
     constexpr auto StringSize        = ConstStr.size();
     constexpr auto ArraySize         = Array.size() - 1;
     const auto*    str               = ConstStr.data();

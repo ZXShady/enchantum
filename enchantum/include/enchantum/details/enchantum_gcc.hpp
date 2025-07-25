@@ -42,7 +42,7 @@ namespace enchantum {
 		template<typename Enum>
 		constexpr auto length_of_enum_in_template_array_if_casting() noexcept
 		{
-			if constexpr (ScopedEnum<Enum>) {
+			if constexpr (is_scoped_enum<Enum>) {
 				return details::enum_in_array_name_size < Enum{} > ();
 			}
 			else {

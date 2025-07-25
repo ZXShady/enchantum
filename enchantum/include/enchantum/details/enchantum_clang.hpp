@@ -86,7 +86,7 @@ namespace details {
 
       const auto* str = ConstStr.data();
 
-      constexpr auto enum_in_array_name = details::enum_in_array_name(raw_type_name<E>, ScopedEnum<E>);
+      constexpr auto enum_in_array_name = details::enum_in_array_name(raw_type_name<E>, is_scoped_enum<E>);
       constexpr auto enum_in_array_len  = enum_in_array_name.size();
       // Ubuntu Clang 20 complains about using local constexpr variables in a local struct
       using CharArray = char[ConstStr.size() + (NullTerminated * ArraySize)];

@@ -35,6 +35,16 @@ concept SignedEnum = Enum<T> && std::signed_integral<std::underlying_type_t<T>>;
 template<typename T>
 concept UnsignedEnum = Enum<T> && !SignedEnum<T>;
 
+
+template<typename T,bool = std::is_enum_v<T>>
+inline constexpr bool is_scoped_enum = false;
+
+template<typename E>
+inline constexpr bool is_scoped_enum<E, true> = !std::is_convertible_v<T, std::underlying_type_t<T>>;
+
+template<typename E>
+inline constexpr bool is_unscoped_enum = std::is_enum_v<E> && !is_scoped_enum<E>; 
+
 template<typename T>
 concept ScopedEnum = Enum<T> && (!std::is_convertible_v<T, std::underlying_type_t<T>>);
 
