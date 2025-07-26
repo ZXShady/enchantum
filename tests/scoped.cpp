@@ -101,15 +101,15 @@ TEST_CASE("scoped::to_string")
 
 TEMPLATE_LIST_TEST_CASE("scoped::cast_bitflag identities", "", AllFlagsTestTypes)
 {
-  constexpr auto value_ors = enchantum::value_ors<TestType>;
+  constexpr auto value_ors = enchantum::valid_mask<TestType>;
   CHECK(value_ors == enchantum::scoped::cast_bitflag<TestType>(enchantum::scoped::to_string_bitflag(value_ors)));
   CHECK(value_ors == enchantum::scoped::cast_bitflag<TestType>(enchantum::scoped::to_string_bitflag(value_ors, ','),','));
 }
 
 TEST_CASE("scoped::to_string_bitflag")
 {
-  CHECK(enchantum::scoped::to_string_bitflag(enchantum::value_ors<Flags>) ==
+  CHECK(enchantum::scoped::to_string_bitflag(enchantum::valid_mask<Flags>) ==
         "Flags::Flag0|Flags::Flag1|Flags::Flag2|Flags::Flag3|Flags::Flag4|Flags::Flag5|Flags::Flag6");
-  CHECK(enchantum::scoped::to_string_bitflag(enchantum::value_ors<Flags>, ',') ==
+  CHECK(enchantum::scoped::to_string_bitflag(enchantum::valid_mask<Flags>, ',') ==
         "Flags::Flag0,Flags::Flag1,Flags::Flag2,Flags::Flag3,Flags::Flag4,Flags::Flag5,Flags::Flag6");
 }

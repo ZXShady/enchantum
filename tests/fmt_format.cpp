@@ -52,6 +52,6 @@ TEST_CASE("Flags enum fmt::format", "[stringify][fmt_format]")
   {
     CHECK(fmt::format("{}", Flags::Flag0 | Flags::Flag4) == "Flag0|Flag4");
     CHECK(fmt::format("{}", Flags::Flag0 | Flags::Flag4 | Flags(200)) == "217");
-    CHECK(fmt::format("{}", enchantum::value_ors<Flags>) == "Flag0|Flag1|Flag2|Flag3|Flag4|Flag5|Flag6");
+    CHECK(fmt::format("{}", enchantum::valid_mask<Flags>) == "Flag0|Flag1|Flag2|Flag3|Flag4|Flag5|Flag6");
   }
 }

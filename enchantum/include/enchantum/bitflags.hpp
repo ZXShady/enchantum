@@ -8,7 +8,7 @@
 namespace enchantum {
 
 template<typename E>
-inline constexpr E value_ors = [] {
+inline constexpr E valid_mask = [] {
   static_assert(is_bitflag<E>, "");
   using T = std::underlying_type_t<E>;
   T ret{};
@@ -23,7 +23,7 @@ template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 {
   using T = std::underlying_type_t<E>;
   if constexpr (is_contiguous_bitflag<E>) {
-    return value >= static_cast<T>(min<E>) && value <= static_cast<T>(value_ors<E>);
+    return value >= static_cast<T>(min<E>) && value <= static_cast<T>(valid_mask<E>);
   }
   else {
     if (value == 0)
