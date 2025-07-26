@@ -14,6 +14,7 @@
 #include "../type_name.hpp"
 #include "generate_arrays.hpp"
 #include "string_view.hpp"
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <climits>
