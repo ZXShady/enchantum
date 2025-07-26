@@ -25,6 +25,10 @@
   #define ENCHANTUM_MIN_RANGE (-ENCHANTUM_MAX_RANGE)
 #endif
 
+#ifndef ENCHANTUM_NULL_TERMINATED
+  #define ENCHANTUM_NULL_TERMINATED 1
+#endif
+
 namespace enchantum {
 
 template<typename T, bool = std::is_enum_v<T>>

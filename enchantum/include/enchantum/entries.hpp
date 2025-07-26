@@ -32,17 +32,17 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 
 
 namespace details {
-  template<typename E, bool NullTerminated = true>
+  template<typename E, bool NullTerminated = ENCHANTUM_NULL_TERMINATED>
   inline constexpr auto reflection_data = reflect<E, NullTerminated>();
 
-  template<typename E, bool NullTerminated = true>
+  template<typename E, bool NullTerminated = ENCHANTUM_NULL_TERMINATED>
   inline constexpr auto reflection_string_indices = reflection_data<E, NullTerminated>.string_indices;
 } // namespace details
 
 #ifdef __cpp_concepts
-template<Enum E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true>
+template<Enum E, typename Pair = std::pair<E, string_view>, bool NullTerminated = ENCHANTUM_NULL_TERMINATED>
 #else
-template<typename E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true, std::enable_if_t<std::is_enum_v<E>, int> = 0>
+template<typename E, typename Pair = std::pair<E, string_view>, bool NullTerminated = ENCHANTUM_NULL_TERMINATED, std::enable_if_t<std::is_enum_v<E>, int> = 0>
 #endif
 inline constexpr auto entries = []() {
 
@@ -84,9 +84,9 @@ inline constexpr auto values = []() {
 }();
 
 #ifdef __cpp_concepts
-template<Enum E, typename String = string_view, bool NullTerminated = true>
+template<Enum E, typename String = string_view, bool NullTerminated = ENCHANTUM_NULL_TERMINATED>
 #else
-template<typename E, typename String = string_view, bool NullTerminated = true, std::enable_if_t<std::is_enum_v<E>, int> = 0>
+template<typename E, typename String = string_view, bool NullTerminated = ENCHANTUM_NULL_TERMINATED, std::enable_if_t<std::is_enum_v<E>, int> = 0>
 #endif
 inline constexpr auto names = []() {
   constexpr auto&                  enums = entries<E, std::pair<E, String>, NullTerminated>;
