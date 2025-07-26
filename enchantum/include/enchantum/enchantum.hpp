@@ -192,9 +192,21 @@ namespace details {
     template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
     [[nodiscard]] constexpr string_view operator()(const E value) const noexcept
     {
-      if (const auto i = enchantum::enum_to_index(value))
-        return names_generator<E>[*i];
-      return string_view();
+      if constexpr (is_contiguous<E> && count<E> <= 32) {
+        // Fast path: use jump table for small contiguous enums
+        using T = std::underlying_type_t<E>;
+        const auto idx = static_cast<T>(value) - static_cast<T>(min<E>);
+        if (idx >= 0 && static_cast<std::size_t>(idx) < count<E>) {
+          return names_generator<E>[static_cast<std::size_t>(idx)];
+        }
+        return string_view();
+      }
+      else {
+        // General path: use enum_to_index
+        if (const auto i = enchantum::enum_to_index(value))
+          return names_generator<E>[*i];
+        return string_view();
+      }
     }
   };
 
