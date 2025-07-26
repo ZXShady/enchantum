@@ -12,13 +12,13 @@ namespace details {
 
   struct senitiel {};
 
-  template<typename CRTP, std::size_t Size>
+  template<typename CRTP, std::ptrdiff_t Size>
   struct sized_iterator {
   private:
     constexpr CRTP&       to_base() noexcept { return static_cast<CRTP&>(*this); }
     constexpr const CRTP& to_base() const noexcept { return static_cast<const CRTP&>(*this); }
 
-    using IndexType = std::conditional_t<(Size < INT16_MAX), std::int8_t, std::int16_t>;
+    using IndexType = std::conditional_t<(Size <= INT8_MAX), std::int8_t, std::int16_t>;
   public:
     IndexType       index{};
     constexpr CRTP& operator+=(const std::ptrdiff_t offset) & noexcept
@@ -127,7 +127,7 @@ namespace details {
     static_assert(size() < INT16_MAX, "Too many enum entries");
 
 
-    struct iterator : sized_iterator<iterator, size()> {
+    struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
       [[nodiscard]] constexpr String operator*() const noexcept
       {
         const auto* const p       = reflection_string_indices<E, NullTerminated>.data();
@@ -153,7 +153,7 @@ namespace details {
 
     static_assert(size() < INT16_MAX, "Too many enum entries");
 
-    struct iterator : sized_iterator<iterator, size()> {
+    struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
     public:
       [[nodiscard]] constexpr E operator*() const noexcept
       {
@@ -193,7 +193,7 @@ namespace details {
 
     static_assert(size() < INT16_MAX, "Too many enum entries");
 
-    struct iterator : sized_iterator<iterator, size()> {
+    struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
     public:
       [[nodiscard]] constexpr Pair operator*() const noexcept
       {
