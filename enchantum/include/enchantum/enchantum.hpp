@@ -213,5 +213,16 @@ namespace details {
 } // namespace details
 inline constexpr details::to_string_functor to_string{};
 
+// Explicit instantiation macro for reducing link times in large projects
+// Usage: ENCHANTUM_EXPLICIT_INSTANTIATE(MyEnum)
+// This instantiates the most commonly used templates to reduce link time overhead
+#define ENCHANTUM_EXPLICIT_INSTANTIATE(EnumType) \
+  namespace enchantum { \
+    namespace details { \
+      template auto reflect<EnumType, true>() noexcept; \
+      template auto reflect<EnumType, false>() noexcept; \
+    } \
+  }
+
 
 } // namespace enchantum
