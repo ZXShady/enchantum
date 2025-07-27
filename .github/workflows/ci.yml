@@ -20,38 +20,40 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          - { name: Windows MSVC 2022, os: windows-2022, compiler: msvc,flags: "" }
-          - { name: Windows MSVC 2022 with Disable Speedup, os: windows-2022, compiler: msvc,flags: "-DENCHANTUM_ENABLE_MSVC_SPEEDUP=OFF" }
+          - { name: Windows MSVC 2022, os: windows-2022, compiler: msvc,flags: "",supports_cpp20: 'true'}
+          - { name: Windows MSVC 2022 with Disable Speedup, os: windows-2022, compiler: msvc,flags: "-DENCHANTUM_ENABLE_MSVC_SPEEDUP=OFF" ,supports_cpp20: 'true'}
 
           # Disabled due to MSVC STL not allowing pre Clang 19
           #- { name: Windows Clang 18, os: windows-latest, compiler: clang, version: 18.1.0, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Windows Clang 19, os: windows-latest, compiler: clang, version: 19.1.0, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Windows Clang 20, os: windows-latest, compiler: clang, version: 20.1.0, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          - { name: Windows Clang 19, os: windows-latest, compiler: clang, version: 19.1.0, flags: "-DCMAKE_CXX_COMPILER=clang++" ,supports_cpp20: 'true'}
+          - { name: Windows Clang 20, os: windows-latest, compiler: clang, version: 20.1.0, flags: "-DCMAKE_CXX_COMPILER=clang++" ,supports_cpp20: 'true'}
 
-          - { name: MacOS Clang Latest, os: macos-latest, compiler: clang, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          - { name: MacOS Clang Latest, os: macos-latest, compiler: clang, flags: "-DCMAKE_CXX_COMPILER=clang++" , supports_cpp20: 'true'}
 
           # Sadly Disabled Due to weird quirks :(
           #- { name: Ubuntu GCC 9,     os: ubuntu-22.04,  compiler: gcc, version: 9, flags: "-DENCHANTUM_RUNTIME_TESTS=ON -DCMAKE_CXX_COMPILER=g++" }
           #- { name: Ubuntu GCC 10,    os: ubuntu-22.04,  compiler: gcc, version: 10, flags: "-DENCHANTUM_RUNTIME_TESTS=ON  -DCMAKE_CXX_COMPILER=g++" }
-          - { name: Ubuntu GCC 11,    os: ubuntu-latest, compiler: gcc, version: 11, flags: "-DCMAKE_CXX_COMPILER=g++" }
-          - { name: Ubuntu GCC 12,    os: ubuntu-latest, compiler: gcc, version: 12, flags: "-DCMAKE_CXX_COMPILER=g++" }
-          - { name: Ubuntu GCC 13,    os: ubuntu-latest, compiler: gcc, version: 13, flags: "-DCMAKE_CXX_COMPILER=g++" }
-          - { name: Ubuntu GCC 14,    os: ubuntu-latest, compiler: gcc, version: 14, flags: "-DCMAKE_CXX_COMPILER=g++" }
+          - { name: Ubuntu GCC 11,    os: ubuntu-latest, compiler: gcc, version: 11, flags: "-DCMAKE_CXX_COMPILER=g++" ,supports_cpp20: 'true'}
+          - { name: Ubuntu GCC 12,    os: ubuntu-latest, compiler: gcc, version: 12, flags: "-DCMAKE_CXX_COMPILER=g++" ,supports_cpp20: 'true'}
+          - { name: Ubuntu GCC 13,    os: ubuntu-latest, compiler: gcc, version: 13, flags: "-DCMAKE_CXX_COMPILER=g++" ,supports_cpp20: 'true'}
+          - { name: Ubuntu GCC 14,    os: ubuntu-latest, compiler: gcc, version: 14, flags: "-DCMAKE_CXX_COMPILER=g++" ,supports_cpp20: 'true'}
           # Sadly cannot install
           #- { name: Ubuntu GCC 15,    os: ubuntu-latest, compiler: gcc, version: 15, flags: "-DCMAKE_CXX_COMPILER=g++" }
           
-          - { name: Ubuntu Clang 10,  os: ubuntu-22.04, compiler: clang, version: 10, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Ubuntu Clang 11,  os: ubuntu-22.04, compiler: clang, version: 11, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Ubuntu Clang 12,  os: ubuntu-22.04, compiler: clang, version: 12, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          - { name: Ubuntu Clang 9,  os: ubuntu-22.04, compiler: clang, version: 9, flags: "-DCMAKE_CXX_COMPILER=clang++" ,supports_cpp20: 'false'}
 
-          - { name: Ubuntu Clang 13,  os: ubuntu-22.04, compiler: clang, version: 13, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Ubuntu Clang 14,  os: ubuntu-22.04, compiler: clang, version: 14, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Ubuntu Clang 15,  os: ubuntu-22.04, compiler: clang, version: 15, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Ubuntu Clang 16,  os: ubuntu-latest, compiler: clang, version: 16, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Ubuntu Clang 17,  os: ubuntu-latest, compiler: clang, version: 17, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Ubuntu Clang 18,  os: ubuntu-latest, compiler: clang, version: 18, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Ubuntu Clang 19,  os: ubuntu-latest, compiler: clang, version: 19, flags: "-DCMAKE_CXX_COMPILER=clang++" }
-          - { name: Ubuntu Clang 20,  os: ubuntu-latest, compiler: clang, version: 20, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          - { name: Ubuntu Clang 10,  os: ubuntu-22.04, compiler: clang, version: 10, flags: "-DCMAKE_CXX_COMPILER=clang++" ,supports_cpp20: 'true'}
+          - { name: Ubuntu Clang 11,  os: ubuntu-22.04, compiler: clang, version: 11, flags: "-DCMAKE_CXX_COMPILER=clang++" ,supports_cpp20: 'true'}
+          - { name: Ubuntu Clang 12,  os: ubuntu-22.04, compiler: clang, version: 12, flags: "-DCMAKE_CXX_COMPILER=clang++" ,supports_cpp20: 'true'}
+
+          - { name: Ubuntu Clang 13,  os: ubuntu-22.04, compiler: clang, version: 13, flags: "-DCMAKE_CXX_COMPILER=clang++" ,supports_cpp20: 'true'}
+          - { name: Ubuntu Clang 14,  os: ubuntu-22.04, compiler: clang, version: 14, flags: "-DCMAKE_CXX_COMPILER=clang++" ,supports_cpp20: 'true'}
+          - { name: Ubuntu Clang 15,  os: ubuntu-22.04, compiler: clang, version: 15, flags: "-DCMAKE_CXX_COMPILER=clang++" ,supports_cpp20: 'true'}
+          - { name: Ubuntu Clang 16,  os: ubuntu-latest, compiler: clang, version: 16, flags: "-DCMAKE_CXX_COMPILER=clang++" ,supports_cpp20: 'true'}
+          - { name: Ubuntu Clang 17,  os: ubuntu-latest, compiler: clang, version: 17, flags: "-DCMAKE_CXX_COMPILER=clang++" ,supports_cpp20: 'true'}
+          - { name: Ubuntu Clang 18,  os: ubuntu-latest, compiler: clang, version: 18, flags: "-DCMAKE_CXX_COMPILER=clang++" ,supports_cpp20: 'true'}
+          - { name: Ubuntu Clang 19,  os: ubuntu-latest, compiler: clang, version: 19, flags: "-DCMAKE_CXX_COMPILER=clang++" ,supports_cpp20: 'true'}
+          - { name: Ubuntu Clang 20,  os: ubuntu-latest, compiler: clang, version: 20, flags: "-DCMAKE_CXX_COMPILER=clang++" ,supports_cpp20: 'true'}
           
           #  Disabled since it cannot be installed ATM
           #- { name: Ubuntu Clang 21,  os: ubuntu-latest, compiler: clang, version: 21, flags: "-DCMAKE_CXX_COMPILER=clang++" }
@@ -85,62 +87,15 @@ jobs:
         with:
           compiler: gcc-${{matrix.platform.version}}
 
-      - name: Configure CMake (Debug C++17)
-        run: >
-          cmake -B build-cpp17-debug
-          -G Ninja
-          ${{ matrix.platform.flags }}
-          -DCMAKE_BUILD_TYPE=Debug
-          -DENCHANTUM_BUILD_TESTS=ON
-          -DCMAKE_CXX_STANDARD=17
+      - name: Setup Build Script
+        run: |
+          chmod +x .github/scripts/build_and_test.sh
 
-      - name: Build (Debug C++17)
-        run: cmake --build build-cpp17-debug
+      - name: Build (C++17)
+        run: |
+          .github/scripts/build_and_test.sh 17 "${{ matrix.platform.flags }}"
 
-      - name: Run Tests (Debug C++17)
-        run: ctest --test-dir build-cpp17-debug --output-on-failure
-
-      - name: Configure CMake (Debug C++20)
-        run: >
-          cmake -B build-cpp20-debug
-          -G Ninja
-          ${{ matrix.platform.flags }}
-          -DCMAKE_BUILD_TYPE=Debug
-          -DENCHANTUM_BUILD_TESTS=ON
-          -DCMAKE_CXX_STANDARD=20
-
-      - name: Build (Debug C++20)
-        run: cmake --build build-cpp20-debug
-
-      - name: Run Tests (Debug C++20)
-        run: ctest --test-dir build-cpp20-debug --output-on-failure
-
-      - name: Configure CMake (Release C++17)
-        run: >
-          cmake -B build-cpp17-release
-          -G Ninja
-          ${{ matrix.platform.flags }}
-          -DCMAKE_BUILD_TYPE=Release
-          -DENCHANTUM_BUILD_TESTS=ON
-          -DCMAKE_CXX_STANDARD=17
-
-      - name: Build (Release C++17)
-        run: cmake --build build-cpp17-release
-
-      - name: Run Tests (Release C++17)
-        run: ctest --test-dir build-cpp17-release --output-on-failure
-
-      - name: Configure CMake (Release C++20)
-        run: >
-          cmake -B build-cpp20-release
-          -G Ninja
-          ${{ matrix.platform.flags }}
-          -DCMAKE_BUILD_TYPE=Release
-          -DENCHANTUM_BUILD_TESTS=ON
-          -DCMAKE_CXX_STANDARD=20
-
-      - name: Build (Release C++20)
-        run: cmake --build build-cpp20-release
-
-      - name: Run Tests (Release C++20)
-        run: ctest --test-dir build-cpp20-release --output-on-failure
+      - name: Build (C++20)
+        if: matrix.platform.supports_cpp20 == 'true'
+        run: |
+          .github/scripts/build_and_test.sh 20 "${{ matrix.platform.flags }}"
