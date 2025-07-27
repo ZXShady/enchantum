@@ -279,7 +279,7 @@ TEMPLATE_LIST_TEST_CASE("bitflags", "[bitflags]", AllFlagsTestTypes)
       }
       return ret;
     }();
-    CHECK(enchantum::to_string_bitflag(enchantum::valid_mask<TestType>) == string);
+    CHECK(enchantum::to_string_bitflag(enchantum::value_ors<TestType>) == string);
   }
 }
 
@@ -292,7 +292,7 @@ TEMPLATE_LIST_TEST_CASE("contains_bitflag returns false for invalid combinations
     const auto test_bit = static_cast<TestType>(Underlying{1} << bit);
 
     using namespace enchantum::bitwise_operators;
-    if (!static_cast<bool>(enchantum::valid_mask<TestType> & test_bit)) {
+    if (!static_cast<bool>(enchantum::value_ors<TestType> & test_bit)) {
       // This bit is not part of the valid mask, so it's invalid
       invalid_combinations.push_back(test_bit);
     }
