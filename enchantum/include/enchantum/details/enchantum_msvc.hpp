@@ -3,6 +3,7 @@
 #include "../type_name.hpp"
 #include "generate_arrays.hpp"
 #include "string_view.hpp"
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <climits>
@@ -138,9 +139,10 @@ namespace details {
         ret.values[ret.valid_count]           = ArrayData[index];
         std::size_t i = 0;
         while (str[i] != ',')
-          ret.strings[ret.total_string_length++] = str[i++];
+          ++i;
+        std::copy_n(str, i, ret.strings + ret.total_string_length);
         ret.string_lengths[ret.valid_count++] = static_cast<std::uint8_t>(i);
-        ret.total_string_length += NullTerminated;
+        ret.total_string_length += i + NullTerminated;
         str += i + 1;
       }
     }
@@ -154,9 +156,7 @@ namespace details {
 
     constexpr auto strings = [](const auto total_length, const char* const name_data) {
       std::array<char, total_length> ret;
-      auto* const                    ret_data = ret.data();
-      for (std::size_t i = 0; i < total_length.value; ++i)
-        ret_data[i] = name_data[i];
+      std::copy_n(name_data, total_length.value, ret.data());
       return ret;
     }(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings);
 

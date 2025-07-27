@@ -1,6 +1,7 @@
 #include "../common.hpp"
 #include "../type_name.hpp"
 #include "generate_arrays.hpp"
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <climits>
@@ -108,9 +109,8 @@ namespace enchantum {
 					else
 						values[valid_count] = static_cast<IntType>(min + static_cast<IntType>(index));
 					string_lengths[valid_count++] = name_size;
-					for (std::size_t i = 0; i < name_size; ++i)
-						strings[total_string_length++] = str[i];
-					total_string_length += null_terminated;
+					std::copy_n(str, name_size, strings + total_string_length);
+					total_string_length += name_size + null_terminated;
 					str += commapos + SZC(", ");
 				}
 			}
@@ -159,9 +159,7 @@ namespace enchantum {
 
 			constexpr auto strings = [](const auto total_length, const char* const data) {
 				std::array<char, total_length.value> ret;
-				auto* const                          ret_data = ret.data();
-				for (std::size_t i = 0; i < total_length.value; ++i)
-					ret_data[i] = data[i];
+				std::copy_n(data, total_length.value, ret.data());
 				return ret;
 				}(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings);
 
