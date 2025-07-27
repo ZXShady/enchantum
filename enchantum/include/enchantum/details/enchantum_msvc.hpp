@@ -57,9 +57,6 @@ namespace details {
     return __FUNCSIG__ + SZC("auto __cdecl enchantum::details::var_name<");
   }
 
-  template<auto Copy>
-  inline constexpr auto static_storage_for = Copy;
-
   template<bool IsBitFlag, typename IntType>
   constexpr void parse_string(
     const char*         str,
@@ -74,9 +71,32 @@ namespace details {
     std::size_t&        total_string_length,
     std::size_t&        valid_count)
   {
+    // clang-format off
+#if ENCHANTUM_ENABLE_MSVC_SPEEDUP
+    constexpr auto skip_work_if_neg = IsBitFlag || std::is_unsigned_v<IntType> || sizeof(IntType) <= 2 ? 0 : 
+// MSVC 19.31 and below don't cast int/unsigned int into `unsigned long long` (std::uint64_t)
+// While higher versions do cast them
+#if _MSC_VER <= 1931
+        sizeof(IntType) == 4
+#else
+        std::is_same_v<IntType,char32_t> 
+#endif
+        ? sizeof(char32_t)*2-1 : sizeof(std::uint64_t)*2-1 - (sizeof(IntType)==8); // subtract 1 more from uint64_t since I am adding it in skip_if_cast_count
+#endif
+    // clang-format on
     for (std::size_t index = 0; index < array_size; ++index) {
       if (*str == '(') {
+#if ENCHANTUM_ENABLE_MSVC_SPEEDUP
+        if constexpr (skip_work_if_neg != 0) {
+          const auto i = min + static_cast<IntType>(index);
+          str += least_length_when_casting + ((i < 0) * skip_work_if_neg);
+        }
+        else {
+          str += least_length_when_casting;
+        }
+#else
         str += least_length_when_casting;
+#endif
         while (*str++ != ',')
           /*intentionally empty*/;
       }

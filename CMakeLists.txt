@@ -25,9 +25,7 @@ option(ENCHANTUM_BUILD_TESTS "Enable tests for this `enchantum` library" OFF)
 option(ENCHANTUM_ENABLE_MSVC_SPEEDUP "Enable faster but not 100% accurate MSVC enum reflection." ON)
 option(ENCHANTUM_BUILD_BENCHMARKS "Enable compile time benchmarks `enchantum` library" OFF)
 
-if(ENCHANTUM_ENABLE_MSVC_SPEEDUP)
-    target_compile_definitions(enchantum INTERFACE ENCHANTUM_ENABLE_MSVC_SPEEDUP=1)
-endif()
+target_compile_definitions(enchantum INTERFACE ENCHANTUM_ENABLE_MSVC_SPEEDUP=$<BOOL:${ENCHANTUM_ENABLE_MSVC_SPEEDUP}>)
 
 if(ENCHANTUM_BUILD_TESTS)
   enable_testing()
