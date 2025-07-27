@@ -1,7 +1,6 @@
 #pragma once
 
 #include "details/string_view.hpp"
-
 #if defined(__NVCOMPILER)
   #include "details/enchantum_nvcc.hpp"
 #elif defined(__clang__)
@@ -32,10 +31,63 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 
 
 namespace details {
-  template<typename E, bool NullTerminated = true>
-  inline constexpr auto reflection_data = reflect<E, NullTerminated>();
 
-  template<typename E, bool NullTerminated = true>
+ template<typename Int>
+ constexpr std::size_t get_index_sequence_max(const bool is_bitflag,const bool has_fixed_underlying,const std::size_t sizeof_enum,const Int min,const Int max
+  ,const bool is_signed
+)
+ {
+  (void)has_fixed_underlying;
+      if(!is_bitflag)
+        return static_cast<std::size_t>(max - min + 1);
+
+      #if __clang_major__ >= 20
+      if (!has_fixed_underlying)
+      {
+        auto        v = max;
+        std::size_t r = 1;
+        while (v >>= 1)
+        r++;
+        return r;
+      }
+      #endif
+      return (sizeof_enum * CHAR_BIT) - is_signed;
+        
+    }
+
+  template<typename E, bool NullTerminated, auto Min = enum_traits<E>::min, decltype(Min) Max = enum_traits<E>::max>
+  inline constexpr auto reflection_data_impl = details::reflect<E, NullTerminated, Min>(
+    std::make_index_sequence<details::get_index_sequence_max(is_bitflag<E>,has_fixed_underlying_type<E>,sizeof(E),Min,Max,std::is_signed_v<std::underlying_type_t<E>>)>{});
+
+  template<typename E, bool NullTerminated>
+  inline constexpr auto reflection_data_string_storage = reflection_data_impl<E, NullTerminated>.strings;
+
+  template<typename E, bool NullTerminated>
+  inline constexpr auto reflection_data = []() {
+    constexpr auto& elements = reflection_data_impl<E, NullTerminated>.elements;
+    using StringLengthType = std::conditional_t<(elements.total_string_length < UINT8_MAX), std::uint8_t, std::uint16_t>;
+
+    struct RetVal {
+      std::array<E, elements.valid_count> values{};
+      // +1 for easier iteration on on last string
+      std::array<StringLengthType, elements.valid_count + 1> string_indices{};
+    } ret;
+
+    std::size_t      i            = 0;
+    StringLengthType string_index = 0;
+    for (; i < elements.valid_count; ++i) {
+      ret.values[i] = static_cast<E>(elements.values[i]);
+      // "aabc"
+
+      ret.string_indices[i] = string_index;
+      string_index += static_cast<StringLengthType>(elements.string_lengths[i] + NullTerminated);
+    }
+    ret.string_indices[i] = string_index;
+    return ret;
+  }();
+
+
+  template<typename E, bool NullTerminated>
   inline constexpr auto reflection_string_indices = reflection_data<E, NullTerminated>.string_indices;
 } // namespace details
 
@@ -49,8 +101,10 @@ inline constexpr auto entries = []() {
 #if defined(__NVCOMPILER)
   // nvc++ had issues with that and did not allow it. it just did not work after testing in godbolt and I don't know why
   const auto reflected = details::reflection_data<E, NullTerminated>;
+  const auto strings   = details::reflection_data_string_storage<E, NullTerminated>.data();
 #else
   const auto reflected = details::reflection_data<std::remove_cv_t<E>, NullTerminated>;
+  const auto strings   = details::reflection_data_string_storage<std::remove_cv_t<E>, NullTerminated>.data();
 #endif
   constexpr auto size = sizeof(reflected.values) / sizeof(reflected.values[0]);
   static_assert(size != 0,
@@ -66,9 +120,8 @@ inline constexpr auto entries = []() {
   for (std::size_t i = 0; i < size; ++i) {
     auto& [e, s]     = ret_data[i];
     e                = reflected.values[i];
-    using StringView = std::remove_cvref_t<decltype(s)>;
-    s                = StringView(reflected.strings + reflected.string_indices[i],
-                   reflected.strings + reflected.string_indices[i + 1] - NullTerminated);
+    using StringView = std::remove_cv_t<std::remove_reference_t<decltype(s)>>;
+    s                = StringView(strings + reflected.string_indices[i],reflected.string_indices[i + 1] - reflected.string_indices[i] - NullTerminated);
   }
   return ret;
 }();

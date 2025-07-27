@@ -1,6 +1,7 @@
 #pragma once
 
 #include "bitflags.hpp"
+#include "common.hpp"
 #include "details/string.hpp"
 #include "details/string_view.hpp"
 #include "enchantum.hpp"
@@ -12,10 +13,14 @@ namespace details {
 
   constexpr string_view remove_scope_or_empty(string_view string, const string_view type_name) noexcept
   {
-    if (!string.starts_with(type_name))
+    const auto starts_with = [](auto a,auto b)
+    {
+      return a.substr(0, b.size()) == b;
+    };
+    if (!starts_with(string,type_name))
       return string_view();
     string.remove_prefix(type_name.size());
-    if (!string.starts_with("::"))
+    if (!starts_with(string,string_view("::",2)))
       return string_view();
     string.remove_prefix(2);
     return string;
@@ -45,7 +50,7 @@ namespace details {
       return n.empty() ? optional<E>() : cast<E>(n);
     }
 
-    template<std::predicate<string_view, string_view> BinaryPred>
+    template<ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(std::predicate<string_view, string_view>) BinaryPred>
     [[nodiscard]] constexpr optional<E> operator()(const string_view name, const BinaryPred binary_predicate) const noexcept
     {
       const auto n = details::remove_scope_or_empty(name, type_name<E>);
@@ -54,10 +59,11 @@ namespace details {
   };
 
   struct to_scoped_string_functor {
-    template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-    [[nodiscard]] constexpr string operator()(const E value) const noexcept
+    // hacky workaround about string not being a literal type.
+    template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E),typename String = string>
+    [[nodiscard]] constexpr String operator()(const E value) const noexcept
     {
-      string s;
+      String s;
       if (const auto i = enchantum::enum_to_index(value)) {
         s += type_name<E>;
         s += "::";
@@ -101,15 +107,15 @@ template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 }
 
 
-template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
-[[nodiscard]] constexpr string to_string_bitflag(const E value, const char sep = '|')
+template<typename String = string,ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
+[[nodiscard]] constexpr String to_string_bitflag(const E value, const char sep = '|')
 {
   using T = std::underlying_type_t<E>;
   if constexpr (has_zero_flag<E>)
     if (static_cast<T>(value) == 0)
       return enchantum::scoped::to_string(value);
 
-  string         name;
+  String         name;
   T              check_value = 0;
   constexpr auto scope_name  = type_name<E>;
   for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {

@@ -3,7 +3,7 @@
 #include "details/optional.hpp"
 #include "details/string.hpp"
 #include "details/string_view.hpp"
-#include "details/generate_arrays.hpp"
+#include "details/shared.hpp"
 #include "details/format_util.hpp"
 #include "generators.hpp"
 #include "algorithms.hpp"

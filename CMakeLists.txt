@@ -14,7 +14,7 @@ file(GLOB_RECURSE INCS "${INCDIR}/*.hpp")
 
 add_library(enchantum INTERFACE ${INCS})
 add_library(enchantum::enchantum ALIAS enchantum)
-target_compile_features(enchantum INTERFACE cxx_std_20)
+target_compile_features(enchantum INTERFACE cxx_std_17)
  
 target_include_directories(enchantum INTERFACE
     $<BUILD_INTERFACE:${INCDIR}>

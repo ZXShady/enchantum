@@ -5,7 +5,6 @@
 #include "details/string_view.hpp"
 #include "entries.hpp"
 #include "generators.hpp"
-#include <bit>
 #include <type_traits>
 #include <utility>
 
@@ -79,7 +78,7 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E), 
-    std::predicate<string_view, string_view> BinaryPredicate>
+    ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(std::predicate<string_view, string_view>) BinaryPredicate>
 [[nodiscard]] constexpr bool contains(const string_view name, const BinaryPredicate binary_predicate) noexcept
 {
   for (const auto s : names_generator<E>)
@@ -94,10 +93,9 @@ namespace details {
   struct index_to_enum_functor {
     [[nodiscard]] constexpr optional<E> operator()(const std::size_t index) const noexcept
     {
-      optional<E> ret;
       if (index < count<E>)
-        ret.emplace(values_generator<E>[index]);
-      return ret;
+        return optional<E>(values_generator<E>[index]);
+      return optional<E>();
     }
   };
 
@@ -120,13 +118,13 @@ namespace details {
               return optional<std::size_t>(0); // assumes 0 is the index of value `0`
 
           using U = std::make_unsigned_t<T>;
-          return has_zero + std::countr_zero(static_cast<U>(e)) - std::countr_zero(static_cast<U>(values_generator<E>[has_zero]));
+          return has_zero + details::countr_zero(static_cast<U>(e)) - details::countr_zero(static_cast<U>(values_generator<E>[has_zero]));
         }
       }
       else {
         for (std::size_t i = 0; i < count<E>; ++i) {
           if (values_generator<E>[i] == e)
-            return i;
+            return optional<std::size_t>(i);
         }
       }
       return optional<std::size_t>();
@@ -138,41 +136,34 @@ namespace details {
   struct cast_functor {
     [[nodiscard]] constexpr optional<E> operator()(const std::underlying_type_t<E> value) const noexcept
     {
-      optional<E> a; // rvo not that it really matters
       if (!enchantum::contains<E>(value))
-        return a;
-      a.emplace(static_cast<E>(value));
-      return a;
+        return optional<E>();
+      return optional<E>(static_cast<E>(value));
     }
 
     [[nodiscard]] constexpr optional<E> operator()(const string_view name) const noexcept
     {
-      optional<E> a; // rvo not that it really matters
-
       constexpr auto minmax = details::minmax_string_size(names<E>.data(), names<E>.data() + names<E>.size());
       if (const auto size = name.size(); size < minmax.first || size > minmax.second)
-        return a; // nullopt
+        return optional<E>(); // nullopt
 
       for (std::size_t i = 0; i < count<E>; ++i) {
         if (names_generator<E>[i] == name) {
-          a.emplace(values_generator<E>[i]);
-          return a;
+          return optional<E>(values_generator<E>[i]);
         }
       }
-      return a; // nullopt
+      return optional<E>(); // nullopt
     }
 
     template<ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(std::predicate<string_view, string_view>) BinaryPred>
     [[nodiscard]] constexpr optional<E> operator()(const string_view name, const BinaryPred binary_predicate) const noexcept
     {
-      optional<E> a; // rvo not that it really matters
       for (std::size_t i = 0; i < count<E>; ++i) {
         if (binary_predicate(name, names_generator<E>[i])) {
-          a.emplace(values_generator<E>[i]);
-          return a;
+          return optional<E>(values_generator<E>[i]);
         }
       }
-      return a;
+      return optional<E>();
     }
   };
 

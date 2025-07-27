@@ -260,7 +260,7 @@ inline constexpr auto prefix_length_or_zero<E, decltype((void)enum_traits<E>::pr
   enum_traits<E>::prefix_length};
 
 template<typename Enum, auto Min, decltype(Min) Max>
-constexpr auto generate_arrays()
+constexpr auto shared()
 {
   if constexpr (BitFlagEnum<Enum>) {
     constexpr std::size_t                             bits = sizeof(Enum) * CHAR_BIT;
@@ -953,7 +953,7 @@ namespace details {
     constexpr auto Min = enum_traits<E>::min;
     constexpr auto Max = enum_traits<E>::max;
 
-    constexpr auto Array             = details::generate_arrays<E, Min, Max>();
+    constexpr auto Array             = details::shared<E, Min, Max>();
     const E* const ArrayData         = Array.data();
     constexpr auto ConstStr          = var_name<Array>();
     constexpr auto StringSize        = ConstStr.size();

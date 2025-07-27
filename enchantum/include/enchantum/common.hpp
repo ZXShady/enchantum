@@ -36,6 +36,12 @@ inline constexpr bool is_scoped_enum<E, true> = !std::is_convertible_v<E, std::u
 template<typename E>
 inline constexpr bool is_unscoped_enum = std::is_enum_v<E> && !is_scoped_enum<E>;
 
+template<typename E,typename = void>
+inline constexpr bool has_fixed_underlying_type = false;
+
+template<typename E>
+inline constexpr bool has_fixed_underlying_type<E,decltype(void(E{0}))> = std::is_enum_v<E>;
+
 
 #ifdef __cpp_concepts
 
@@ -74,7 +80,9 @@ template<typename T>
 concept EnumFixedUnderlying = Enum<T> && requires { T{0}; };
 
 #else
-template<typename E, typename = void, std::enable_if_t<std::is_enum_v<E>, int> = 0>
+
+
+template<typename E, typename = void>
 inline constexpr bool is_bitflag = false;
 
 // clang-format off
@@ -86,7 +94,8 @@ inline constexpr bool is_bitflag<E,
     decltype(E{} | E{}), 
     decltype(std::declval<E&>() &= E{}), 
     decltype(std::declval<E&>() |= E{})
-    >> = (std::is_same_v<decltype(E{} & E{}),bool>  || std::is_same_v<decltype(E{} & E{}), E>) 
+    >> =  std::is_enum_v<E>
+    &&    (std::is_same_v<decltype(E{} & E{}),bool>  || std::is_same_v<decltype(E{} & E{}), E>) 
     &&    std::is_same_v<decltype(~E{}), E> 
     &&    std::is_same_v<decltype(E{} | E{}), E>
     &&    std::is_same_v<decltype(std::declval<E&>() &= E{}), E&>
@@ -154,8 +163,8 @@ namespace details {
     using T = std::underlying_type_t<E>;
     using L = std::numeric_limits<T>;
 #if !defined(__NVCOMPILER) && defined(__clang__) && __clang_major__ >= 20
-    constexpr auto Max = EnumFixedUnderlying<E> ? (L::max)() : details::valid_cast_range<E, 1>();
-    constexpr auto Min = EnumFixedUnderlying<E> ? (L::min)() : details::valid_cast_range<E, std::is_signed_v<T> ? -1 : 0>();
+    constexpr auto Max = has_fixed_underlying_type<E> ? (L::max)() : details::valid_cast_range<E, 1>();
+    constexpr auto Min = has_fixed_underlying_type<E> ? (L::min)() : details::valid_cast_range<E, std::is_signed_v<T> ? -1 : 0>();
 #else
     constexpr auto Max = (L::max)();
     constexpr auto Min = (L::min)();

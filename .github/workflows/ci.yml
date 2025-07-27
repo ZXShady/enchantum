@@ -85,34 +85,62 @@ jobs:
         with:
           compiler: gcc-${{matrix.platform.version}}
 
-      - name: Configure CMake (Debug)
+      - name: Configure CMake (Debug C++17)
         run: >
-          cmake -B build
+          cmake -B build-cpp17-debug
           -G Ninja
           ${{ matrix.platform.flags }}
           -DCMAKE_BUILD_TYPE=Debug
           -DENCHANTUM_BUILD_TESTS=ON
+          -DCMAKE_CXX_STANDARD=17
 
-      - name: Build (Debug)
-        run: cmake --build build
+      - name: Build (Debug C++17)
+        run: cmake --build build-cpp17-debug
 
-      - name: Run Tests (Debug)
-        run: ctest --test-dir build --output-on-failure
+      - name: Run Tests (Debug C++17)
+        run: ctest --test-dir build-cpp17-debug --output-on-failure
 
-      - name: Clean Build Directory
-        run: "rm -rf build"
-        shell: bash
-
-      - name: Configure CMake (Release)
+      - name: Configure CMake (Debug C++20)
         run: >
-          cmake -B build
+          cmake -B build-cpp20-debug
+          -G Ninja
+          ${{ matrix.platform.flags }}
+          -DCMAKE_BUILD_TYPE=Debug
+          -DENCHANTUM_BUILD_TESTS=ON
+          -DCMAKE_CXX_STANDARD=20
+
+      - name: Build (Debug C++20)
+        run: cmake --build build-cpp20-debug
+
+      - name: Run Tests (Debug C++20)
+        run: ctest --test-dir build-cpp20-debug --output-on-failure
+
+      - name: Configure CMake (Release C++17)
+        run: >
+          cmake -B build-cpp17-release
           -G Ninja
           ${{ matrix.platform.flags }}
           -DCMAKE_BUILD_TYPE=Release
           -DENCHANTUM_BUILD_TESTS=ON
+          -DCMAKE_CXX_STANDARD=17
 
-      - name: Build (Release)
-        run: cmake --build build
+      - name: Build (Release C++17)
+        run: cmake --build build-cpp17-release
 
-      - name: Run Tests (Release)
-        run: ctest --test-dir build --output-on-failure
+      - name: Run Tests (Release C++17)
+        run: ctest --test-dir build-cpp17-release --output-on-failure
+
+      - name: Configure CMake (Release C++20)
+        run: >
+          cmake -B build-cpp20-release
+          -G Ninja
+          ${{ matrix.platform.flags }}
+          -DCMAKE_BUILD_TYPE=Release
+          -DENCHANTUM_BUILD_TESTS=ON
+          -DCMAKE_CXX_STANDARD=20
+
+      - name: Build (Release C++20)
+        run: cmake --build build-cpp20-release
+
+      - name: Run Tests (Release C++20)
+        run: ctest --test-dir build-cpp20-release --output-on-failure

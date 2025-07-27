@@ -3,7 +3,7 @@
 #include <enchantum/bitflags.hpp>
 #include <enchantum/bitset.hpp>
 #include <enchantum/bitwise_operators.hpp>
-#include <enchantum/details/generate_arrays.hpp>
+#include <enchantum/details/shared.hpp>
 #include <enchantum/details/optional.hpp>
 #include <enchantum/details/string.hpp>
 #include <enchantum/details/string_view.hpp>
@@ -21,7 +21,7 @@
 #include <enchantum/bitflags.hpp>
 #include <enchantum/bitset.hpp>
 #include <enchantum/bitwise_operators.hpp>
-#include <enchantum/details/generate_arrays.hpp>
+#include <enchantum/details/shared.hpp>
 #include <enchantum/details/optional.hpp>
 #include <enchantum/details/string.hpp>
 #include <enchantum/details/string_view.hpp>

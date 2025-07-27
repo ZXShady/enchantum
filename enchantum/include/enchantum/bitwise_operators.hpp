@@ -17,48 +17,48 @@ enchantum::contains(Flags::F1); // considered `BitFlagEnum` concept woops! ODR!
 */
 
 namespace enchantum::bitwise_operators {
-template<Enum E>
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 [[nodiscard]] constexpr E operator~(E e) noexcept
 {
   return static_cast<E>(~static_cast<std::underlying_type_t<E>>(e));
 }
 
-template<Enum E>
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 [[nodiscard]] constexpr E operator|(E a, E b) noexcept
 {
   using T = std::underlying_type_t<E>;
   return static_cast<E>(static_cast<T>(a) | static_cast<T>(b));
 }
 
-template<Enum E>
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 [[nodiscard]] constexpr E operator&(E a, E b) noexcept
 {
   using T = std::underlying_type_t<E>;
   return static_cast<E>(static_cast<T>(a) & static_cast<T>(b));
 }
 
-template<Enum E>
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 [[nodiscard]] constexpr E operator^(E a, E b) noexcept
 {
   using T = std::underlying_type_t<E>;
   return static_cast<E>(static_cast<T>(a) ^ static_cast<T>(b));
 }
 
-template<Enum E>
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 constexpr E& operator|=(E& a, E b) noexcept
 {
   using T  = std::underlying_type_t<E>;
   return a = static_cast<E>(static_cast<T>(a) | static_cast<T>(b));
 }
 
-template<Enum E>
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 constexpr E& operator&=(E& a, E b) noexcept
 {
   using T  = std::underlying_type_t<E>;
   return a = static_cast<E>(static_cast<T>(a) & static_cast<T>(b));
 }
 
-template<Enum E>
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 constexpr E& operator^=(E& a, E b) noexcept
 {
   using T  = std::underlying_type_t<E>;

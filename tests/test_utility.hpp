@@ -12,7 +12,8 @@ template<typename... Commas>
 struct TypeWithCommas;
 
 // Tests whether string parsing will break if commas occur in typename
-namespace LongNamespaced::Namespace2::inline InlineNamespace {
+namespace LongNamespaced::Namespace2 {
+  inline namespace InlineNamespace {
 template<typename... IAmHereForCommasInTypeName>
 struct Really_Unreadable_Class_Name {
 
@@ -68,7 +69,7 @@ using UnscopedColor = UglyType::UnscopedColor;
 #endif
 
 ENCHANTUM_DEFINE_BITWISE_FOR(Flags)
-
+  }
 } // namespace LongNamespaced::Namespace2::inline InlineNamespace
 
 enum class StrongFlagsNoOverloadedOperators : std::uint8_t {
@@ -197,8 +198,13 @@ enum class UnderlyingTypeChar32_t : char32_t {
   _8,
   _9,
 };
+enum class UnderlyingTypeChar8_t 
 #ifdef __cpp_char8_t
-enum class UnderlyingTypeChar8_t : char8_t {
+: char8_t
+#else
+: char 
+#endif
+{
   _0,
   _1,
   _2,
@@ -210,7 +216,7 @@ enum class UnderlyingTypeChar8_t : char8_t {
   _8,
   _9,
 };
-#endif
+
 enum class Letters {
   a,
   b,
@@ -395,8 +401,8 @@ using AllEnumsTestTypes = concat<
     Outer::Inner::CStyleAnon>>;
 
 
-template<enchantum::Enum E>
-struct Catch::StringMaker<E> {
+template<typename E>
+struct Catch::StringMaker<E,std::enable_if_t<std::is_enum_v<E>>> {
   static std::string convert(E e)
   {
     return '"' + std::to_string(static_cast<std::underlying_type_t<E>>(e)) + '"';

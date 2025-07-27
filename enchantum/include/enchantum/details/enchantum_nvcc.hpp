@@ -1,29 +1,29 @@
+#include "../common.hpp"
+#include "../type_name.hpp"
+#include "shared.hpp"
 #include <array>
 #include <cassert>
 #include <climits>
 #include <cstdint>
 #include <type_traits>
 #include <utility>
-#include "../common.hpp"
-#include "../type_name.hpp"
-#include "generate_arrays.hpp"
 namespace enchantum {
 
 namespace details {
-  constexpr std::size_t find_semicolon(const char* const s)
+  constexpr std::size_t find_semicolon(const char* s)
   {
     for (std::size_t i = 0; true; ++i)
       if (s[i] == ';')
         return i;
   }
-  constexpr auto enum_in_array_name(const std::string_view raw_type_name, const bool is_scoped_enum) noexcept
+  constexpr std::size_t enum_in_array_name_size(const string_view raw_type_name, const bool is_scoped_enum) noexcept
   {
     if (is_scoped_enum)
-      return raw_type_name;
+      return raw_type_name.size();
 
     if (const auto pos = raw_type_name.rfind(':'); pos != string_view::npos)
-      return raw_type_name.substr(0, pos - 1);
-    return string_view();
+      return pos - 1;
+    return 0;
   }
 
 #define SZC(x) (sizeof(x) - 1)
@@ -31,123 +31,110 @@ namespace details {
   template<auto... Vs>
   constexpr auto var_name() noexcept
   {
-    constexpr auto funcsig_off = SZC("constexpr auto enchantum::details::var_name() noexcept [with _ Vs = _{}; ");
-    return string_view(__PRETTY_FUNCTION__ + funcsig_off, SZC(__PRETTY_FUNCTION__) - funcsig_off - SZC(" _ Vs = 0]"));
+    return __PRETTY_FUNCTION__ + SZC("constexpr auto enchantum::details::var_name() noexcept [with _ Vs = _{}; ");
   }
 
-  template<auto Copy>
-  inline constexpr auto static_storage_for = Copy;
-
-  template<typename E, std::size_t Length, std::size_t StringLength>
-  struct ReflectRetVal {
-    E values[Length]{};
-
-    // We are making an assumption that no sane user will use an enum member name longer than 256 characters
-    // if you are not sane then I don't know what to do
-    std::uint8_t string_lengths[Length]{};
-
-    char        strings[StringLength]{};
-    std::size_t total_string_length = 0;
-    std::size_t valid_count         = 0;
-  };
-
-  template<typename E, bool NullTerminated>
-  constexpr auto reflect() noexcept
+  template<bool IsBitFlag, typename IntType>
+  constexpr void parse_string(
+    const char*         str,
+    const std::size_t   least_length_when_casting,
+    const std::size_t   least_length_when_value,
+    const IntType       min,
+    const std::size_t   array_size,
+    const bool          null_terminated,
+    IntType* const      values,
+    std::uint8_t* const string_lengths,
+    char* const         strings,
+    std::size_t&        total_string_length,
+    std::size_t&        valid_count)
   {
-    constexpr auto Min      = enum_traits<E>::min;
-    constexpr auto Max      = enum_traits<E>::max;
-    constexpr auto bits     = (sizeof(E) * CHAR_BIT) - std::is_signed_v<E>;
-    constexpr auto elements = []() {
-      using Under      = std::underlying_type_t<E>;
-      using Underlying = std::make_unsigned_t<std::conditional_t<std::is_same_v<bool, Under>, unsigned char, Under>>;
-      constexpr auto ArraySize = is_bitflag<E> ? 1 + bits : (Max - Min) + 1;
-
-// NVCC seems to not consider else branches of if constexpr as always returning so I have to
-// disable this warning
-#pragma diag_suppress implicit_return_from_non_void_function
-      constexpr auto ConstStr = []<std::size_t... Idx>(std::index_sequence<Idx...>) -> std::string_view {
-        // dummy 0
-        constexpr struct _ {
-        } A;                                           // forces NVCC to shorten the string types
-        if constexpr (sizeof...(Idx) && is_bitflag<E>) // sizeof... to make contest dependant
-          return details::var_name<A, static_cast<E>(0), static_cast<E>(Underlying(1) << Idx)..., 0>();
+    for (std::size_t index = 0; index < array_size; ++index) {
+      // check if cast (starts with '(')
+      str += SZC("_ Vs = ");
+      if (str[0] == '(') {
+        str += least_length_when_casting;
+        while (*str++ != ';')
+          /*intentionally empty*/;
+        str += SZC(" ");
+      }
+      else {
+        str += least_length_when_value;
+        const auto commapos = details::find_semicolon(str);
+        if constexpr (IsBitFlag)
+          values[valid_count] = index == 0 ? IntType{} : static_cast<IntType>(IntType{1} << (index - 1));
         else
-          return details::var_name<A, static_cast<E>(static_cast<decltype(Min)>(Idx) + Min)..., 0>();
-      }(std::make_index_sequence<is_bitflag<E> ? bits : ArraySize>());
+          values[valid_count] = static_cast<IntType>(min + static_cast<IntType>(index));
+        string_lengths[valid_count++] = static_cast<std::uint8_t>(commapos);
+        __builtin_memcpy(strings + total_string_length, str, commapos);
+        total_string_length += commapos + null_terminated;
+        str += commapos + SZC("; ");
+      }
+    }
+  }
+
+  template<typename E, bool NullTerminated, auto Min, std::size_t... Is>
+  constexpr auto reflect(std::index_sequence<Is...>) noexcept
+  {
+    using MinT = decltype(Min);
+    using T    = std::underlying_type_t<E>;
+
+    constexpr auto elements_local = []() {
+      constexpr auto ArraySize = sizeof...(Is) + is_bitflag<E>;
+#pragma diag_suppress implicit_return_from_non_void_function
+      const auto str = [](auto dependant) {
+        constexpr bool always_true = sizeof(dependant) != 0;
+        // forces NVCC to shorten the string types
+        constexpr struct _ {
+        } A;
+        using Underlying = std::make_unsigned_t<std::conditional_t<std::is_same_v<bool, T>, unsigned char, T>>;
+
+        // dummy 0
+        if constexpr (always_true && is_bitflag<E>) // sizeof... to make contest dependant
+          return details::var_name<A, static_cast<E>(!always_true), static_cast<E>(Underlying(1) << Is)..., 0>();
+        else
+          return details::var_name<A, static_cast<E>(static_cast<MinT>(Is) + Min)..., int(!always_true)>();
+      }(0);
 #pragma diag_default implicit_return_from_non_void_function
 
-      const auto* str = ConstStr.data();
+      constexpr auto enum_in_array_len = details::enum_in_array_name_size(raw_type_name<E>, is_scoped_enum<E>);
+      // Ubuntu Clang 20 complains about using local constexpr variables in a local struct
+      ReflectStringReturnValue<std::underlying_type_t<E>, ArraySize> ret;
 
-      constexpr auto enum_in_array_name = details::enum_in_array_name(raw_type_name<E>, is_scoped_enum<E>);
-      constexpr auto enum_in_array_len  = enum_in_array_name.size();
-      ReflectRetVal<E, ArraySize, ConstStr.size() + (NullTerminated * ArraySize)> ret;
+      // ((anonymous namespace)::A)0
+      // (anonymous namespace)::a
+      // this is needed to determine whether the above are cast expression if 2 braces are
+      // next to eachother then it is a cast but only for anonymoused namespaced enums
 
-      for (std::size_t index = 0; index < ArraySize; ++index) {
-        str += SZC("_ Vs = ");
-        // check if cast (starts with '(')
-        if (*str == '(') {
-          str += SZC("(") + enum_in_array_len + SZC(")0"); // there is atleast 1 base 10 digit
-          str += details::find_semicolon(str) + SZC("; ");
-        }
-        else {
-          if constexpr (enum_in_array_len != 0)
-            str += enum_in_array_len + SZC("::");
+      details::parse_string<is_bitflag<E>>(
+        /*str = */ str,
+        /*least_length_when_casting=*/SZC("(") + enum_in_array_len + SZC(")0"),
+        /*least_length_when_value=*/details::prefix_length_or_zero<E> +
+          (enum_in_array_len != 0 ? enum_in_array_len + SZC("::") : 0),
+        /*min = */ static_cast<T>(Min),
+        /*array_size = */ ArraySize,
+        /*null_terminated= */ NullTerminated,
+        /*enum_values= */ ret.values,
+        /*string_lengths= */ ret.string_lengths,
+        /*strings= */ ret.strings,
+        /*total_string_length*/ ret.total_string_length,
+        /*valid_count*/ ret.valid_count);
 
-          if constexpr (details::prefix_length_or_zero<E> != 0)
-            str += details::prefix_length_or_zero<E>;
-
-          const auto name_size = details::find_semicolon(str);
-          {
-            if constexpr (is_bitflag<E>)
-              ret.values[ret.valid_count] = {index == 0 ? E() : E(Underlying{1} << (index - 1))};
-            else
-              ret.values[ret.valid_count] = {E(Min + static_cast<decltype(Min)>(index))};
-
-            ret.string_lengths[ret.valid_count++] = name_size;
-            
-            for(std::size_t i =0;i<name_size;++i)
-              ret.strings[i+ret.total_string_length] = str[i];
-            // __builtin_memcpy(ret.strings + ret.total_string_length, str, name_size);
-            ret.total_string_length += name_size + NullTerminated;
-          }
-          str += name_size + SZC("; ");
-        }
-      }
       return ret;
     }();
 
-    using StringLengthType = std::conditional_t<(elements.total_string_length < UINT8_MAX), std::uint8_t, std::uint16_t>;
+    using Strings = std::array<char, elements_local.total_string_length>;
 
-    struct RetVal {
-      std::array<E, elements.valid_count> values{};
-      // +1 for easier iteration on on last string
-      std::array<StringLengthType, elements.valid_count + 1> string_indices{};
-      const char*                                            strings{};
-    } ret;
-    for(std::size_t i=0;i<elements.valid_count;++i)
-      ret.values[i] = elements.values[i];
+    struct {
+      decltype(elements_local) elements;
+      Strings                  strings;
+    } data = {elements_local, [](const char* const strings) {
+                Strings ret{};
+                __builtin_memcpy(ret.data(), strings, ret.size());
+                return ret;
+              }(elements_local.strings)};
 
-    // __builtin_memcpy(ret.values.data(), elements.values, sizeof(ret.values));
-
-    constexpr auto strings = [](const auto total_length, const char* data) {
-      std::array<char, total_length.value> strings{};
-      for(std::size_t i = 0;i<total_length.value;++i)
-        strings[i] = data[i];
-        // __builtin_memcpy(strings.data(), data, total_length.value);
-      return strings;
-    }(std::integral_constant<std::size_t, elements.total_string_length>{}, elements.strings);
-    ret.strings = static_storage_for<strings>.data();
-
-    auto* const      string_indices_data = ret.string_indices.data();
-    std::size_t      i                   = 0;
-    StringLengthType string_index        = 0;
-    for (; i < elements.valid_count; ++i) {
-      string_indices_data[i] = string_index;
-      string_index += elements.string_lengths[i] + NullTerminated;
-    }
-    ret.string_indices[i] = string_index;
-    return ret;
-  }
+    return data;
+  } // namespace details
 
 } // namespace details
 } // namespace enchantum

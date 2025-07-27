@@ -6,7 +6,7 @@
 
 namespace enchantum {
 namespace details {
-  template<Enum E>
+  template<typename E>
   std::string format(E e) noexcept
   {
     if constexpr (is_bitflag<E>) {

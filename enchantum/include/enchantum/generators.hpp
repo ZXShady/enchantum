@@ -1,14 +1,15 @@
 #pragma once
 #include "entries.hpp"
-#include <bit>
-#include <compare>
+#ifdef __cpp_impl_three_way_comparison
+  #include <compare>
+#endif
 #include <cstddef>
 #include <cstdint>
 #include <utility>
+#include "details/countr_zero.hpp"
 
 namespace enchantum {
 namespace details {
-
 
   struct senitiel {};
 
@@ -59,24 +60,24 @@ namespace details {
     [[nodiscard]] constexpr friend CRTP operator+(CRTP it, const std::ptrdiff_t offset) noexcept
     {
       it += offset;
-      return it.to_base();
+      return it;
     }
 
     [[nodiscard]] constexpr friend CRTP operator+(const std::ptrdiff_t offset, CRTP it) noexcept
     {
       it += offset;
-      return it.to_base();
+      return it;
     }
 
     [[nodiscard]] constexpr friend CRTP operator-(CRTP it, const std::ptrdiff_t offset) noexcept
     {
       it -= offset;
-      return it.to_base();
+      return it;
     }
 
-    [[nodiscard]] constexpr friend std::ptrdiff_t operator-(const sized_iterator a, const sized_iterator b) noexcept
+    [[nodiscard]] constexpr std::ptrdiff_t operator-(const sized_iterator that) const noexcept
     {
-      return a.index - b.index;
+      return index - that.index;
     }
 
     [[nodiscard]] constexpr bool operator==(const sized_iterator that) const noexcept { return that.index == index; };
@@ -90,30 +91,26 @@ namespace details {
     [[nodiscard]] constexpr bool operator!=(const sized_iterator that) const noexcept { return that.index != index; };
     [[nodiscard]] constexpr bool operator!=(senitiel) const noexcept { return Size != index; }
 
-    [[nodiscard]] friend constexpr bool operator==(const sized_iterator it, senitiel) const noexcept { return Size == it.index; }
+        [[nodiscard]] friend constexpr bool operator==(senitiel,const sized_iterator it) noexcept { return Size == it.index; }
 
 
-    [[nodiscard]] friend constexpr bool operator!=(const sized_iterator a, const sized_iterator b) noexcept
-    {
-      return a.index != b.index;
-    };
-    [[nodiscard]] friend constexpr bool operator!=(const sized_iterator it, senitiel) const noexcept
-    {
-      return Size != it.index;
-    }
+
+    [[nodiscard]] friend constexpr bool operator!=(senitiel,const sized_iterator it) noexcept { return Size != it.index; }
+
+
 
     [[nodiscard]] constexpr bool operator<(const  sized_iterator that) const noexcept { return index < that.index; };
-    [[nodiscard]] constexpr bool operator>(const  sized_iterator that) const noexcept { return index < that.index; };
+    [[nodiscard]] constexpr bool operator>(const  sized_iterator that) const noexcept { return index > that.index; };
     [[nodiscard]] constexpr bool operator<=(const sized_iterator that) const noexcept { return index <= that.index; };
     [[nodiscard]] constexpr bool operator>=(const sized_iterator that) const noexcept { return index >= that.index; };
 
     [[nodiscard]] constexpr bool operator<(senitiel) const noexcept { return index < Size; };
-    [[nodiscard]] constexpr bool operator>(senitiel) const noexcept { return index < Size; };
+    [[nodiscard]] constexpr bool operator>(senitiel) const noexcept { return index > Size; };
     [[nodiscard]] constexpr bool operator<=(senitiel) const noexcept { return index <= Size; };
     [[nodiscard]] constexpr bool operator>=(senitiel) const noexcept { return index >= Size; };
 
     [[nodiscard]] friend constexpr bool operator<(senitiel,  const sized_iterator it) noexcept { return Size < it.index; };
-    [[nodiscard]] friend constexpr bool operator>(senitiel,  const sized_iterator it) noexcept { return Size < it.index; };
+    [[nodiscard]] friend constexpr bool operator>(senitiel,  const sized_iterator it) noexcept { return Size > it.index; };
     [[nodiscard]] friend constexpr bool operator<=(senitiel, const sized_iterator it) noexcept { return Size <= it.index; };
     [[nodiscard]] friend constexpr bool operator>=(senitiel, const sized_iterator it) noexcept { return Size >= it.index; };
 
@@ -130,9 +127,9 @@ namespace details {
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
       [[nodiscard]] constexpr String operator*() const noexcept
       {
-        const auto* const p       = reflection_string_indices<E, NullTerminated>.data();
-        const auto* const strings = reflection_data<E, NullTerminated>.strings;
-        return String(strings + p[this->index], strings + p[this->index + 1] - NullTerminated);
+        const auto* const p       = details::reflection_string_indices<E, NullTerminated>.data();
+        const auto* const strings = details::reflection_data_string_storage<E, NullTerminated>.data();
+        return String(strings + p[this->index], p[this->index + 1]  - p[this->index] - NullTerminated);
       }
 
       [[nodiscard]] constexpr String operator[](const std::ptrdiff_t i) const noexcept { return *(*this + i); }
@@ -164,7 +161,7 @@ namespace details {
         }
         else if constexpr (is_contiguous_bitflag<E>) {
           using UT                       = std::make_unsigned_t<T>;
-          constexpr auto real_min_offset = std::countr_zero(static_cast<UT>(values<E>[has_zero_flag<E>]));
+          constexpr auto real_min_offset = details::countr_zero(static_cast<UT>(values<E>[has_zero_flag<E>]));
 
           if constexpr (has_zero_flag<E>)
             if (this->index == 0)

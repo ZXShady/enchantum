@@ -5,12 +5,12 @@ FetchContent_Declare(
   GIT_TAG devel
 )
 FetchContent_MakeAvailable(Catch2)
-
+ 
 target_compile_features(Catch2 PRIVATE cxx_std_17)
 target_compile_definitions(Catch2 PUBLIC CATCH_CONFIG_ENABLE_OPTIONAL_STRINGMAKER)
 add_executable(tests)
 target_include_directories(tests PRIVATE "third_party")
-target_compile_features(tests PRIVATE cxx_std_20)
+target_compile_features(tests PRIVATE cxx_std_17)
 
 
 target_link_libraries(tests PRIVATE enchantum::enchantum Catch2::Catch2WithMain)
@@ -30,10 +30,12 @@ endif()
 file(GLOB_RECURSE SRCS "*.cpp" "*.hpp")
 
 
+get_target_property(STD tests CXX_STANDARD)
+
 if(MSVC)
-set(CMAKE_REQUIRED_FLAGS "/std:c++20")
+set(CMAKE_REQUIRED_FLAGS "/std:c++${STD}")
 else()
-set(CMAKE_REQUIRED_FLAGS "-std=c++20")
+set(CMAKE_REQUIRED_FLAGS "-std=c++${STD}")
 endif()
 check_cxx_source_compiles("
     #include <format>
@@ -50,6 +52,12 @@ if(NOT HAS_STD_FORMAT)
 	list(REMOVE_ITEM SRCS "${CMAKE_CURRENT_SOURCE_DIR}/std_format.cpp")
 endif()
 
+if(STD LESS 20)
+    list(REMOVE_ITEM SRCS "${CMAKE_CURRENT_SOURCE_DIR}/concepts.cpp")
+    list(REMOVE_ITEM SRCS "${CMAKE_CURRENT_SOURCE_DIR}/double_include.cpp")
+    list(REMOVE_ITEM SRCS "${CMAKE_CURRENT_SOURCE_DIR}/std_format.cpp")
+    list(REMOVE_ITEM SRCS "${CMAKE_CURRENT_SOURCE_DIR}/single_header.cpp")
+endif()
 target_sources(tests PRIVATE ${SRCS})
 
 include(CTest)
