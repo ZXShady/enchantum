@@ -28,10 +28,10 @@ namespace details {
 
 #define SZC(x) (sizeof(x) - 1)
 
-  template<auto... Vs>
+  template<auto... V>
   constexpr auto var_name() noexcept
   {
-    return __PRETTY_FUNCTION__ + SZC("constexpr auto enchantum::details::var_name() noexcept [with _ Vs = _{}; ");
+    return __PRETTY_FUNCTION__ + SZC("constexpr auto enchantum::details::var_name() noexcept [with _ *V = (_ *)0; ");
   }
 
   template<bool IsBitFlag, typename IntType>
@@ -50,7 +50,7 @@ namespace details {
   {
     for (std::size_t index = 0; index < array_size; ++index) {
       // check if cast (starts with '(')
-      str += SZC("_ Vs = ");
+      str += SZC("_ *V = ");
       if (str[0] == '(') {
         str += least_length_when_casting;
         while (*str++ != ';')
@@ -84,10 +84,10 @@ namespace details {
       const auto str = [](auto dependant) {
         constexpr bool always_true = sizeof(dependant) != 0;
         // forces NVCC to shorten the string types
-        constexpr struct _ {
-        } A;
+        struct _ {};
+        // using a pointer since C++17 only allows pointers to class types not the class types themselves
+        constexpr _* A{};
         using Underlying = std::make_unsigned_t<std::conditional_t<std::is_same_v<bool, T>, unsigned char, T>>;
-
         // dummy 0
         if constexpr (always_true && is_bitflag<E>) // sizeof... to make contest dependant
           return details::var_name<A, static_cast<E>(!always_true), static_cast<E>(Underlying(1) << Is)..., 0>();
