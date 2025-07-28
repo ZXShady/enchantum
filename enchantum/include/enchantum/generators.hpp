@@ -3,15 +3,16 @@
 #ifdef __cpp_impl_three_way_comparison
   #include <compare>
 #endif
+#include "details/countr_zero.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <utility>
-#include "details/countr_zero.hpp"
 
 namespace enchantum {
 namespace details {
 
   struct senitiel {};
+
 
   template<typename CRTP, std::ptrdiff_t Size>
   struct sized_iterator {
@@ -80,6 +81,12 @@ namespace details {
       return index - that.index;
     }
 
+    [[nodiscard]] constexpr std::ptrdiff_t        operator-(senitiel) const noexcept { return index - Size; }
+    [[nodiscard]] friend constexpr std::ptrdiff_t operator-(senitiel, sized_iterator it) noexcept
+    {
+      return Size - it.index;
+    }
+
     [[nodiscard]] constexpr bool operator==(const sized_iterator that) const noexcept { return that.index == index; };
     [[nodiscard]] constexpr bool operator==(senitiel) const noexcept { return Size == index; }
 
@@ -91,16 +98,20 @@ namespace details {
     [[nodiscard]] constexpr bool operator!=(const sized_iterator that) const noexcept { return that.index != index; };
     [[nodiscard]] constexpr bool operator!=(senitiel) const noexcept { return Size != index; }
 
-        [[nodiscard]] friend constexpr bool operator==(senitiel,const sized_iterator it) noexcept { return Size == it.index; }
+    [[nodiscard]] friend constexpr bool operator==(senitiel, const sized_iterator it) noexcept
+    {
+      return Size == it.index;
+    }
 
 
+    [[nodiscard]] friend constexpr bool operator!=(senitiel, const sized_iterator it) noexcept
+    {
+      return Size != it.index;
+    }
 
-    [[nodiscard]] friend constexpr bool operator!=(senitiel,const sized_iterator it) noexcept { return Size != it.index; }
 
-
-
-    [[nodiscard]] constexpr bool operator<(const  sized_iterator that) const noexcept { return index < that.index; };
-    [[nodiscard]] constexpr bool operator>(const  sized_iterator that) const noexcept { return index > that.index; };
+    [[nodiscard]] constexpr bool operator<(const sized_iterator that) const noexcept { return index < that.index; };
+    [[nodiscard]] constexpr bool operator>(const sized_iterator that) const noexcept { return index > that.index; };
     [[nodiscard]] constexpr bool operator<=(const sized_iterator that) const noexcept { return index <= that.index; };
     [[nodiscard]] constexpr bool operator>=(const sized_iterator that) const noexcept { return index >= that.index; };
 
@@ -109,10 +120,22 @@ namespace details {
     [[nodiscard]] constexpr bool operator<=(senitiel) const noexcept { return index <= Size; };
     [[nodiscard]] constexpr bool operator>=(senitiel) const noexcept { return index >= Size; };
 
-    [[nodiscard]] friend constexpr bool operator<(senitiel,  const sized_iterator it) noexcept { return Size < it.index; };
-    [[nodiscard]] friend constexpr bool operator>(senitiel,  const sized_iterator it) noexcept { return Size > it.index; };
-    [[nodiscard]] friend constexpr bool operator<=(senitiel, const sized_iterator it) noexcept { return Size <= it.index; };
-    [[nodiscard]] friend constexpr bool operator>=(senitiel, const sized_iterator it) noexcept { return Size >= it.index; };
+    [[nodiscard]] friend constexpr bool operator<(senitiel, const sized_iterator it) noexcept
+    {
+      return Size < it.index;
+    };
+    [[nodiscard]] friend constexpr bool operator>(senitiel, const sized_iterator it) noexcept
+    {
+      return Size > it.index;
+    };
+    [[nodiscard]] friend constexpr bool operator<=(senitiel, const sized_iterator it) noexcept
+    {
+      return Size <= it.index;
+    };
+    [[nodiscard]] friend constexpr bool operator>=(senitiel, const sized_iterator it) noexcept
+    {
+      return Size >= it.index;
+    };
 
 #endif
   };
@@ -125,11 +148,12 @@ namespace details {
 
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
+      using value_type = String;
       [[nodiscard]] constexpr String operator*() const noexcept
       {
         const auto* const p       = details::reflection_string_indices<E, NullTerminated>.data();
         const auto* const strings = details::reflection_data_string_storage<E, NullTerminated>.data();
-        return String(strings + p[this->index], p[this->index + 1]  - p[this->index] - NullTerminated);
+        return String(strings + p[this->index], p[this->index + 1] - p[this->index] - NullTerminated);
       }
 
       [[nodiscard]] constexpr String operator[](const std::ptrdiff_t i) const noexcept { return *(*this + i); }
@@ -151,7 +175,7 @@ namespace details {
     static_assert(size() < INT16_MAX, "Too many enum entries");
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
-    public:
+      using value_type = E;
       [[nodiscard]] constexpr E operator*() const noexcept
       {
         using T = std::underlying_type_t<E>;
@@ -191,7 +215,7 @@ namespace details {
     static_assert(size() < INT16_MAX, "Too many enum entries");
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
-    public:
+      using value_type = Pair;
       [[nodiscard]] constexpr Pair operator*() const noexcept
       {
         return Pair{
