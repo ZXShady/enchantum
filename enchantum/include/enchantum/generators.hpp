@@ -18,43 +18,40 @@ namespace details {
   struct sized_iterator {
     static_assert(Size < INT16_MAX, "Too many enum entries");
   private:
-    constexpr CRTP&       to_base() noexcept { return static_cast<CRTP&>(*this); }
-    constexpr const CRTP& to_base() const noexcept { return static_cast<const CRTP&>(*this); }
-
     using IndexType = std::conditional_t<(Size <= INT8_MAX), std::int8_t, std::int16_t>;
   public:
     IndexType       index{};
     constexpr CRTP& operator+=(const std::ptrdiff_t offset) & noexcept
     {
       index += static_cast<IndexType>(offset);
-      return to_base();
+      return static_cast<CRTP&>(*this);
     }
     constexpr CRTP& operator-=(const std::ptrdiff_t offset) & noexcept
     {
       index -= static_cast<IndexType>(offset);
-      return to_base();
+      return static_cast<CRTP&>(*this);
     }
 
     constexpr CRTP& operator++() & noexcept
     {
       ++index;
-      return to_base();
+      return static_cast<CRTP&>(*this);
     }
     constexpr CRTP& operator--() & noexcept
     {
       --index;
-      return to_base();
+      return static_cast<CRTP&>(*this);
     }
 
     [[nodiscard]] constexpr CRTP operator++(int) & noexcept
     {
-      auto copy = to_base();
+      auto copy = static_cast<CRTP&>(*this);
       ++*this;
       return copy;
     }
     [[nodiscard]] constexpr CRTP operator--(int) & noexcept
     {
-      auto copy = to_base();
+      auto copy = static_cast<CRTP&>(*this);
       --*this;
       return copy;
     }

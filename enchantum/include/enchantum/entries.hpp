@@ -64,9 +64,20 @@ namespace details {
     // +1 for easier iteration on on last string
     std::array<StringLengthType, Size + 1> string_indices{};
   };
+
+  template<typename E, bool NullTerminated, auto Min = enum_traits<E>::min, decltype(Min) Max = enum_traits<E>::max>
+  inline constexpr auto reflection_data_impl = details::reflect<E, NullTerminated, Min>(
+    std::make_index_sequence<details::get_index_sequence_max(is_bitflag<E>,
+                                                             has_fixed_underlying_type<E>,
+                                                             sizeof(E),
+                                                             Min,
+                                                             Max,
+                                                             std::is_signed_v<std::underlying_type_t<E>>)>{});
+
+
   template<typename E,bool NullTerminated>
   constexpr auto get_reflection_data() noexcept {
-    constexpr auto& elements = reflection_data_impl<E, NullTerminated>.elements;
+    constexpr auto elements = reflection_data_impl<E, NullTerminated>.elements;
     using StringLengthType = std::conditional_t<(elements.total_string_length < UINT8_MAX), std::uint8_t, std::uint16_t>;
 
     FinalReflectionResult<E, StringLengthType, elements.valid_count> ret;
@@ -86,15 +97,7 @@ namespace details {
 
 
 
-  template<typename E, bool NullTerminated, auto Min = enum_traits<E>::min, decltype(Min) Max = enum_traits<E>::max>
-  inline constexpr auto reflection_data_impl = details::reflect<E, NullTerminated, Min>(
-    std::make_index_sequence<details::get_index_sequence_max(is_bitflag<E>,
-                                                             has_fixed_underlying_type<E>,
-                                                             sizeof(E),
-                                                             Min,
-                                                             Max,
-                                                             std::is_signed_v<std::underlying_type_t<E>>)>{});
-
+  
   template<typename E, bool NullTerminated>
   inline constexpr auto reflection_data_string_storage = details::reflection_data_impl<E, NullTerminated>.strings;
 
@@ -147,7 +150,7 @@ namespace details
   template<typename E>
   constexpr auto get_values() noexcept
   {
-    constexpr auto&             enums = entries<E>;
+    constexpr auto             enums = entries<E>;
     std::array<E, enums.size()> ret{};
     const auto* const           enums_data = enums.data();
     for (std::size_t i = 0; i < ret.size(); ++i)
@@ -158,7 +161,7 @@ namespace details
   template<typename E,typename String,bool NullTerminated>
   constexpr auto get_names() noexcept
   {
-    constexpr auto&                  enums = entries<E, std::pair<E, String>, NullTerminated>;
+    constexpr auto                  enums = entries<E, std::pair<E, String>, NullTerminated>;
     std::array<String, enums.size()> ret{};
     const auto* const                enums_data = enums.data();
     for (std::size_t i = 0; i < ret.size(); ++i)
