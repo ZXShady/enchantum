@@ -85,7 +85,14 @@ namespace details {
 #endif
     // clang-format on
     for (std::size_t index = 0; index < array_size; ++index) {
+#if _MSC_VER <= 1924
+      // if it starts with the number 0 (because of 0x0) then it is a value
+      // and you cannot start an enum name with a digit so this is safe
+      if (*str == '0') {
+#else
+      // if it starts with a '(' it is a cast!
       if (*str == '(') {
+#endif
 #if ENCHANTUM_ENABLE_MSVC_SPEEDUP
         if constexpr (skip_work_if_neg != 0) {
           const auto i = min + static_cast<IntType>(index);
@@ -147,7 +154,11 @@ namespace details {
       ReflectStringReturnValue<std::underlying_type_t<E>, ArraySize> ret;
       details::parse_string<is_bitflag<E>>(
         /*str = */ str,
+#if _MSC_VER <= 1924
+        /*least_length_when_casting=*/SZC("0x0"),
+#else
         /*least_length_when_casting=*/SZC("(enum ") + type_name_len + SZC(")0x0") + (sizeof(E) == 8),
+#endif
         /*least_length_when_value=*/details::prefix_length_or_zero<E> +
           (enum_in_array_len != 0 ? enum_in_array_len + SZC("::") : 0),
         /*min = */ static_cast<std::underlying_type_t<E>>(Min),

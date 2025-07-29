@@ -16,6 +16,7 @@ namespace details {
 
   template<typename CRTP, std::ptrdiff_t Size>
   struct sized_iterator {
+    static_assert(Size < INT16_MAX, "Too many enum entries");
   private:
     constexpr CRTP&       to_base() noexcept { return static_cast<CRTP&>(*this); }
     constexpr const CRTP& to_base() const noexcept { return static_cast<const CRTP&>(*this); }
@@ -142,10 +143,7 @@ namespace details {
 
   template<typename E, typename String = string_view, bool NullTerminated = true>
   struct names_generator_t {
-    [[nodiscard]] static constexpr auto size() noexcept { return count<E>; }
-
-    static_assert(size() < INT16_MAX, "Too many enum entries");
-
+    [[nodiscard]] static constexpr std::size_t size() noexcept { return count<E>; }
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
       using value_type = String;
@@ -170,9 +168,7 @@ namespace details {
 
   template<typename E>
   struct values_generator_t {
-    [[nodiscard]] static constexpr auto size() noexcept { return count<E>; }
-
-    static_assert(size() < INT16_MAX, "Too many enum entries");
+    [[nodiscard]] static constexpr std::size_t size() noexcept { return count<E>; }
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
       using value_type = E;
@@ -210,9 +206,7 @@ namespace details {
 
   template<typename E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true>
   struct entries_generator_t {
-    [[nodiscard]] static constexpr auto size() noexcept { return count<E>; }
-
-    static_assert(size() < INT16_MAX, "Too many enum entries");
+    [[nodiscard]] static constexpr std::size_t size() noexcept { return count<E>; }
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
       using value_type = Pair;
