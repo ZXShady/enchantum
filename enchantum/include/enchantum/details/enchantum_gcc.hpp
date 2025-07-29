@@ -154,27 +154,6 @@ namespace details {
               }(elements_local.strings)};
 
     return data;
-    //using StringLengthType = std::conditional_t<(elements.total_string_length < UINT8_MAX), std::uint8_t, std::uint16_t>;
-    //
-    //struct RetVal {
-    //  std::array<E, elements.valid_count> values{};
-    //  // +1 for easier iteration on on last string
-    //  std::array<StringLengthType, elements.valid_count + 1> string_indices{};
-    //  const char*                                            strings{};
-    //} ret;
-    //ret.strings = static_storage_for<strings>.data();
-    //
-    //std::size_t      i            = 0;
-    //StringLengthType string_index = 0;
-    //for (; i < elements.valid_count; ++i) {
-    //  ret.values[i] = static_cast<E>(elements.values[i]);
-    //  // "aabc"
-    //
-    //  ret.string_indices[i] = string_index;
-    //  string_index += static_cast<StringLengthType>(elements.string_lengths[i] + NullTerminated);
-    //}
-    //ret.string_indices[i] = string_index;
-    //return ret;
   }
 
 } // namespace details
