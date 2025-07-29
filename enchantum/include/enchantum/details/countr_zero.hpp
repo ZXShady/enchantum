@@ -1,6 +1,6 @@
 #pragma once
 
-#if __cplusplus >= 202002L || (defined(_MSC_VER) && _MSC_VER >= 202002L)
+#if (__cplusplus >= 202002L || (defined(_MSVC_LANG) && _MSVC_LANG >= 202002L)) && __has_include(<bit>)
 #include <bit>
 namespace enchantum{
   namespace details 

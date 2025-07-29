@@ -19,6 +19,6 @@
 
 #if __has_include(<fmt/format.h>)
   #include "fmt_format.hpp"
-#elif __has_include(<format>)
+#elif (__cplusplus >= 202002 || (defined(_MSVC_LANG) && _MSVC_LANG >= 202002)) && __has_include(<format>)
   #include "std_format.hpp"
 #endif
