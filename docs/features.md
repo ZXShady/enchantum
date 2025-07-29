@@ -4,14 +4,16 @@ All non-`void` functions are `[[nodiscard]]` unless explicitly said otherwise.
 
 **Note**: Documentation Incomplete.
 
+*all the concepts are replaced by SFINAE equalivents when compiling in C++17 mode*
+
 Quick Reference
 
 **Concepts And Traits**:
   - [Enum](#enum)
   - [SignedEnum](#signedenum)
   - [UnsignedEnum](#unsignedenum)
-  - [ScopedEnum](#scopedenum)
-  - [UnscopedEnum](#unscopedenum)
+  - [ScopedEnum / is_scoped_enum](#scopedenum)
+  - [UnscopedEnum / is_scoped_enum](#unscopedenum)
   - [ContiguousEnum](#contiguousenum)
   - [BitFlagEnum](#bitflagenum)
   - [ContiguousBitFlagEnum](#contiguousbitflagenum)
@@ -125,10 +127,15 @@ enum class UnsignedColor : unsigned int { Red, Green, Blue };
 static_assert(enchantum::UnsignedEnum<UnsignedColor>);
 ```
 
-## ScopedEnum
+## ScopedEnum / is_scoped_enum
 The ScopedEnum concept restricts to enums that are scoped (i.e., they do not implicitly convert to their underlying type). This applies to enum class in C++.
 
+There exists a C++17 trait for backward compatability.
+
 ```cpp
+template<typename T>
+inline constexpr bool is_scoped_enum = !std::is_convertible_v<T,std::underlying_type_t<T>>;
+
 template<typename T>
 concept ScopedEnum = Enum<T> && (!std::is_convertible_v<T, std::underlying_type_t<T>>);
 ```
@@ -139,13 +146,19 @@ concept ScopedEnum = Enum<T> && (!std::is_convertible_v<T, std::underlying_type_
 #include <enchantum/common.hpp>
 
 enum class ScopedColor { Red, Green, Blue };
+static_assert(enchantum::is_scoped_enum<ScopedColor>);
 static_assert(enchantum::ScopedEnum<ScopedColor>);
 ```
 
-## UnscopedEnum
+## UnscopedEnum / is_unscoped_enum
 The UnscopedEnum concept restricts to enums that are unscoped (i.e., they implicitly convert to their underlying type). This applies to traditional C-style enums.
 
+There exists a C++17 trait for backward compatability.
+
 ```cpp
+template<typename T>
+inline constexpr bool is_unscoped_enum = std::is_enum_v<T> && !is_scoped_enum<T>;
+
 template<typename T>
 concept UnscopedEnum = Enum<T> && !ScopedEnum<T>;
 ```
