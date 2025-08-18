@@ -28,22 +28,11 @@ inline constexpr E value_ors = [] {
 template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 [[nodiscard]] constexpr bool contains_bitflag(const std::underlying_type_t<E> value) noexcept
 {
-  using T = std::underlying_type_t<E>;
-  if constexpr (is_contiguous_bitflag<E>) {
-    return value >= static_cast<T>(min<E>) && value <= static_cast<T>(value_ors<E>);
-  }
-  else {
+  if constexpr (!has_zero_flag<E>)
     if (value == 0)
-      return has_zero_flag<E>;
-    T valid_bits = 0;
+      return false;
 
-    for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
-      const auto v = static_cast<T>(values_generator<E>[i]);
-      if ((value & v) == v)
-        valid_bits |= v;
-    }
-    return valid_bits == value;
-  }
+  return value == (static_cast<std::underlying_type_t<E>>(value_ors<E>) & value);
 }
 
 template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
