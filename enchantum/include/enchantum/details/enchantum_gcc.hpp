@@ -10,6 +10,7 @@
 
 #include "string_view.hpp"
 
+#define ENCAHNTUM_DETAILS_GCC_MAJOR __GNUC__
 #if __GNUC__ <= 10
 // for out of bounds conversions for C style enums
   #pragma GCC diagnostic push

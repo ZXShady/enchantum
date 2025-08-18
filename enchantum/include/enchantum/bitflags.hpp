@@ -5,7 +5,7 @@
 #include "enchantum.hpp"
 #include "generators.hpp"
 
-#if defined(__GNUC__) && __GNUC__ <= 10
+#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wconversion"
   #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
@@ -136,6 +136,6 @@ template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 
 } // namespace enchantum
 
-#if defined(__GNUC__) && __GNUC__ <= 10
+#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif

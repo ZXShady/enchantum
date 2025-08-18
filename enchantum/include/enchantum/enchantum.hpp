@@ -8,7 +8,7 @@
 #include <type_traits>
 #include <utility>
 
-#if defined(__GNUC__) && __GNUC__ <= 10
+#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wconversion"
   #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
@@ -224,6 +224,6 @@ inline constexpr details::to_string_functor to_string{};
 } // namespace enchantum
 
 
-#if defined(__GNUC__) && __GNUC__ <= 10
+#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif

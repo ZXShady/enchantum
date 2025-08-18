@@ -89,14 +89,14 @@ namespace details {
       // "aabc"
 
       ret.string_indices[i] = string_index;
-#if defined(__GNUC__) && __GNUC__ <= 10
+#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   // false positives from T += T
   // it does not make sense.
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wconversion"
 #endif
       string_index += static_cast<StringLengthType>(elements.string_lengths[i] + NullTerminated);
-#if defined(__GNUC__) && __GNUC__ <= 10
+#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif
 

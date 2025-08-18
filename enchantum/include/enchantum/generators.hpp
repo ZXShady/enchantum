@@ -7,7 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <utility>
-#if defined(__GNUC__) && __GNUC__ <= 10
+#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   // false positives from T += T
   // it does not make sense.
   #pragma GCC diagnostic push
@@ -255,6 +255,6 @@ inline constexpr details::entries_generator_t<E, Pair, NullTerminated> entries_g
 
 } // namespace enchantum
 
-#if defined(__GNUC__) && __GNUC__ <= 10
+#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif
