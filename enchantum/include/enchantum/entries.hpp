@@ -17,6 +17,12 @@
 #include <type_traits>
 #include <utility>
 
+#ifndef ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY
+  #define ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY 2
+#endif
+#if ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY < 0
+  #error ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY must not be a negative number.
+#endif
 namespace enchantum {
 
 #ifdef __cpp_lib_to_underlying
@@ -57,9 +63,8 @@ namespace details {
     return (sizeof_enum * CHAR_BIT) - is_signed;
   }
 
-  template<typename E,typename StringLengthType,std::size_t Size>
-  struct FinalReflectionResult
-  {
+  template<typename E, typename StringLengthType, std::size_t Size>
+  struct FinalReflectionResult {
     std::array<E, Size> values{};
     // +1 for easier iteration on on last string
     std::array<StringLengthType, Size + 1> string_indices{};
@@ -75,15 +80,67 @@ namespace details {
                                                              std::is_signed_v<std::underlying_type_t<E>>)>{});
 
 
-  template<typename E,bool NullTerminated>
-  constexpr auto get_reflection_data() noexcept {
+  // Thanks https://en.cppreference.com/w/cpp/utility/intcmp.html
+  template<typename T, typename U>
+  constexpr bool cmp_less(const T t, const U u) noexcept
+  {
+    if constexpr (std::is_signed_v<T> == std::is_signed_v<U>)
+      return t < u;
+    else if constexpr (std::is_signed_v<T>)
+      return t < 0 || std::make_unsigned_t<T>(t) < u;
+    else
+      return u >= 0 && t < std::make_unsigned_t<U>(u);
+  }
+
+  template<typename U>
+  constexpr bool cmp_less(const bool t, const U u) noexcept
+  {
+    return details::cmp_less(int(t), u);
+  }
+
+  template<typename T>
+  constexpr bool cmp_less(const T t, const bool u) noexcept
+  {
+    return details::cmp_less(t, int(u));
+  }
+
+  constexpr bool cmp_less(const bool t, const bool u) noexcept
+  {
+    return int(t) < int(u);
+  }
+
+  template<typename T, typename U>
+  constexpr T ClampToRange(U u)
+  {
+    using L = std::numeric_limits<T>;
+    if (details::cmp_less((L::max)(), u))
+      return (L::max)();
+    if (details::cmp_less(u, (L::min)()))
+      return (L::min)();
+    return T(u);
+  }
+  template<typename E, bool NullTerminated>
+  constexpr auto get_reflection_data() noexcept
+  {
     constexpr auto elements = reflection_data_impl<E, NullTerminated>.elements;
     using StringLengthType = std::conditional_t<(elements.total_string_length < UINT8_MAX), std::uint8_t, std::uint16_t>;
 
+#if ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY >= 2
+    if constexpr (
+  #if __clang_major__ >= 20
+      has_fixed_underlying_type<E> &&
+  #endif
+      !details::has_specialized_traits<E>) {
+      static_assert(elements.valid_count == reflection_data_impl<E, NullTerminated,
+        details::ClampToRange<std::underlying_type_t<E>>(enum_traits<E>::min * ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY),
+        details::ClampToRange<std::underlying_type_t<E>>(enum_traits<E>::max * ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY)
+    >.elements.valid_count,
+          "enchantum has detected that this enum is not fully reflected. Please look at https://github.com/ZXShady/enchantum/blob/main/docs/features.md#enchantum_check_out_of_bounds_by for more information");
+    }
+#endif
     FinalReflectionResult<E, StringLengthType, elements.valid_count> ret;
-
-    std::size_t      i            = 0;
-    StringLengthType string_index = 0;
+    std::size_t                                                      i            = 0;
+    StringLengthType                                                 string_index = 0;
     for (; i < elements.valid_count; ++i) {
       ret.values[i] = static_cast<E>(elements.values[i]);
       // "aabc"
@@ -99,15 +156,12 @@ namespace details {
 #if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif
-
     }
     ret.string_indices[i] = string_index;
     return ret;
   }
 
 
-
-  
   template<typename E, bool NullTerminated>
   inline constexpr auto reflection_data_string_storage = details::reflection_data_impl<E, NullTerminated>.strings;
 
@@ -155,12 +209,11 @@ inline constexpr auto entries = []() {
   return ret;
 }();
 
-namespace details
-{
+namespace details {
   template<typename E>
   constexpr auto get_values() noexcept
   {
-    constexpr auto             enums = entries<E>;
+    constexpr auto              enums = entries<E>;
     std::array<E, enums.size()> ret{};
     const auto* const           enums_data = enums.data();
     for (std::size_t i = 0; i < ret.size(); ++i)
@@ -168,10 +221,10 @@ namespace details
     return ret;
   }
 
-  template<typename E,typename String,bool NullTerminated>
+  template<typename E, typename String, bool NullTerminated>
   constexpr auto get_names() noexcept
   {
-    constexpr auto                  enums = entries<E, std::pair<E, String>, NullTerminated>;
+    constexpr auto                   enums = entries<E, std::pair<E, String>, NullTerminated>;
     std::array<String, enums.size()> ret{};
     const auto* const                enums_data = enums.data();
     for (std::size_t i = 0; i < ret.size(); ++i)
@@ -179,7 +232,7 @@ namespace details
     return ret;
   }
 
-}
+} // namespace details
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 inline constexpr auto values = details::get_values<E>();

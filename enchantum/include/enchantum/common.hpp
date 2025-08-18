@@ -192,9 +192,18 @@ struct enum_traits {
 private:
   using T = std::underlying_type_t<E>;
 public:
+  using zxshady_enchantum_is_not_specialized_tag = void;
   static constexpr auto          max = details::enum_range_of<E>(1);
   static constexpr decltype(max) min = details::enum_range_of<E>(-1);
 };
+
+namespace details {
+  template<typename T,typename = void>
+  inline constexpr bool has_specialized_traits = true;
+  template<typename T>
+  inline constexpr bool has_specialized_traits<T, typename enum_traits<T>::zxshady_enchantum_is_not_specialized_tag> = false;
+
+} // namespace details
 
 } // namespace enchantum
 

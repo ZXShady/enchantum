@@ -62,6 +62,7 @@ Quick Reference
 
 **Macros**:
   - [ENCHANTUM_DEFINE_BITWISE_FOR](#enchantum_define_bitwise_for)
+  - [ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY](#enchantum_check_out_of_bounds_by)
   - [ENCHANTUM_ASSERT](#enchantum_assert)
   - [ENCHANTUM_THROW](#enchantum_throw)
   - [ENCHANTUM_ENABLE_MSVC_SPEEDUP](#enchantum_enable_msvc_speedup)
@@ -1593,6 +1594,44 @@ Overloads the bitwise operators for a given enum. `~`,`&`,`|`,`^`,`&=`,`|=`,`^=`
   }
 ```
 
+
+### `ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY`
+
+- **Description**:
+A customizable macro that is set to a positive integeral value which allows enchantum to detect whether an enum was not fully reflected. it is by default `2`
+
+```cpp
+#include <enchantum/enchantum.hpp>
+
+enum class A : int {
+    a = 100,
+    b = 197,
+    c = 300 // enchantum can't see it!
+};
+static_assert(enchantum::count<A> == 2); // true
+```
+
+This is bad, you would rather have it error out if it can't fully reflect and this is what the macro does
+
+the macro checks X times the range so enchantum looks in [-256,256] range while the check looks in [-1024,1024] range for example and compares whether they are equal if they aren't then you have an enum that is not fully reflected.
+
+This impacts compile times negativly so it can be disabled by setting `ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY` to 0 to disable it or by specializing `enum_traits` it skips the checks.
+
+```cpp
+// Expand 4 times the range of any enum to check.
+#define ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY 4
+#include <enchantum/enchantum.hpp>
+
+// default scan range [-256,256]
+// check scan range [-1024,1024]
+enum class A : int {
+    a = 100,
+    b = 197,
+    c = 300 // enchantum can't see it! but the check can!
+};
+// an assertion inside count<A> fires telling you that enchantum did not fully reflect this enum 
+static_assert(enchantum::count<A> == 2); // does not compile
+```
 
 ### ENCHANTUM_ASSERT
 
