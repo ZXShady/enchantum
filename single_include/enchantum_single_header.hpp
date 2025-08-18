@@ -139,7 +139,7 @@ using ::std::string;
 } // namespace enchantum
 
 #ifdef __cpp_concepts
-#include <concepts>
+  #include <concepts>
 #endif
 #include <limits>
 #include <string_view>
@@ -175,11 +175,11 @@ inline constexpr bool is_scoped_enum<E, true> = !std::is_convertible_v<E, std::u
 template<typename E>
 inline constexpr bool is_unscoped_enum = std::is_enum_v<E> && !is_scoped_enum<E>;
 
-template<typename E,typename = void>
+template<typename E, typename = void>
 inline constexpr bool has_fixed_underlying_type = false;
 
 template<typename E>
-inline constexpr bool has_fixed_underlying_type<E,decltype(void(E{0}))> = std::is_enum_v<E>;
+inline constexpr bool has_fixed_underlying_type<E, decltype(void(E{0}))> = std::is_enum_v<E>;
 
 #ifdef __cpp_concepts
 
@@ -296,23 +296,27 @@ namespace details {
   constexpr auto enum_range_of(const int max_range)
   {
     using T = std::underlying_type_t<E>;
-    using L = std::numeric_limits<T>;
-#if !defined(__NVCOMPILER) && defined(__clang__) && __clang_major__ >= 20
-    constexpr auto Max = has_fixed_underlying_type<E> ? (L::max)() : details::valid_cast_range<E, 1>();
-    constexpr auto Min = has_fixed_underlying_type<E> ? (L::min)() : details::valid_cast_range<E, std::is_signed_v<T> ? -1 : 0>();
-#else
-    constexpr auto Max = (L::max)();
-    constexpr auto Min = (L::min)();
-#endif
-
-    if constexpr (std::is_signed_v<T>) {
-      return max_range > 0 ? details::Min(ENCHANTUM_MAX_RANGE, Max) : details::Max(ENCHANTUM_MIN_RANGE, Min);
+    if constexpr (std::is_same_v<bool, T>) {
+      return max_range > 0;
     }
     else {
-      if constexpr (std::is_same_v<bool, T>)
-        return max_range > 0;
-      else
+      using L = std::numeric_limits<T>;
+#if !defined(__NVCOMPILER) && defined(__clang__) && __clang_major__ >= 20
+      constexpr auto Max = has_fixed_underlying_type<E> ? (L::max)() : details::valid_cast_range<E, 1>();
+      constexpr auto Min = has_fixed_underlying_type<E>
+        ? (L::min)()
+        : details::valid_cast_range<E, std::is_signed_v<T> ? -1 : 0>();
+#else
+      constexpr auto Max = (L::max)();
+      constexpr auto Min = (L::min)();
+#endif
+      (void)Min; // Only used in signed branch
+      if constexpr (std::is_signed_v<T>) {
+        return max_range > 0 ? details::Min(ENCHANTUM_MAX_RANGE, Max) : details::Max(ENCHANTUM_MIN_RANGE, Min);
+      }
+      else {
         return max_range > 0 ? details::Min(static_cast<unsigned int>(ENCHANTUM_MAX_RANGE), Max) : 0;
+      }
     }
   }
 } // namespace details
@@ -329,12 +333,12 @@ public:
 } // namespace enchantum
 
 #ifdef __cpp_concepts
-  #define ENCHANTUM_DETAILS_ENUM_CONCEPT(Name) Enum Name
-  #define ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(...) __VA_ARGS__
+  #define ENCHANTUM_DETAILS_ENUM_CONCEPT(Name)         Enum Name
+  #define ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(...)   __VA_ARGS__
   #define ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(Name) BitFlagEnum Name
 #else
-  #define ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(...) typename
-  #define ENCHANTUM_DETAILS_ENUM_CONCEPT(Name) typename Name, std::enable_if_t<std::is_enum_v<Name>, int> = 0
+  #define ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(...)   typename
+  #define ENCHANTUM_DETAILS_ENUM_CONCEPT(Name)         typename Name, std::enable_if_t<std::is_enum_v<Name>, int> = 0
   #define ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(Name) typename Name, std::enable_if_t<is_bitflag<Name>, int> = 0
 #endif
 #include <array>
@@ -680,9 +684,16 @@ namespace details {
 #include <type_traits>
 #include <utility>
 
+#if __GNUC__ <= 10
+// for out of bounds conversions for C style enums
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wconversion"
+#endif
+
 namespace enchantum {
 namespace details {
 #define SZC(x) (sizeof(x) - 1)
+
   // this is needed since gcc transforms "{anonymous}" into "<unnamed>" for values
   template<auto Enum>
   constexpr auto enum_in_array_name_size() noexcept
@@ -709,6 +720,40 @@ namespace details {
     }
   }
 
+#if __GNUC__ == 10
+  template<auto V>
+  constexpr auto gcc10_workaround() noexcept
+  {
+    using E = decltype(V);
+    using T = std::underlying_type_t<E>;
+    constexpr auto prefix = SZC("constexpr auto enchantum::details::gcc10_workaround() [with auto V = ");
+    constexpr auto begin  = __PRETTY_FUNCTION__ + prefix;
+    if constexpr (begin[0] == '(') {
+      std::size_t i   = SZC(__PRETTY_FUNCTION__) - prefix - SZC("(");
+      const char* end = __PRETTY_FUNCTION__ + SZC(__PRETTY_FUNCTION__) - 1;
+      while (*end != ')') {
+        --end;
+        --i;
+      }
+      --i;
+      return i;
+    }
+    else if constexpr (static_cast<T>(V) == (std::numeric_limits<T>::max)()) {
+      constexpr auto  s      = details::enum_in_array_name_size<E{}>();
+      constexpr auto& tyname = raw_type_name<E>;
+      if (constexpr auto pos = tyname.rfind("::"); pos != tyname.npos) {
+        return s + tyname.substr(pos).size();
+      }
+      else {
+        return s + tyname.size();
+      }
+    }
+    else {
+      return details::gcc10_workaround<static_cast<E>(static_cast<T>(V) + 1)>();
+    }
+  }
+#endif
+
   template<typename Enum>
   constexpr auto length_of_enum_in_template_array_if_casting() noexcept
   {
@@ -716,6 +761,9 @@ namespace details {
       return details::enum_in_array_name_size<Enum{}>();
     }
     else {
+#if __GNUC__ == 10
+      return details::gcc10_workaround<static_cast<Enum>((std::numeric_limits<std::underlying_type_t<Enum>>::min)())>();
+#else
       constexpr auto  s      = details::enum_in_array_name_size<Enum{}>();
       constexpr auto& tyname = raw_type_name<Enum>;
       if (constexpr auto pos = tyname.rfind("::"); pos != tyname.npos) {
@@ -724,6 +772,7 @@ namespace details {
       else {
         return s + tyname.size();
       }
+#endif
     }
   }
 
@@ -747,6 +796,7 @@ namespace details {
     std::size_t&        total_string_length,
     std::size_t&        valid_count)
   {
+    (void)min; // not always used
     for (std::size_t index = 0; index < array_size; ++index) {
       if (*str == '(') {
         str = std::char_traits<char>::find(str + least_length_when_casting, UINT8_MAX, ',') + SZC(", ");
@@ -779,12 +829,19 @@ namespace details {
       using Underlying = std::make_unsigned_t<std::conditional_t<std::is_same_v<bool, Under>, unsigned char, Under>>;
 
       constexpr auto str = [](const auto dependant) {
-        // __builtin_bit_cast used to silence errors when casting out of unscoped enums range
+#if __GNUC__ <= 10
+      // GCC 10 does not have it
+  #define CAST(type, value) static_cast<type>(value)
+#else
+      // __builtin_bit_cast used to silence errors when casting out of unscoped enums range
+  #define CAST(type, value) __builtin_bit_cast(type, value)
+#endif
         // dummy 0
         if constexpr (sizeof(dependant) && is_bitflag<E>) // sizeof... to make contest dependant
-          return details::var_name<E{}, __builtin_bit_cast(E, static_cast<Under>(Underlying{1} << Is))..., 0>();
+          return details::var_name<E{}, CAST(E, static_cast<Under>(Underlying{1} << Is))..., 0>();
         else
-          return details::var_name<__builtin_bit_cast(E, static_cast<Under>(static_cast<decltype(Min)>(Is) + Min))..., 0>();
+          return details::var_name<CAST(E, static_cast<Under>(static_cast<decltype(Min)>(Is) + Min))..., 0>();
+#undef CAST
       }(0);
 
       constexpr auto enum_in_array_len = details::enum_in_array_name_size<E{}>();
@@ -828,6 +885,11 @@ namespace details {
 } // namespace enchantum
 
 #undef SZC
+
+#if __GNUC__ <= 10
+  #pragma GCC diagnostic pop
+#endif
+
 #elif defined(_MSC_VER)
   
 
@@ -1094,7 +1156,17 @@ namespace details {
       // "aabc"
 
       ret.string_indices[i] = string_index;
+#if __GNUC__ <= 10
+  // false positives from T += T
+  // it does not make sense.
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wconversion"
+#endif
       string_index += static_cast<StringLengthType>(elements.string_lengths[i] + NullTerminated);
+#if __GNUC__ <= 10
+  #pragma GCC diagnostic pop
+#endif
+
     }
     ret.string_indices[i] = string_index;
     return ret;
@@ -1255,7 +1327,7 @@ namespace enchantum{
 
     int count = 0;
     while ((x & 1) == 0) {
-        x >>= 1;
+        x = static_cast<T>(x >> 1);
         ++count;
     }
     return count;
@@ -1266,6 +1338,12 @@ namespace enchantum{
 #include <cstddef>
 #include <cstdint>
 #include <utility>
+#if __GNUC__ <= 10
+  // false positives from T += T
+  // it does not make sense.
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wconversion"
+#endif
 
 namespace enchantum {
 namespace details {
@@ -1504,8 +1582,19 @@ inline constexpr details::entries_generator_t<E, Pair, NullTerminated> entries_g
 #endif
 
 } // namespace enchantum
+
+#if __GNUC__ <= 10
+  #pragma GCC diagnostic pop
+#endif
+
 #include <type_traits>
 #include <utility>
+
+#if __GNUC__ <= 10
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wconversion"
+  #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
 
 namespace enchantum {
 
@@ -1686,6 +1775,16 @@ inline constexpr details::to_string_functor to_string{};
 
 } // namespace enchantum
 
+#if __GNUC__ <= 10
+  #pragma GCC diagnostic pop
+#endif
+
+#if __GNUC__ <= 10
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wconversion"
+  #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
 namespace enchantum {
 
 template<typename E>
@@ -1808,6 +1907,10 @@ template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 }
 
 } // namespace enchantum
+
+#if __GNUC__ <= 10
+  #pragma GCC diagnostic pop
+#endif
 
 #include <string>
 
@@ -2194,6 +2297,11 @@ auto operator>>(std::basic_istream<char, Traits>& is, E& value)
 
 #include <cstddef>
 
+#if __GNUC__ <= 10
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
 namespace enchantum {
 namespace details {
   template<std::ptrdiff_t N>
@@ -2230,6 +2338,10 @@ inline constexpr details::next_value_circular_functor<1>  next_value_circular{};
 inline constexpr details::next_value_circular_functor<-1> prev_value_circular{};
 
 } // namespace enchantum
+
+#if __GNUC__ <= 10
+  #pragma GCC diagnostic pop
+#endif
 
 #if __has_include(<fmt/format.h>)
   

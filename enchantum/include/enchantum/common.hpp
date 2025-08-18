@@ -1,6 +1,6 @@
 #pragma once
 #ifdef __cpp_concepts
-#include <concepts>
+  #include <concepts>
 #endif
 #include <limits>
 #include <string_view>
@@ -36,11 +36,11 @@ inline constexpr bool is_scoped_enum<E, true> = !std::is_convertible_v<E, std::u
 template<typename E>
 inline constexpr bool is_unscoped_enum = std::is_enum_v<E> && !is_scoped_enum<E>;
 
-template<typename E,typename = void>
+template<typename E, typename = void>
 inline constexpr bool has_fixed_underlying_type = false;
 
 template<typename E>
-inline constexpr bool has_fixed_underlying_type<E,decltype(void(E{0}))> = std::is_enum_v<E>;
+inline constexpr bool has_fixed_underlying_type<E, decltype(void(E{0}))> = std::is_enum_v<E>;
 
 
 #ifdef __cpp_concepts
@@ -161,23 +161,27 @@ namespace details {
   constexpr auto enum_range_of(const int max_range)
   {
     using T = std::underlying_type_t<E>;
-    using L = std::numeric_limits<T>;
-#if !defined(__NVCOMPILER) && defined(__clang__) && __clang_major__ >= 20
-    constexpr auto Max = has_fixed_underlying_type<E> ? (L::max)() : details::valid_cast_range<E, 1>();
-    constexpr auto Min = has_fixed_underlying_type<E> ? (L::min)() : details::valid_cast_range<E, std::is_signed_v<T> ? -1 : 0>();
-#else
-    constexpr auto Max = (L::max)();
-    constexpr auto Min = (L::min)();
-#endif
-
-    if constexpr (std::is_signed_v<T>) {
-      return max_range > 0 ? details::Min(ENCHANTUM_MAX_RANGE, Max) : details::Max(ENCHANTUM_MIN_RANGE, Min);
+    if constexpr (std::is_same_v<bool, T>) {
+      return max_range > 0;
     }
     else {
-      if constexpr (std::is_same_v<bool, T>)
-        return max_range > 0;
-      else
+      using L = std::numeric_limits<T>;
+#if !defined(__NVCOMPILER) && defined(__clang__) && __clang_major__ >= 20
+      constexpr auto Max = has_fixed_underlying_type<E> ? (L::max)() : details::valid_cast_range<E, 1>();
+      constexpr auto Min = has_fixed_underlying_type<E>
+        ? (L::min)()
+        : details::valid_cast_range<E, std::is_signed_v<T> ? -1 : 0>();
+#else
+      constexpr auto Max = (L::max)();
+      constexpr auto Min = (L::min)();
+#endif
+      (void)Min; // Only used in signed branch
+      if constexpr (std::is_signed_v<T>) {
+        return max_range > 0 ? details::Min(ENCHANTUM_MAX_RANGE, Max) : details::Max(ENCHANTUM_MIN_RANGE, Min);
+      }
+      else {
         return max_range > 0 ? details::Min(static_cast<unsigned int>(ENCHANTUM_MAX_RANGE), Max) : 0;
+      }
     }
   }
 } // namespace details
@@ -195,11 +199,11 @@ public:
 } // namespace enchantum
 
 #ifdef __cpp_concepts
-  #define ENCHANTUM_DETAILS_ENUM_CONCEPT(Name) Enum Name
-  #define ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(...) __VA_ARGS__
+  #define ENCHANTUM_DETAILS_ENUM_CONCEPT(Name)         Enum Name
+  #define ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(...)   __VA_ARGS__
   #define ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(Name) BitFlagEnum Name
 #else
-  #define ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(...) typename
-  #define ENCHANTUM_DETAILS_ENUM_CONCEPT(Name) typename Name, std::enable_if_t<std::is_enum_v<Name>, int> = 0
+  #define ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(...)   typename
+  #define ENCHANTUM_DETAILS_ENUM_CONCEPT(Name)         typename Name, std::enable_if_t<std::is_enum_v<Name>, int> = 0
   #define ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(Name) typename Name, std::enable_if_t<is_bitflag<Name>, int> = 0
 #endif

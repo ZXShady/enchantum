@@ -6,7 +6,7 @@ If you face any issues while using the library don't hesistate to open up an iss
 
 ## Forward Declared Enums
 
-This library cannot reflect on forward declared enums you will get a cryptic error usually telling you that you are not initializing a variable in a constexpr context.
+This library cannot reflect on forward declared enums you will get a `static_assert` error.
 
 The reason is to avoid [ODR](https://cppreference.com/w/cpp/language/definition.html) issues, where you reflect on a forward declared enum in one translation unit then reflect the full definition in another unit you will face [ODR](https://cppreference.com/w/cpp/language/definition.html) issues.
 
@@ -16,7 +16,7 @@ But however this disallows reflection of empty enums.
 enum class Empty {};
 ```
 
-Cannot be reflected as a consequence of disabling forward declared enums.
+`Empty` cannot be reflected as a consequence of disabling forward declared enums.
 
 ## Enum Range
 
@@ -74,7 +74,7 @@ Change the limit for the number of `constexpr` steps allowed: (hyperlink to docs
 
 [GCC](https://gcc.gnu.org/onlinedocs/gcc-14.2.0/gcc/C_002b_002b-Dialect-Options.html#index-fconstexpr-depth): `-fconstexpr-depth=N, -fconstexpr-loop-limit=N, -fconstexpr-ops-limit=N`
 
-## Unscoped enums in templates may not work correctly on Сlang or GCC 10.
+## Unscoped enums in templates may not work correctly on Сlang.
 
 Clang is super weird with these enums
 
@@ -103,12 +103,6 @@ struct GoodClang {
 
 enchantum::entries<GoodClang<int>::Type>; // happy clang
 ```
-
-GCC 10 Straight up won't output anything correct about those enums.
-
-So don't use GCC 10 with enums inside templates.
-
-This is fixable but requires much work. if heavily wanted though I will make it.
 
 ## Unnamed Enums
 
@@ -149,7 +143,6 @@ enchantum::entries<Nest<int>::A>; // fails
 
 There is no workaround.
 
-
 ## Aliased enums are not supported on NVC++
 
 ```cpp
@@ -160,3 +153,4 @@ using B = A;
 enchantum::entries<B>; // fails
 ```
 
+There is no workaround.

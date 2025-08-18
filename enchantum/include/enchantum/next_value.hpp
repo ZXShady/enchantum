@@ -6,6 +6,11 @@
 #include <cstddef>
 #include "generators.hpp"
 
+#if defined(__GNUC__) && __GNUC__ <= 10
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
 namespace enchantum {
 namespace details {
   template<std::ptrdiff_t N>
@@ -43,3 +48,8 @@ inline constexpr details::next_value_circular_functor<1>  next_value_circular{};
 inline constexpr details::next_value_circular_functor<-1> prev_value_circular{};
 
 } // namespace enchantum
+
+
+#if defined(__GNUC__) && __GNUC__ <= 10
+  #pragma GCC diagnostic pop
+#endif

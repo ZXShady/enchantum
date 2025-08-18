@@ -7,6 +7,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <utility>
+#if defined(__GNUC__) && __GNUC__ <= 10
+  // false positives from T += T
+  // it does not make sense.
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wconversion"
+#endif
 
 namespace enchantum {
 namespace details {
@@ -248,3 +254,7 @@ inline constexpr details::entries_generator_t<E, Pair, NullTerminated> entries_g
 #endif
 
 } // namespace enchantum
+
+#if defined(__GNUC__) && __GNUC__ <= 10
+  #pragma GCC diagnostic pop
+#endif

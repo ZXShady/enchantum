@@ -19,7 +19,7 @@ namespace enchantum{
 
     int count = 0;
     while ((x & 1) == 0) {
-        x >>= 1;
+        x = static_cast<T>(x >> 1);
         ++count;
     }
     return count;

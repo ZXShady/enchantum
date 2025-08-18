@@ -30,15 +30,15 @@ jobs:
 
           - { name: MacOS Clang Latest, os: macos-latest, compiler: clang, flags: "-DCMAKE_CXX_COMPILER=clang++" , supports_cpp20: 'true'}
 
-          # Sadly Disabled Due to weird quirks :(
-          #- { name: Ubuntu GCC 9,     os: ubuntu-22.04,  compiler: gcc, version: 9, flags: "-DENCHANTUM_RUNTIME_TESTS=ON -DCMAKE_CXX_COMPILER=g++" }
-          #- { name: Ubuntu GCC 10,    os: ubuntu-22.04,  compiler: gcc, version: 10, flags: "-DENCHANTUM_RUNTIME_TESTS=ON  -DCMAKE_CXX_COMPILER=g++" }
+          - { name: Ubuntu GCC 9,     os: ubuntu-22.04,  compiler: gcc, version: 9, flags: "-DENCHANTUM_RUNTIME_TESTS=ON -DCMAKE_CXX_COMPILER=g++" }
+          - { name: Ubuntu GCC 10,    os: ubuntu-22.04,  compiler: gcc, version: 10, flags: "-DENCHANTUM_RUNTIME_TESTS=ON  -DCMAKE_CXX_COMPILER=g++" ,supports_cpp20: 'true'}
           - { name: Ubuntu GCC 11,    os: ubuntu-latest, compiler: gcc, version: 11, flags: "-DCMAKE_CXX_COMPILER=g++" ,supports_cpp20: 'true'}
           - { name: Ubuntu GCC 12,    os: ubuntu-latest, compiler: gcc, version: 12, flags: "-DCMAKE_CXX_COMPILER=g++" ,supports_cpp20: 'true'}
           - { name: Ubuntu GCC 13,    os: ubuntu-latest, compiler: gcc, version: 13, flags: "-DCMAKE_CXX_COMPILER=g++" ,supports_cpp20: 'true'}
           - { name: Ubuntu GCC 14,    os: ubuntu-latest, compiler: gcc, version: 14, flags: "-DCMAKE_CXX_COMPILER=g++" ,supports_cpp20: 'true'}
-          # Sadly cannot install
-          #- { name: Ubuntu GCC 15,    os: ubuntu-latest, compiler: gcc, version: 15, flags: "-DCMAKE_CXX_COMPILER=g++" }
+          
+          #    Cannot install ATM
+          # - { name: Ubuntu GCC 15,    os: ubuntu-latest, compiler: gcc, version: 15, flags: "-DCMAKE_CXX_COMPILER=g++" }
           
           - { name: Ubuntu Clang 9,  os: ubuntu-22.04, compiler: clang, version: 9, flags: "-DCMAKE_CXX_COMPILER=clang++" ,supports_cpp20: 'false'}
 

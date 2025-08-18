@@ -10,9 +10,17 @@
 
 #include "string_view.hpp"
 
+#if __GNUC__ <= 10
+// for out of bounds conversions for C style enums
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wconversion"
+#endif
+
 namespace enchantum {
 namespace details {
 #define SZC(x) (sizeof(x) - 1)
+
+
   // this is needed since gcc transforms "{anonymous}" into "<unnamed>" for values
   template<auto Enum>
   constexpr auto enum_in_array_name_size() noexcept
@@ -39,6 +47,40 @@ namespace details {
     }
   }
 
+#if __GNUC__ == 10
+  template<auto V>
+  constexpr auto gcc10_workaround() noexcept
+  {
+    using E = decltype(V);
+    using T = std::underlying_type_t<E>;
+    constexpr auto prefix = SZC("constexpr auto enchantum::details::gcc10_workaround() [with auto V = ");
+    constexpr auto begin  = __PRETTY_FUNCTION__ + prefix;
+    if constexpr (begin[0] == '(') {
+      std::size_t i   = SZC(__PRETTY_FUNCTION__) - prefix - SZC("(");
+      const char* end = __PRETTY_FUNCTION__ + SZC(__PRETTY_FUNCTION__) - 1;
+      while (*end != ')') {
+        --end;
+        --i;
+      }
+      --i;
+      return i;
+    }
+    else if constexpr (static_cast<T>(V) == (std::numeric_limits<T>::max)()) {
+      constexpr auto  s      = details::enum_in_array_name_size<E{}>();
+      constexpr auto& tyname = raw_type_name<E>;
+      if (constexpr auto pos = tyname.rfind("::"); pos != tyname.npos) {
+        return s + tyname.substr(pos).size();
+      }
+      else {
+        return s + tyname.size();
+      }
+    }
+    else {
+      return details::gcc10_workaround<static_cast<E>(static_cast<T>(V) + 1)>();
+    }
+  }
+#endif
+
   template<typename Enum>
   constexpr auto length_of_enum_in_template_array_if_casting() noexcept
   {
@@ -46,6 +88,9 @@ namespace details {
       return details::enum_in_array_name_size<Enum{}>();
     }
     else {
+#if __GNUC__ == 10
+      return details::gcc10_workaround<static_cast<Enum>((std::numeric_limits<std::underlying_type_t<Enum>>::min)())>();
+#else
       constexpr auto  s      = details::enum_in_array_name_size<Enum{}>();
       constexpr auto& tyname = raw_type_name<Enum>;
       if (constexpr auto pos = tyname.rfind("::"); pos != tyname.npos) {
@@ -54,6 +99,7 @@ namespace details {
       else {
         return s + tyname.size();
       }
+#endif
     }
   }
 
@@ -78,6 +124,7 @@ namespace details {
     std::size_t&        total_string_length,
     std::size_t&        valid_count)
   {
+    (void)min; // not always used
     for (std::size_t index = 0; index < array_size; ++index) {
       if (*str == '(') {
         str = std::char_traits<char>::find(str + least_length_when_casting, UINT8_MAX, ',') + SZC(", ");
@@ -112,12 +159,19 @@ namespace details {
 
 
       constexpr auto str = [](const auto dependant) {
-        // __builtin_bit_cast used to silence errors when casting out of unscoped enums range
+#if __GNUC__ <= 10
+      // GCC 10 does not have it
+  #define CAST(type, value) static_cast<type>(value)
+#else
+      // __builtin_bit_cast used to silence errors when casting out of unscoped enums range
+  #define CAST(type, value) __builtin_bit_cast(type, value)
+#endif
         // dummy 0
         if constexpr (sizeof(dependant) && is_bitflag<E>) // sizeof... to make contest dependant
-          return details::var_name<E{}, __builtin_bit_cast(E, static_cast<Under>(Underlying{1} << Is))..., 0>();
+          return details::var_name<E{}, CAST(E, static_cast<Under>(Underlying{1} << Is))..., 0>();
         else
-          return details::var_name<__builtin_bit_cast(E, static_cast<Under>(static_cast<decltype(Min)>(Is) + Min))..., 0>();
+          return details::var_name<CAST(E, static_cast<Under>(static_cast<decltype(Min)>(Is) + Min))..., 0>();
+#undef CAST
       }(0);
 
       constexpr auto enum_in_array_len = details::enum_in_array_name_size<E{}>();
@@ -161,3 +215,7 @@ namespace details {
 } // namespace enchantum
 
 #undef SZC
+
+#if __GNUC__ <= 10
+  #pragma GCC diagnostic pop
+#endif

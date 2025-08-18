@@ -228,7 +228,7 @@ TEMPLATE_LIST_TEST_CASE("bitflags", "[bitflags]", AllFlagsTestTypes)
     T value{};
     for (auto bit = std::size_t{enchantum::has_zero_flag<TestType>}; bit < count; ++bit) {
       if (mask & static_cast<std::uint64_t>(values[bit])) {
-        value |= static_cast<T>(values[bit]);
+        value = static_cast<T>(value | static_cast<T>(values[bit]));
       }
     }
     if (static_cast<T>(value) != 0)

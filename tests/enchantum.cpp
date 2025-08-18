@@ -213,7 +213,6 @@ auto values_of<UnderlyingTypeChar16_t> = std::array{UnderlyingTypeChar16_t::_0,
                                                     UnderlyingTypeChar16_t::_7,
                                                     UnderlyingTypeChar16_t::_8,
                                                     UnderlyingTypeChar16_t::_9};
-;
 template<>
 auto values_of<UnderlyingTypeChar32_t> = std::array{UnderlyingTypeChar32_t::_0,
                                                     UnderlyingTypeChar32_t::_1,
