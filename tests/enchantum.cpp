@@ -476,6 +476,20 @@ TEST_CASE("Color enum cast with custom binary predicate (case insensitive)", "[c
   STATIC_CHECK(enchantum::cast<Color>("purple", case_insensitive) == Color::Purple);
   STATIC_CHECK(enchantum::cast<Color>("AQUA", case_insensitive) == Color::Aqua);
   STATIC_CHECK_FALSE(enchantum::cast<Color>("zxSHADY", case_insensitive));
+
+  STATIC_CHECK(enchantum::cast<Color>("green", case_insensitive_by_strings) == Color::Green);
+  STATIC_CHECK(enchantum::cast<Color>("RED", case_insensitive_by_strings) == Color::Red);
+  STATIC_CHECK(enchantum::cast<Color>("bLuE", case_insensitive_by_strings) == Color::Blue);
+  STATIC_CHECK(enchantum::cast<Color>("purple", case_insensitive_by_strings) == Color::Purple);
+  STATIC_CHECK(enchantum::cast<Color>("AQUA", case_insensitive_by_strings) == Color::Aqua);
+  STATIC_CHECK_FALSE(enchantum::cast<Color>("zxSHADY", case_insensitive_by_strings));
+
+  STATIC_CHECK(enchantum::cast<Color>("green", case_insensitive_both) == Color::Green);
+  STATIC_CHECK(enchantum::cast<Color>("RED", case_insensitive_both) == Color::Red);
+  STATIC_CHECK(enchantum::cast<Color>("bLuE", case_insensitive_both) == Color::Blue);
+  STATIC_CHECK(enchantum::cast<Color>("purple", case_insensitive_both) == Color::Purple);
+  STATIC_CHECK(enchantum::cast<Color>("AQUA", case_insensitive_both) == Color::Aqua);
+  STATIC_CHECK_FALSE(enchantum::cast<Color>("zxSHADY", case_insensitive_both));
 }
 
 TEST_CASE("Color enum index_to_enum", "[index_to_enum]")

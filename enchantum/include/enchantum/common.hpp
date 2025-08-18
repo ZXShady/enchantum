@@ -200,10 +200,8 @@ public:
 
 #ifdef __cpp_concepts
   #define ENCHANTUM_DETAILS_ENUM_CONCEPT(Name)         Enum Name
-  #define ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(...)   __VA_ARGS__
   #define ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(Name) BitFlagEnum Name
 #else
-  #define ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(...)   typename
   #define ENCHANTUM_DETAILS_ENUM_CONCEPT(Name)         typename Name, std::enable_if_t<std::is_enum_v<Name>, int> = 0
   #define ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(Name) typename Name, std::enable_if_t<is_bitflag<Name>, int> = 0
 #endif

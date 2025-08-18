@@ -94,10 +94,9 @@ int main()
     // *music == Music::Jazz
   }
   // pass a predicate taking two string views
-  music = enchantum::cast<Music>("JAZZ",[](std::string_view a,std::string_view b){
-    return std::ranges::equal(a,b,[](unsigned char x,unsigned char y){
-      return std::tolower(x) == std::tolower(y);      
-    });
+  music = enchantum::cast<Music>("JAZZ",[](char x,char y){
+      using UC = unsigned char;
+      return std::tolower(UC(x)) == std::tolower(UC(y));      
   });
   if(music.has_value()) {
       // *music == Music::Jazz

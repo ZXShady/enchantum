@@ -24,6 +24,7 @@ Quick Reference
   - [is_bitflag](#is_bitflag)
   - [is_contiguous_bitflag](#is_contiguous_bitflag)
   - [enum_traits](#enum_traits)
+  - [BinaryPredicate](#binary_predicate)
 
 **Functions**:
   - [to_string](#to_string)
@@ -385,6 +386,33 @@ static_assert(names[0] == "A");
 static_assert(names[1] == "B");
 ```
 
+### `binary_predicate`
+
+When a function takes an argument named `BinaryPredicate`. 
+
+it must be 
+
+1. Side effect free
+2. Copyable
+3. Callable with atleast `(char,char)` or `(std::string_view,std::string_view)`.
+4. Must be callable while being `const`
+
+**Note:** if it is callable with both `char` and `std::string_view` it will prefer to call the `char` overload.
+
+```cpp
+struct CaseInsensitive {
+  void operator()(std::string_view a,std::string_view b) // OOPS! I missed `const`
+  {
+    // caseless comparison here
+  }
+};
+
+enum class E { Value };
+
+enchantum::cast<E>("Value",CaseInsensitive{}); // ERROR!
+
+```
+
 --- 
 ## Functions
 
@@ -483,8 +511,8 @@ namespace details
 
   constexpr std::optional<E> operator()(std::string_view name) noexcept;
 
-  template<std::predicate<std::string_view, std::string_view> BinaryPred>
-  constexpr std::optional<E> operator()(std::string_view name, BinaryPred binary_predicate) const noexcept
+  template<typename BinaryPredicate>
+  constexpr std::optional<E> operator()(std::string_view name, BinaryPredicate binary_predicate) const noexcept
   };
 }
 
@@ -528,8 +556,8 @@ assert(enchantum::cast<Status>("UnKnOwn",[](std::string_view a,std::string_view 
 ```cpp
 // defined in header bitflags.hpp
 
-template<BitFlagEnum E, std::predicate<std::string_view, std::string_view> BinaryPred>
-constexpr std::optional<E> cast_bitflag(std::string_view name, char sep, BinaryPred binary_pred) noexcept;
+template<BitFlagEnum E, typename BinaryPredicate>
+constexpr std::optional<E> cast_bitflag(std::string_view name, char sep, BinaryPredicate binary_pred) noexcept;
 
 template<BitFlagEnum E>
 constexpr std::optional<E> cast_bitflag(std::string_view name, char sep = '|') noexcept;
@@ -936,7 +964,7 @@ constexpr bool contains(std::underlying_type_t<E> value) noexcept;
 template<Enum E>
 constexpr bool contains(std::string_view name) noexcept;
 
-template<Enum E, std::predicate<std::string_view, std::string_view> BinaryPredicate>
+template<Enum E, typename BinaryPredicate>
 constexpr bool contains(std::string_view name, BinaryPredicate binary_predicate) noexcept;
 
 ```
@@ -979,8 +1007,8 @@ constexpr bool contains_bitflag(std::underlying_type_t<E> value) noexcept;
 template<BitFlagEnum E>
 constexpr bool contains_bitflag(std::string_view name,char sep = '|') noexcept;
 
-template<BitFlagEnum E, std::predicate<std::string_view, std::string_view> BinaryPred>
-constexpr bool contains_bitflag(std::string_view s, char sep, BinaryPred binary_pred) noexcept;
+template<BitFlagEnum E, typename BinaryPredicate>
+constexpr bool contains_bitflag(std::string_view s, char sep, BinaryPredicate binary_pred) noexcept;
 
 ```
 
@@ -1060,8 +1088,8 @@ namespace details {
   struct CAST_FUNCTOR {
     constexpr std::optional<E> operator()(std::string_view name) const noexcept;
 
-    template<std::predicate<std::string_view, std::string_view> BinaryPred>
-    constexpr std::optional<E> operator(std::string_view name, BinaryPred binary_predicate)() const noexcept;
+    template<typename BinaryPredicate>
+    constexpr std::optional<E> operator(std::string_view name, BinaryPredicate binary_predicate)() const noexcept;
   };
 }
 
@@ -1073,21 +1101,21 @@ inline constexpr details::CAST_FUNCTOR<E> cast;
 template<Enum E>
 constexpr bool contains(std::string_view name) noexcept;
 
-template<Enum E, std::predicate<std::string_view, std::string_view> BinaryPredicate>
+template<Enum E, typename BinaryPredicate>
 constexpr bool contains(std::string_view name, BinaryPredicate binary_predicate) noexcept;
 
 
 template<BitFlagEnum E>
 string to_string_bitflag(E value, char sep = '|');
 
-template<BitFlagEnum E, std::predicate<std::string_view, std::string_view> BinaryPred>
-constexpr std::optional<E> cast_bitflag(std::string_view s, char sep, BinaryPred binary_pred) noexcept;
+template<BitFlagEnum E, typename BinaryPredicate>
+constexpr std::optional<E> cast_bitflag(std::string_view s, char sep, BinaryPredicate binary_pred) noexcept;
 
 template<BitFlagEnum E>
 constexpr std::optional<E> cast_bitflag(std::string_view s, char sep = '|') noexcept;
 
-template<BitFlagEnum E, std::predicate<std::string_view, std::string_view> BinaryPred>
-constexpr bool contains_bitflag(std::string_view s, char sep, BinaryPred binary_pred) noexcept;
+template<BitFlagEnum E, typename BinaryPredicate>
+constexpr bool contains_bitflag(std::string_view s, char sep, BinaryPredicate binary_pred) noexcept;
 
 template<BitFlagEnum E>
 constexpr bool contains_bitflag(std::string_view s, char sep = '|') noexcept;

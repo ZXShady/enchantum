@@ -52,8 +52,7 @@ template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
   return enchantum::contains_bitflag<E>(static_cast<std::underlying_type_t<E>>(value));
 }
 
-template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E),
-         ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(std::predicate<string_view, string_view>) BinaryPred>
+template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E), typename BinaryPred>
 [[nodiscard]] constexpr bool contains_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
 {
   std::size_t pos = 0;
@@ -104,8 +103,7 @@ template<typename String = string, ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
   return String();
 }
 
-template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E),
-         ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(std::predicate<string_view, string_view>) BinaryPred>
+template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E), typename BinaryPred>
 [[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
 {
   using T = std::underlying_type_t<E>;

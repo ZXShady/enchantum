@@ -18,6 +18,28 @@
 namespace enchantum {
 
 namespace details {
+  template<typename BinaryPredicate>
+  constexpr bool call_predicate(const BinaryPredicate binary_pred, const string_view a, const string_view b)
+  {
+    if constexpr (std::is_invocable_v<const BinaryPredicate&, const char&, const char&>) {
+      const auto a_size = a.size();
+      if (a_size != b.size())
+        return false;
+      const auto a_data = a.data();
+      const auto b_data = b.data();
+
+      for (std::size_t i = 0; i < a_size; ++i)
+        if (!binary_pred(a_data[i],b_data[i]))
+          return false;
+      return true;
+    }
+    else {
+      static_assert(std::is_invocable_v<const BinaryPredicate&, const string_view&, const string_view&>,
+                    "BinaryPredicate must be callable with atleast 2 char or 2 string_views");
+      return binary_pred(a, b);
+    }
+  }
+
   constexpr std::pair<std::size_t, std::size_t> minmax_string_size(const string_view* begin, const string_view* const end)
   {
     using T     = std::size_t;
@@ -32,8 +54,6 @@ namespace details {
   }
 
 } // namespace details
-
-
 
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
@@ -84,12 +104,11 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 }
 
 
-template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E), 
-    ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(std::predicate<string_view, string_view>) BinaryPredicate>
-[[nodiscard]] constexpr bool contains(const string_view name, const BinaryPredicate binary_predicate) noexcept
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E), typename BinaryPred>
+[[nodiscard]] constexpr bool contains(const string_view name, const BinaryPred binary_pred) noexcept
 {
   for (const auto s : names_generator<E>)
-    if (binary_predicate(name, s))
+    if (details::call_predicate(binary_pred, name, s))
       return true;
   return false;
 }
@@ -125,7 +144,8 @@ namespace details {
               return optional<std::size_t>(0); // assumes 0 is the index of value `0`
 
           using U = std::make_unsigned_t<T>;
-          return has_zero + details::countr_zero(static_cast<U>(e)) - details::countr_zero(static_cast<U>(values_generator<E>[has_zero]));
+          return has_zero + details::countr_zero(static_cast<U>(e)) -
+            details::countr_zero(static_cast<U>(values_generator<E>[has_zero]));
         }
       }
       else {
@@ -162,11 +182,12 @@ namespace details {
       return optional<E>(); // nullopt
     }
 
-    template<ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(std::predicate<string_view, string_view>) BinaryPred>
-    [[nodiscard]] constexpr optional<E> operator()(const string_view name, const BinaryPred binary_predicate) const noexcept
+    template<typename BinaryPred>
+    [[nodiscard]] constexpr optional<E> operator()(const string_view name, const BinaryPred binary_pred) const noexcept
     {
+
       for (std::size_t i = 0; i < count<E>; ++i) {
-        if (binary_predicate(name, names_generator<E>[i])) {
+        if (details::call_predicate(binary_pred, name, names_generator<E>[i])) {
           return optional<E>(values_generator<E>[i]);
         }
       }
