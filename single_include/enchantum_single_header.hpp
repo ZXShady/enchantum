@@ -334,10 +334,8 @@ public:
 
 #ifdef __cpp_concepts
   #define ENCHANTUM_DETAILS_ENUM_CONCEPT(Name)         Enum Name
-  #define ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(...)   __VA_ARGS__
   #define ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(Name) BitFlagEnum Name
 #else
-  #define ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(...)   typename
   #define ENCHANTUM_DETAILS_ENUM_CONCEPT(Name)         typename Name, std::enable_if_t<std::is_enum_v<Name>, int> = 0
   #define ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(Name) typename Name, std::enable_if_t<is_bitflag<Name>, int> = 0
 #endif
@@ -347,14 +345,15 @@ public:
 #include <cstdint>
 #include <type_traits>
 
-namespace enchantum::details {
+namespace enchantum {
+namespace details {
 
-template<typename E, typename = void>
-inline constexpr std::size_t prefix_length_or_zero = 0;
+  template<typename E, typename = void>
+  inline constexpr std::size_t prefix_length_or_zero = 0;
 
-template<typename E>
-inline constexpr auto prefix_length_or_zero<E, decltype((void)enum_traits<E>::prefix_length)> = std::size_t{
-  enum_traits<E>::prefix_length};
+  template<typename E>
+  inline constexpr auto prefix_length_or_zero<E, decltype((void)enum_traits<E>::prefix_length)> = std::size_t{
+    enum_traits<E>::prefix_length};
 
   template<typename Underlying, std::size_t ArraySize>
   struct ReflectStringReturnValue {
@@ -362,12 +361,13 @@ inline constexpr auto prefix_length_or_zero<E, decltype((void)enum_traits<E>::pr
     std::uint8_t string_lengths[ArraySize]{};
     // the sum of all character names must be less than the size of this array
     // no one will likely hit this unless you for some odd reason have extremely long names
-    char         strings[1024*8]{};
-    std::size_t  total_string_length = 0;
-    std::size_t  valid_count         = 0;
+    char        strings[1024 * 8]{};
+    std::size_t total_string_length = 0;
+    std::size_t valid_count         = 0;
   };
 
-} // namespace enchantum::details
+} // namespace details
+} // namespace enchantum
 
 #if defined(__NVCOMPILER)
   
@@ -684,6 +684,7 @@ namespace details {
 #include <type_traits>
 #include <utility>
 
+#define ENCAHNTUM_DETAILS_GCC_MAJOR __GNUC__
 #if __GNUC__ <= 10
 // for out of bounds conversions for C style enums
   #pragma GCC diagnostic push
@@ -1156,14 +1157,14 @@ namespace details {
       // "aabc"
 
       ret.string_indices[i] = string_index;
-#if __GNUC__ <= 10
+#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   // false positives from T += T
   // it does not make sense.
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wconversion"
 #endif
       string_index += static_cast<StringLengthType>(elements.string_lengths[i] + NullTerminated);
-#if __GNUC__ <= 10
+#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif
 
@@ -1338,7 +1339,7 @@ namespace enchantum{
 #include <cstddef>
 #include <cstdint>
 #include <utility>
-#if __GNUC__ <= 10
+#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   // false positives from T += T
   // it does not make sense.
   #pragma GCC diagnostic push
@@ -1583,14 +1584,14 @@ inline constexpr details::entries_generator_t<E, Pair, NullTerminated> entries_g
 
 } // namespace enchantum
 
-#if __GNUC__ <= 10
+#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif
 
 #include <type_traits>
 #include <utility>
 
-#if __GNUC__ <= 10
+#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wconversion"
   #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
@@ -1599,6 +1600,28 @@ inline constexpr details::entries_generator_t<E, Pair, NullTerminated> entries_g
 namespace enchantum {
 
 namespace details {
+  template<typename BinaryPredicate>
+  constexpr bool call_predicate(const BinaryPredicate binary_pred, const string_view a, const string_view b)
+  {
+    if constexpr (std::is_invocable_v<const BinaryPredicate&, const char&, const char&>) {
+      const auto a_size = a.size();
+      if (a_size != b.size())
+        return false;
+      const auto a_data = a.data();
+      const auto b_data = b.data();
+
+      for (std::size_t i = 0; i < a_size; ++i)
+        if (!binary_pred(a_data[i],b_data[i]))
+          return false;
+      return true;
+    }
+    else {
+      static_assert(std::is_invocable_v<const BinaryPredicate&, const string_view&, const string_view&>,
+                    "BinaryPredicate must be callable with atleast 2 char or 2 string_views");
+      return binary_pred(a, b);
+    }
+  }
+
   constexpr std::pair<std::size_t, std::size_t> minmax_string_size(const string_view* begin, const string_view* const end)
   {
     using T     = std::size_t;
@@ -1661,12 +1684,11 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
   return false;
 }
 
-template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E), 
-    ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(std::predicate<string_view, string_view>) BinaryPredicate>
-[[nodiscard]] constexpr bool contains(const string_view name, const BinaryPredicate binary_predicate) noexcept
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E), typename BinaryPred>
+[[nodiscard]] constexpr bool contains(const string_view name, const BinaryPred binary_pred) noexcept
 {
   for (const auto s : names_generator<E>)
-    if (binary_predicate(name, s))
+    if (details::call_predicate(binary_pred, name, s))
       return true;
   return false;
 }
@@ -1701,7 +1723,8 @@ namespace details {
               return optional<std::size_t>(0); // assumes 0 is the index of value `0`
 
           using U = std::make_unsigned_t<T>;
-          return has_zero + details::countr_zero(static_cast<U>(e)) - details::countr_zero(static_cast<U>(values_generator<E>[has_zero]));
+          return has_zero + details::countr_zero(static_cast<U>(e)) -
+            details::countr_zero(static_cast<U>(values_generator<E>[has_zero]));
         }
       }
       else {
@@ -1737,11 +1760,12 @@ namespace details {
       return optional<E>(); // nullopt
     }
 
-    template<ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(std::predicate<string_view, string_view>) BinaryPred>
-    [[nodiscard]] constexpr optional<E> operator()(const string_view name, const BinaryPred binary_predicate) const noexcept
+    template<typename BinaryPred>
+    [[nodiscard]] constexpr optional<E> operator()(const string_view name, const BinaryPred binary_pred) const noexcept
     {
+
       for (std::size_t i = 0; i < count<E>; ++i) {
-        if (binary_predicate(name, names_generator<E>[i])) {
+        if (details::call_predicate(binary_pred, name, names_generator<E>[i])) {
           return optional<E>(values_generator<E>[i]);
         }
       }
@@ -1775,11 +1799,11 @@ inline constexpr details::to_string_functor to_string{};
 
 } // namespace enchantum
 
-#if __GNUC__ <= 10
+#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif
 
-#if __GNUC__ <= 10
+#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wconversion"
   #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
@@ -1800,22 +1824,11 @@ inline constexpr E value_ors = [] {
 template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 [[nodiscard]] constexpr bool contains_bitflag(const std::underlying_type_t<E> value) noexcept
 {
-  using T = std::underlying_type_t<E>;
-  if constexpr (is_contiguous_bitflag<E>) {
-    return value >= static_cast<T>(min<E>) && value <= static_cast<T>(value_ors<E>);
-  }
-  else {
+  if constexpr (!has_zero_flag<E>)
     if (value == 0)
-      return has_zero_flag<E>;
-    T valid_bits = 0;
+      return false;
 
-    for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
-      const auto v = static_cast<T>(values_generator<E>[i]);
-      if ((value & v) == v)
-        valid_bits |= v;
-    }
-    return valid_bits == value;
-  }
+  return value == (static_cast<std::underlying_type_t<E>>(value_ors<E>) & value);
 }
 
 template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
@@ -1824,8 +1837,7 @@ template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
   return enchantum::contains_bitflag<E>(static_cast<std::underlying_type_t<E>>(value));
 }
 
-template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E),
-         ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(std::predicate<string_view, string_view>) BinaryPred>
+template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E), typename BinaryPred>
 [[nodiscard]] constexpr bool contains_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
 {
   std::size_t pos = 0;
@@ -1874,8 +1886,7 @@ template<typename String = string, ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
   return String();
 }
 
-template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E),
-         ENCHANTUM_DETAILS_CONCEPT_OR_TYPENAME(std::predicate<string_view, string_view>) BinaryPred>
+template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E), typename BinaryPred>
 [[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
 {
   using T = std::underlying_type_t<E>;
@@ -1908,7 +1919,7 @@ template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 
 } // namespace enchantum
 
-#if __GNUC__ <= 10
+#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif
 
@@ -2184,56 +2195,59 @@ enchantum::contains(Flags::F1); // considered `BitFlagEnum` concept woops! ODR!
 
 */
 
-namespace enchantum::bitwise_operators {
-template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-[[nodiscard]] constexpr E operator~(E e) noexcept
-{
-  return static_cast<E>(~static_cast<std::underlying_type_t<E>>(e));
-}
+namespace enchantum {
+namespace bitwise_operators {
 
-template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-[[nodiscard]] constexpr E operator|(E a, E b) noexcept
-{
-  using T = std::underlying_type_t<E>;
-  return static_cast<E>(static_cast<T>(a) | static_cast<T>(b));
-}
+  template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+  [[nodiscard]] constexpr E operator~(E e) noexcept
+  {
+    return static_cast<E>(~static_cast<std::underlying_type_t<E>>(e));
+  }
 
-template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-[[nodiscard]] constexpr E operator&(E a, E b) noexcept
-{
-  using T = std::underlying_type_t<E>;
-  return static_cast<E>(static_cast<T>(a) & static_cast<T>(b));
-}
+  template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+  [[nodiscard]] constexpr E operator|(E a, E b) noexcept
+  {
+    using T = std::underlying_type_t<E>;
+    return static_cast<E>(static_cast<T>(a) | static_cast<T>(b));
+  }
 
-template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-[[nodiscard]] constexpr E operator^(E a, E b) noexcept
-{
-  using T = std::underlying_type_t<E>;
-  return static_cast<E>(static_cast<T>(a) ^ static_cast<T>(b));
-}
+  template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+  [[nodiscard]] constexpr E operator&(E a, E b) noexcept
+  {
+    using T = std::underlying_type_t<E>;
+    return static_cast<E>(static_cast<T>(a) & static_cast<T>(b));
+  }
 
-template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-constexpr E& operator|=(E& a, E b) noexcept
-{
-  using T  = std::underlying_type_t<E>;
-  return a = static_cast<E>(static_cast<T>(a) | static_cast<T>(b));
-}
+  template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+  [[nodiscard]] constexpr E operator^(E a, E b) noexcept
+  {
+    using T = std::underlying_type_t<E>;
+    return static_cast<E>(static_cast<T>(a) ^ static_cast<T>(b));
+  }
 
-template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-constexpr E& operator&=(E& a, E b) noexcept
-{
-  using T  = std::underlying_type_t<E>;
-  return a = static_cast<E>(static_cast<T>(a) & static_cast<T>(b));
-}
+  template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+  constexpr E& operator|=(E& a, E b) noexcept
+  {
+    using T  = std::underlying_type_t<E>;
+    return a = static_cast<E>(static_cast<T>(a) | static_cast<T>(b));
+  }
 
-template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-constexpr E& operator^=(E& a, E b) noexcept
-{
-  using T  = std::underlying_type_t<E>;
-  return a = static_cast<E>(static_cast<T>(a) ^ static_cast<T>(b));
-}
+  template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+  constexpr E& operator&=(E& a, E b) noexcept
+  {
+    using T  = std::underlying_type_t<E>;
+    return a = static_cast<E>(static_cast<T>(a) & static_cast<T>(b));
+  }
 
-} // namespace enchantum::bitwise_operators
+  template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+  constexpr E& operator^=(E& a, E b) noexcept
+  {
+    using T  = std::underlying_type_t<E>;
+    return a = static_cast<E>(static_cast<T>(a) ^ static_cast<T>(b));
+  }
+
+} // namespace bitwise_operators
+} // namespace enchantum
 
 #define ENCHANTUM_DEFINE_BITWISE_FOR(Enum)                                                \
   [[nodiscard]] constexpr Enum operator&(Enum a, Enum b) noexcept                         \
@@ -2262,42 +2276,43 @@ constexpr E& operator^=(E& a, E b) noexcept
 #include <iostream>
 #include <string>
 
-namespace enchantum::iostream_operators {
-template<typename Traits, ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-std::basic_ostream<char, Traits>& operator<<(std::basic_ostream<char, Traits>& os, const E e)
-{
-  return os << details::format(e);
-}
+namespace enchantum {
+namespace iostream_operators {
+  template<typename Traits, ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+  std::basic_ostream<char, Traits>& operator<<(std::basic_ostream<char, Traits>& os, const E e)
+  {
+    return os << details::format(e);
+  }
 
-template<typename Traits, ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-auto operator>>(std::basic_istream<char, Traits>& is, E& value)
-  -> decltype((value = E{}, is))
-    // sfinae to check whether value is assignable
-{
-  std::basic_string<char, Traits> s;
-  is >> s;
-  if (!is)
+  template<typename Traits, ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+  auto operator>>(std::basic_istream<char, Traits>& is, E& value) -> decltype((value = E{}, is))
+  // sfinae to check whether value is assignable
+  {
+    std::basic_string<char, Traits> s;
+    is >> s;
+    if (!is)
+      return is;
+
+    if constexpr (is_bitflag<E>) {
+      if (const auto v = enchantum::cast_bitflag<E>(s))
+        value = *v;
+      else
+        is.setstate(std::ios_base::failbit);
+    }
+    else {
+      if (const auto v = enchantum::cast<E>(s))
+        value = *v;
+      else
+        is.setstate(std::ios_base::failbit);
+    }
     return is;
-
-  if constexpr (is_bitflag<E>) {
-    if (const auto v = enchantum::cast_bitflag<E>(s))
-      value = *v;
-    else
-      is.setstate(std::ios_base::failbit);
   }
-  else {
-    if (const auto v = enchantum::cast<E>(s))
-      value = *v;
-    else
-      is.setstate(std::ios_base::failbit);
-  }
-  return is;
-}
-} // namespace enchantum::iostream_operators
+} // namespace iostream_operators
+} // namespace enchantum
 
 #include <cstddef>
 
-#if __GNUC__ <= 10
+#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
@@ -2339,7 +2354,7 @@ inline constexpr details::next_value_circular_functor<-1> prev_value_circular{};
 
 } // namespace enchantum
 
-#if __GNUC__ <= 10
+#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif
 
