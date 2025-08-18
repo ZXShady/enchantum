@@ -16,56 +16,59 @@ enchantum::contains(Flags::F1); // considered `BitFlagEnum` concept woops! ODR!
 
 */
 
-namespace enchantum::bitwise_operators {
-template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-[[nodiscard]] constexpr E operator~(E e) noexcept
-{
-  return static_cast<E>(~static_cast<std::underlying_type_t<E>>(e));
-}
+namespace enchantum {
+namespace bitwise_operators {
 
-template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-[[nodiscard]] constexpr E operator|(E a, E b) noexcept
-{
-  using T = std::underlying_type_t<E>;
-  return static_cast<E>(static_cast<T>(a) | static_cast<T>(b));
-}
+  template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+  [[nodiscard]] constexpr E operator~(E e) noexcept
+  {
+    return static_cast<E>(~static_cast<std::underlying_type_t<E>>(e));
+  }
 
-template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-[[nodiscard]] constexpr E operator&(E a, E b) noexcept
-{
-  using T = std::underlying_type_t<E>;
-  return static_cast<E>(static_cast<T>(a) & static_cast<T>(b));
-}
+  template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+  [[nodiscard]] constexpr E operator|(E a, E b) noexcept
+  {
+    using T = std::underlying_type_t<E>;
+    return static_cast<E>(static_cast<T>(a) | static_cast<T>(b));
+  }
 
-template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-[[nodiscard]] constexpr E operator^(E a, E b) noexcept
-{
-  using T = std::underlying_type_t<E>;
-  return static_cast<E>(static_cast<T>(a) ^ static_cast<T>(b));
-}
+  template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+  [[nodiscard]] constexpr E operator&(E a, E b) noexcept
+  {
+    using T = std::underlying_type_t<E>;
+    return static_cast<E>(static_cast<T>(a) & static_cast<T>(b));
+  }
 
-template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-constexpr E& operator|=(E& a, E b) noexcept
-{
-  using T  = std::underlying_type_t<E>;
-  return a = static_cast<E>(static_cast<T>(a) | static_cast<T>(b));
-}
+  template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+  [[nodiscard]] constexpr E operator^(E a, E b) noexcept
+  {
+    using T = std::underlying_type_t<E>;
+    return static_cast<E>(static_cast<T>(a) ^ static_cast<T>(b));
+  }
 
-template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-constexpr E& operator&=(E& a, E b) noexcept
-{
-  using T  = std::underlying_type_t<E>;
-  return a = static_cast<E>(static_cast<T>(a) & static_cast<T>(b));
-}
+  template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+  constexpr E& operator|=(E& a, E b) noexcept
+  {
+    using T  = std::underlying_type_t<E>;
+    return a = static_cast<E>(static_cast<T>(a) | static_cast<T>(b));
+  }
 
-template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-constexpr E& operator^=(E& a, E b) noexcept
-{
-  using T  = std::underlying_type_t<E>;
-  return a = static_cast<E>(static_cast<T>(a) ^ static_cast<T>(b));
-}
+  template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+  constexpr E& operator&=(E& a, E b) noexcept
+  {
+    using T  = std::underlying_type_t<E>;
+    return a = static_cast<E>(static_cast<T>(a) & static_cast<T>(b));
+  }
 
-} // namespace enchantum::bitwise_operators
+  template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+  constexpr E& operator^=(E& a, E b) noexcept
+  {
+    using T  = std::underlying_type_t<E>;
+    return a = static_cast<E>(static_cast<T>(a) ^ static_cast<T>(b));
+  }
+
+} // namespace bitwise_operators
+} // namespace enchantum
 
 #define ENCHANTUM_DEFINE_BITWISE_FOR(Enum)                                                \
   [[nodiscard]] constexpr Enum operator&(Enum a, Enum b) noexcept                         \
@@ -90,4 +93,3 @@ constexpr E& operator^=(E& a, E b) noexcept
   {                                                                                       \
     return static_cast<Enum>(~static_cast<std::underlying_type_t<Enum>>(a));              \
   }
-
