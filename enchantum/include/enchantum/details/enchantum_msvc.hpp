@@ -32,7 +32,7 @@ namespace details {
                          SZC(__FUNCSIG__) - SZC("auto __cdecl enchantum::details::enum_in_array_name_size<>(void) noexcept")};
 
     if constexpr (is_scoped_enum<decltype(Enum)>) {
-      if (s.front() == '(') {
+      if (s[0] == '(') {
         s.remove_prefix(SZC("(enum "));
         s.remove_suffix(SZC(")0x0"));
         return s.size();
@@ -40,7 +40,7 @@ namespace details {
       return s.substr(0, s.rfind(':') - 1).size();
     }
     else {
-      if (s.front() == '(') {
+      if (s[0] == '(') {
         s.remove_prefix(SZC("(enum "));
         s.remove_suffix(SZC(")0x0"));
       }

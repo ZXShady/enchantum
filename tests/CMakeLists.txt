@@ -9,6 +9,7 @@ FetchContent_MakeAvailable(Catch2)
 target_compile_features(Catch2 PRIVATE cxx_std_17)
 target_compile_definitions(Catch2 PUBLIC CATCH_CONFIG_ENABLE_OPTIONAL_STRINGMAKER)
 add_executable(tests)
+
 target_include_directories(tests PRIVATE "third_party")
 target_compile_features(tests PRIVATE cxx_std_17)
 
@@ -27,7 +28,7 @@ else()
   target_compile_options(tests PRIVATE -Werror -Wall -Wextra -Wshadow -Wconversion -Wpedantic)
 endif()
 
-file(GLOB_RECURSE SRCS "*.cpp" "*.hpp")
+file(GLOB SRCS "*.cpp" "*.hpp")
 
 
 get_target_property(STD tests CXX_STANDARD)
@@ -60,6 +61,18 @@ if(STD LESS 20)
 endif()
 target_sources(tests PRIVATE ${SRCS})
 
+
+add_executable(tests_config)
+target_compile_features(tests_config PRIVATE cxx_std_17)
+target_compile_definitions(tests_config PRIVATE ENCHANTUM_CONFIG_FILE="config_test/config.hpp")
+target_sources(tests_config PRIVATE config_test/config.cpp config_test/config.hpp)
+target_include_directories(tests_config PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(tests_config Catch2::Catch2WithMain enchantum::enchantum)
+
 include(CTest)
 include(Catch)
 catch_discover_tests(tests)
+catch_discover_tests(tests_config)
+
+
+

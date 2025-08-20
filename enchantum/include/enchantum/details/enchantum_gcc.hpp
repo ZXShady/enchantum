@@ -35,10 +35,10 @@ namespace details {
     using E = decltype(Enum);
     // if scoped
     if constexpr (!std::is_convertible_v<E, std::underlying_type_t<E>>) {
-      return s.front() == '(' ? s.size() - SZC("()0") : s.rfind(':') - 1;
+      return s[0] == '(' ? s.size() - SZC("()0") : s.rfind(':') - 1;
     }
     else {
-      if (s.front() == '(') {
+      if (s[0] == '(') {
         s.remove_prefix(SZC("("));
         s.remove_suffix(SZC(")0"));
       }

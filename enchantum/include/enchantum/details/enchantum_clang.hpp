@@ -24,7 +24,7 @@
 namespace enchantum {
 
 namespace details {
-  constexpr auto enum_in_array_name(const std::string_view raw_type_name, const bool is_scoped_enum) noexcept
+  constexpr auto enum_in_array_name(const string_view raw_type_name, const bool is_scoped_enum) noexcept
   {
     if (is_scoped_enum)
       return raw_type_name;
@@ -115,7 +115,7 @@ namespace details {
       // (anonymous namespace)::a
       // this is needed to determine whether the above are cast expression if 2 braces are
       // next to eachother then it is a cast but only for anonymoused namespaced enums
-      constexpr std::size_t index_check = !enum_in_array_name.empty() && enum_in_array_name.front() == '(' ? 1 : 0;
+      constexpr std::size_t index_check = enum_in_array_name.size() != 0 && enum_in_array_name[0] == '(' ? 1 : 0;
 
       details::parse_string<is_bitflag<E>>(
         /*index_check=*/index_check,
