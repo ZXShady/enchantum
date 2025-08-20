@@ -1598,7 +1598,7 @@ Overloads the bitwise operators for a given enum. `~`,`&`,`|`,`^`,`&=`,`|=`,`^=`
 ### `ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY`
 
 - **Description**:
-A customizable macro that is set to a positive integeral value which allows enchantum to detect whether an enum was not fully reflected. it is by default `2`
+A customizable macro that is set to a positive integeral value which allows enchantum to detect whether an enum was not fully reflected. it is by default `2` for safety reasons.
 
 ```cpp
 #include <enchantum/enchantum.hpp>

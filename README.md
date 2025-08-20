@@ -241,22 +241,25 @@ All times in seconds (lower is better, bold is fastest). Compiled with `-O3` fir
 
 "Timeout" means it took more than 20 minutes and still did not finish
 
-| Compiler    | Test Case   | `enchantum`  | `magic_enum` | `simple_enum` |
-|-------------|-------------|--------------| ------------ |---------------|
-| **GCC**     | Small       | **6.0**      |  47          | 21.5          |
-|             | Big         | **2.7**      |  21          | 6.3           |
-|             | Large Range | **15.9**     |  Timeout     | 313           |
-|             | Ideal Range | 3            |  8.1         | **2.7**       |
+**Notes**: numbers in `()` are with [`ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY`](docs/features.md/#enchantum_check_out_of_bounds_by) set to the default which is `2`.
+in short terms it is extra checks against not fully reflected enums which can be disbled by setting it to `0`
+
+| Compiler    | Test Case   | `enchantum`     | `magic_enum` | `simple_enum` |
+|-------------|-------------|-----------------|--------------|---------------|
+| **GCC**     | Small       | **6.0**  (9.3)  |  47          | 21.5          |
+|             | Big         | **2.7**  (4.6)  |  21          | 6.3           |
+|             | Large Range | **15.9** (45.1) |  Timeout     | 313           |
+|             | Ideal Range | 3        (4.2)  |  8.1         | **2.7**       |
 |                                                                         |
-| **Clang**   | Small       | **5.8**      |  47          | 14            |
-|             | Big         | **2.3**      |  18          | 4.4           |
-|             | Large Range | **15.1**     |  Timeout     | 96.3          |
-|             | Ideal Range | 2.9          |  8.7         | **2.3**       |
+| **Clang**   | Small       | **5.8**  (8.7)  |  47          | 14            |
+|             | Big         | **2.3**  (3.6)  |  18          | 4.4           |
+|             | Large Range | **15.1** (36.6) |  Timeout     | 96.3          |
+|             | Ideal Range | 2.9      (3.5)  |  8.7         | **2.3**       |
 |                                                                         |
-| **MSVC**    | Small       | **15.8**     |  80          | 186           |
-|             | Big         | **8.8**      |  37          | 32.1          |
-|             | Large Range | **85.3**     |  Timeout     | Timeout       |
-|             | Ideal Range | 5.8          |  17.9        | **4.7**       |
+| **MSVC**    | Small       | **15.8** (50.7) |  80          | 186           |
+|             | Big         | **8.8**  (13.6) |  37          | 32.1          |
+|             | Large Range | **85.3** (265.1)|  Timeout     | Timeout       |
+|             | Ideal Range | 5.8      (18.1) |  17.9        | **4.7**       |
 
 ## Object File Sizes
 
