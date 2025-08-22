@@ -126,13 +126,9 @@ namespace details {
 
     struct {
       decltype(elements_local) elements;
-      Strings                  strings;
-    } data = {elements_local, [](const char* const strings) {
-                Strings ret{};
-                __builtin_memcpy(ret.data(), strings, ret.size());
-                return ret;
-              }(elements_local.strings)};
-
+      Strings                  strings{};
+    } data = {elements_local};
+    __builtin_memcpy(data.strings.data(), elements_local.strings, data.strings.size());
     return data;
   } // namespace details
 

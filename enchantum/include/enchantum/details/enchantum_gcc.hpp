@@ -198,16 +198,12 @@ namespace details {
 
     struct {
       decltype(elements_local) elements;
-      Strings                  strings;
-    } data = {elements_local, [](const char* const strings) {
-                Strings     ret{};
-                const auto  size     = ret.size();
-                auto* const ret_data = ret.data();
-                for (std::size_t i = 0; i < size; ++i)
-                  ret_data[i] = strings[i];
-                return ret;
-              }(elements_local.strings)};
-
+      Strings                  strings{};
+    } data = {elements_local};
+    const auto  size        = data.strings.size();
+    auto* const data_string = data.strings.data();
+    for (std::size_t i = 0; i < size; ++i)
+      data_string[i] = elements_local.strings[i];
     return data;
   }
 
