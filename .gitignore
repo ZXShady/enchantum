@@ -32,4 +32,11 @@ buildGCC/
 CMakeFiles/
 .vs/
 benchmarks/time.py
-benchmarks/*.cpp
+
+# Test executables (but not markdown/csv files)
+bench_naive
+bench_len_first
+bench_auto
+benchmark_test
+test_len_first
+test_api_compatibility
