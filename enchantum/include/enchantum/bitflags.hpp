@@ -78,7 +78,7 @@ template<typename String = string, ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
   String name;
   T      check_value = 0;
   for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
-    const auto v = static_cast<T>(values<E>[i]);
+    const auto v = static_cast<T>(values_generator<E>[i]);
     if (v == (static_cast<T>(value) & v)) {
       const auto s = names_generator<E>[i];
       if (!name.empty())
