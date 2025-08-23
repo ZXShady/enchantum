@@ -327,8 +327,7 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
     if constexpr (count<E> >= 2) { if (names_generator<E>[1] == name) return true; }
     if constexpr (count<E> >= 3) { if (names_generator<E>[2] == name) return true; }
     return false;
-  }
-  if constexpr (count<E> <= ENCHANTUM_ENUM_SMALL_THRESHOLD) {
+  } else if constexpr (count<E> <= ENCHANTUM_ENUM_SMALL_THRESHOLD) {
     constexpr auto minmax = details::minmax_string_size(names<E>.data(), names<E>.data() + names<E>.size());
     if (const auto size = name.size(); size < minmax.first || size > minmax.second)
       return false;
@@ -423,9 +422,9 @@ namespace details {
         return details::cast_unrolled<E>(name);
       return details::cast_len_first<E>(name);
 #else // AUTO
-      if constexpr (count<E> <= ENCHANTUM_ENUM_TINY_THRESHOLD)
+      if constexpr (count<E> <= ENCHANTUM_ENUM_TINY_THRESHOLD) {
         return details::cast_unrolled<E>(name);
-      if constexpr (count<E> <= ENCHANTUM_ENUM_SMALL_THRESHOLD) {
+      } else if constexpr (count<E> <= ENCHANTUM_ENUM_SMALL_THRESHOLD) {
         constexpr auto minmax = details::minmax_string_size(names<E>.data(), names<E>.data() + names<E>.size());
         const auto sz = name.size();
         if (sz < minmax.first || sz > minmax.second) return optional<E>();
