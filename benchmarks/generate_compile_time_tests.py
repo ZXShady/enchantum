@@ -40,6 +40,12 @@ libs = {
         "min_macro": "MAGIC_ENUM_RANGE_MIN",
         "max_macro": "MAGIC_ENUM_RANGE_MAX"
     },
+    "conjure_enum": {
+        "include_path": "fix8/conjure_enum.hpp",
+        "to_string": "enum_to_string_conjure_wrapper",
+        "min_macro": "FIX8_CONJURE_ENUM_MIN_VALUE",
+        "max_macro": "FIX8_CONJURE_ENUM_MAX_VALUE"
+    },
     "enchantum": {
         "include_path": "enchantum/enchantum.hpp",
         "to_string": "enchantum::to_string",
@@ -59,14 +65,16 @@ def create_tests(lib_name: str, lib_config: dict, filename: str, enum_count: int
         if lib_config["min_macro"] and lib_config["max_macro"]:
             f.write(f"#define {lib_config['min_macro']} ({min_range})\n")
             f.write(f"#define {lib_config['max_macro']} ({max_range})\n")
-
+        if lib_name == "conjure_enum":
+            f.write(f"#define FIX8_CONJURE_ENUM_MINIMAL 1\n")
+        
         f.write(f'#include <{lib_config["include_path"]}>\n\n')
 
         if lib_name == "conjure_enum":
             f.write("""
 template<typename T>
 constexpr auto enum_to_string_conjure_wrapper(T e) {
-    return conjure_enum<T>::enum_to_string(e);
+    return FIX8::conjure_enum<T>::enum_to_string(e);
 }
 """)
 

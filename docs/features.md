@@ -12,8 +12,8 @@ Quick Reference
   - [Enum](#enum)
   - [SignedEnum](#signedenum)
   - [UnsignedEnum](#unsignedenum)
-  - [ScopedEnum / is_scoped_enum](#scopedenum)
-  - [UnscopedEnum / is_scoped_enum](#unscopedenum)
+  - [ScopedEnum / is_scoped_enum](#scopedenum--is_scoped_enum)
+  - [UnscopedEnum / is_scoped_enum](#unscopedenum--is_unscoped_enum)
   - [ContiguousEnum](#contiguousenum)
   - [BitFlagEnum](#bitflagenum)
   - [ContiguousBitFlagEnum](#contiguousbitflagenum)
@@ -38,7 +38,7 @@ Quick Reference
   - [enum_to_index](#enum_to_index)
   - [next_value/prev_value](#next_valueprev_value)
   - [std::format/fmt::format](#fmtformat--stdformat-support)
-  - [iostream support](#operator-stream-output-operator)
+  - [iostream support](#iostream-support)
   - [for_each](#for_each)
   - [to_underlying](#to_underlying)
 
@@ -347,12 +347,9 @@ static_assert(enchantum::has_zero_flag<FlagsWithNone>);
 // defined in header `common.hpp`
 
 template<typename T>
-struct enum_traits;
-
-template<Enum E>
-struct enum_traits<E> // default
+struct enum_traits
 {
-  constexpr static auto prefix_length = 0;
+  constexpr static std::size_t prefix_length = 0;
   constexpr static auto min = ENCHANTUM_MIN_RANGE;
   constexpr static auto max = ENCHANTUM_MAX_RANGE;
 };
@@ -410,7 +407,7 @@ struct CaseInsensitive {
 
 enum class E { Value };
 
-enchantum::cast<E>("Value",CaseInsensitive{}); // ERROR!
+enchantum::cast<E>("Value",CaseInsensitive{}); // ERROR! not callable while being const!
 
 ```
 
@@ -1375,15 +1372,10 @@ Defined in header `enchantum.hpp`
 
 ---
 
-# Stream Operators
-
-The `operator>>` and `operator<<` are provided in the `enchantum` library to enable **streaming** of enum values to and from input/output streams. These operators are defined in the nested `istream_operators` and `ostream_operators` namespaces in headers `istream.hpp` and `ostream.hpp` respectivly.
-
-There is also the convienence header `iostream.hpp` which includes both of them and has a new nested namespace that contains the istream operators and ostream operators
-
-They are not `[[nodiscard]]`.
 
 ## iostream support
+
+The `operator>>` and `operator<<` are provided in the `enchantum` library to enable streaming of enum values to and from input/output streams. These operators are defined in the nested `iostream_operators`.
 
 ```cpp
 // defined in header iostream.hpp
@@ -1397,7 +1389,7 @@ namespace iostream_operators {
 }
 ```
 
-These functions are not `[[nodiscard]]`.
+These operators are not `[[nodiscard]]`.
 
 - **Example**:
 ```cpp
@@ -1469,23 +1461,23 @@ Defined in header `entries.hpp` which is included everywhere.
 
 ```cpp
 // defined in header `array.hpp`
-template <Enum E, typename T>
-class array : public std::array<T,count<E>> {
-private:
-  using base = std::array<T,count<E>>;
+template<typename E, typename V, typename Container = std::array<V, count<E>>>
+class array : public Container {
+  static_assert(std::is_enum_v<E>);
 public:
-  using index_type = E;
-  using typename base::reference;
-  using typename base::const_reference;
+  using container_type = Container;
+  using index_type     = E;
+  using typename Container::const_reference;
+  using typename Container::reference;
 
-  using base::at;
-  using base::operator[];
+  using Container::at;
+  using Container::operator[];
 
-  constexpr reference at(E pos);
-  constexpr const_reference at(E pos) const;
-  constexpr reference operator[](E pos) noexcept;
-  constexpr const_reference operator[](E pos) const noexcept;
-}
+  [[nodiscard]] constexpr reference at(const E index);
+  [[nodiscard]] constexpr const_reference at(const E index) const;
+  [[nodiscard]] constexpr reference operator[](const E index) noexcept;
+  [[nodiscard]] constexpr const_reference operator[](const E index) const noexcept;
+};
 ```
 
 **Example**
@@ -1510,39 +1502,38 @@ std::cout << values.at(Color::Blue) << '\n';  // Outputs: 42
 
 ```cpp
 // defined in header `bitset.hpp`
-template<Enum E>
-class bitset : public std::bitset<count<E>> {
-private:
-  using base = std::bitset<count<E>>;
+template<typename E, typename Container = std::bitset<count<E>>>
+class bitset : public Container {
+  static_assert(std::is_enum_v<E>);
 public:
-  using typename base::reference;
 
-  using base::operator[];
-  using base::flip;
-  using base::reset;
-  using base::set;
-  using base::test;
+  using container_type = Container;
+  using typename Container::reference;
 
-  using base::base;
-  using base::operator=;
+  using Container::operator[];
+  using Container::flip;
+  using Container::reset;
+  using Container::set;
+  using Container::test;
 
-  [[nodiscard]] constexpr std::string to_string(char sep = '|') const;
+  using Container::Container;
+  using Container::operator=;
 
-  [[nodiscard]] constexpr auto to_string(char zero,char one) const;
+  constexpr bitset(const std::initializer_list<E> values) noexcept;
 
-  constexpr bitset(std::initializer_list<E> values) noexcept;
-
-  [[nodiscard]] constexpr reference operator[](E pos) noexcept;
-  [[nodiscard]] constexpr bool operator[](E pos) const noexcept;
-  constexpr bool test(E pos);
-  constexpr bitset& set(E pos, bool value = true);
-  constexpr bitset& reset(E pos);
-  constexpr bitset& flip(E pos);
+  [[nodiscard]] string to_string(const char sep = '|') const;
+  [[nodiscard]] constexpr auto to_string(const char zero, const char one) const;
+  [[nodiscard]] constexpr reference operator[](const E index) noexcept;
+  [[nodiscard]] constexpr bool operator[](const E index) const noexcept;
+  constexpr bitset& set(const E pos, bool value = true);
+  constexpr bitset& reset(const E pos);
+  constexpr bitset& flip(const E pos);
 };
 
-template<typename E>
-struct std::hash<enchantum::bitset<E>> : std::hash<std::bitset<enchantum::count<E>>> {
-  using std::hash<std::bitset<enchantum::count<E>>>::operator();
+
+template<typename E,typename Container>
+struct std::hash<enchantum::bitset<E,Container>> : std::hash<std::bitset<enchantum::count<E>,Container>> {
+  using std::hash<std::bitset<enchantum::count<E>,Container>>::operator();
 };
 ```
 
@@ -1669,7 +1660,7 @@ The `__VA_ARGS__` at the end is more info in the macro for example local variabl
 A boolean macro that speeds up msvc compile times but may cause issues with extremely large enums ranges. it is on by default and can be overriden.
 
 ```cpp
-// defined in header `entries.hpp`
+// defined in header `entries.hpp` only when msvc is in use
 #ifndef ENCHANTUM_ENABLE_MSVC_SPEEDUP
 #define ENCHANTUM_ENABLE_MSVC_SPEEDUP 1
 #endif

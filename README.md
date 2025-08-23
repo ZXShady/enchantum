@@ -15,6 +15,8 @@ Key Features
 
   - Most efficient binary size wise.
   
+  - 0 Allocations
+
   - Supports:
        -  Scoped enums
        -  Unscoped C enums
@@ -51,9 +53,10 @@ Tested locally on Windows 10 with:
 Compiler Support: (Look at [CI](https://github.com/ZXShady/enchantum/actions))
   - GCC >= 9 
   - Clang >= 8
-  - MSVC >= 19.24 VS16.4 (Tested through godbolt)
+  - MSVC >= 19.24 VS16.4 (lower verions tested through godbolt)
 
 Tested through basic tests on godbolt since I could not install it on CI
+  - ICX >= 2021.1.2 (Tested through godbolt [test link](https://godbolt.org/z/5naTha56K))
   - NVC++ >= 22.7 (minimum on godbolt [test link](https://godbolt.org/z/xr7xr6Y6v))
 
 ---
@@ -169,9 +172,11 @@ There are several enum reflection libraries out there — so why choose **enchan
 - Supports wide strings.
 - Efficient executable binary size.
 - Null terminated strings.
+- 0 Allocations
 
 **Cons**
 - Compile times grow significantly with larger `MAGIC_ENUM_MAX_RANGE`.
+- No warnings for not fully reflected enums.
 
 ### conjure_enum
 
@@ -181,13 +186,18 @@ There are several enum reflection libraries out there — so why choose **enchan
 
 **Cons**
 
-*Note: Could not get this to compile locally. Based on the README, compile times are similar to or worse than magic_enum.*
+- Slow compilation speed
+- Bigger executable sizes
+- Non optimal algorithms
+- Allocations
+- No warnings for not fully reflected enums.
 
 ### simple_enum
 
 **Pros**
 - Faster compile times.
 - Functor based API.
+- 0 Allocations
 
 **Cons**
 - Requires specifying enum `first`/`last` values manually (intrusive, doesn't work well with third-party enums)
@@ -195,6 +205,7 @@ There are several enum reflection libraries out there — so why choose **enchan
 - Big binary size bloat.
 - No support for bitflags yet.
 - No support for null terminated strings.
+- No warnings for not fully reflected enums.
 
 ### enchantum
 
@@ -205,13 +216,14 @@ There are several enum reflection libraries out there — so why choose **enchan
 - Supports C++17.
 - Clean and Simple Functor based API `enchantum::to_string(E)` no `enchantum::to_string<E::V>()` since compile times are fast.
 - Features like disabling null termination if not needed and specifying common enum prefix for C style enums, and reflect '0' values for bit flag enums.
-- Supports all sort of enums (scoped,unscoped,C style unfixed underlying type,anonymous namespaced enums, enums with commas in their typename,etc...);
+- Supports all sort of enums (scoped,unscoped,C style unfixed underlying type,anonymous namespaced enums, enums with commas in their typename,etc..)
 - Most efficient object binary size and executable size.
 - Null terminated strings.
+- 0 Allocations
+- Compiler errors for not fully reflected enums.
 
 **Cons**
-- Compiler errors are incomprehensible if something goes wrong, needs a level 10 wizard to read them.
-- No support for wide strings (yet)
+- No support for wide strings.
 
 ---
 
@@ -228,12 +240,11 @@ Each compile time benchmark was run 10 times and averaged unless noted otherwise
 
 The enum members are from 0 to Count
 
-
-| Test Case       | Small      | Big          | Large Range | Ideal Range |
-|-----------------|------------|--------------|-------------|-------------|
-| Number of Enums | 200        | 32           | 200         | 100         |
-| Enum Range      | (-128,128) | (-256,256)   | (-1024,1024)| (0,50)      |
-| Values per Enum | 16         | 200          | 16          |  50         |
+|      Test Case         | Small      | Big          | Large Range | Ideal Range |
+|------------------------|------------|--------------|-------------|-------------|
+| Number of Enums        | 200        | 32           | 200         | 100         |
+| Enum Reflection Range  | (-128,128) | (-256,256)   | (-1024,1024)| (0,50)      |
+| Enum members from 0 to | 16         | 200          | 16          |  50         |
 
 
 ### Compile Time
@@ -242,24 +253,32 @@ All times in seconds (lower is better, bold is fastest). Compiled with `-O3` fir
 "Timeout" means it took more than 20 minutes and still did not finish
 
 **Notes**: numbers in `()` are with [`ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY`](docs/features.md/#enchantum_check_out_of_bounds_by) set to the default which is `2`.
-in short terms it is extra checks against not fully reflected enums which can be disbled by setting it to `0`
+in short terms it is extra compile time only checks against not fully reflected enums which can be disabled by setting it to `0`.
 
-| Compiler    | Test Case   | `enchantum`     | `magic_enum` | `simple_enum` |
-|-------------|-------------|-----------------|--------------|---------------|
-| **GCC**     | Small       | **6.0**  (9.3)  |  47          | 21.5          |
-|             | Big         | **2.7**  (4.6)  |  21          | 6.3           |
-|             | Large Range | **15.9** (45.1) |  Timeout     | 313           |
-|             | Ideal Range | 3        (4.2)  |  8.1         | **2.7**       |
-|                                                                         |
-| **Clang**   | Small       | **5.8**  (8.7)  |  47          | 14            |
-|             | Big         | **2.3**  (3.6)  |  18          | 4.4           |
-|             | Large Range | **15.1** (36.6) |  Timeout     | 96.3          |
-|             | Ideal Range | 2.9      (3.5)  |  8.7         | **2.3**       |
-|                                                                         |
-| **MSVC**    | Small       | **15.8** (50.7) |  80          | 186           |
-|             | Big         | **8.8**  (13.6) |  37          | 32.1          |
-|             | Large Range | **85.3** (265.1)|  Timeout     | Timeout       |
-|             | Ideal Range | 5.8      (18.1) |  17.9        | **4.7**       |
+Conjure enum was compiled with `FIX8_CONJURE_ENUM_MINIMAL` macro defined.
+
+| Compiler    | Test Case   | `enchantum`     | `magic_enum` | `simple_enum` | `conjure_enum` |
+|-------------|-------------|-----------------|--------------|---------------|----------------|
+| **GCC**     | Small       | **6.0**  (9.3)  |  47          | 21.5          | 97.1           |
+|             | Big         | **2.7**  (4.6)  |  21          | 6.3           | 81.7           |
+|             | Large Range | **15.9** (45.1) |  Timeout     | 313           | Unknown        |
+|             | Ideal Range | 3        (4.2)  |  8.1         | **2.7**       | 46.8           |
+|                                                                            |                |
+| **Clang**   | Small       | **5.8**  (8.7)  |  47          | 14            | 66.8           |
+|             | Big         | **2.3**  (3.6)  |  18          | 4.4           | 52.9           |
+|             | Large Range | **15.1** (36.6) |  Timeout     | 96.3          | Timeout        |
+|             | Ideal Range | 2.9      (3.5)  |  8.7         | **2.3**       | 32             |
+|                                                                                             |
+| **MSVC**    | Small       | **15.8** (50.7) |  80          | 186           | ERROR          |
+|             | Big         | **8.8**  (13.6) |  37          | 32.1          | 244.9          |
+|             | Large Range | **85.3** (265.1)|  Timeout     | Timeout       | Timeout        |
+|             | Ideal Range | 5.8      (18.1) |  17.9        | **4.7**       | 95.7           |
+
+`conjure_enum` in "Small" test case caused the compiler to emit
+
+```js
+fatal error C1060: compiler is out of heap space
+```
 
 ## Object File Sizes
 
@@ -271,12 +290,12 @@ could not get `simple_enum` in there since it does not have a single header vers
 
 Clang is only currently measured.
 
-| Compiler    | Test Case   | `enchantum`  | `magic_enum` | `simple_enum` |
-|-------------|-------------|--------------| ------------ |---------------|
-| **Clang**   | Small       | **275**      | 732          | 12070         |
-|             | Big         | **84**       | 1307         | 3847          |
-|             | Large Range | **275**      | Unknown      | 98366         |
-|             | Ideal Range | **299**      | 1051         | 1233          |
+| Compiler    | Test Case   | `enchantum`  | `magic_enum` | `simple_enum` | `conjure_enum` |
+|-------------|-------------|--------------| ------------ |---------------|----------------|
+| **Clang**   | Small       | **275**      | 732          | 12070         | 779            |
+|             | Big         | **84**       | 1307         | 3847          | 1400           |
+|             | Large Range | **275**      | Unknown      | 98366         | Unknown        |
+|             | Ideal Range | **299**      | 1051         | 1233          | 1123           |
 
 
 **Note**:
@@ -289,27 +308,26 @@ and this gets worse as the main enum name gets longer (e.g by putting the enums 
 but it also allows the library to do `O(1)` enum to string lookup for **any** enum, 
 which I don't necessarily think is worth it and compile faster.
 
+As for why `conjure_enum` although based on the same `magic_enum` implementation compile slower and larger binary sizes is due to unnecessary storing of enum namespaces in the binary. instead of storing `"Value"` it will store `"Namespace::Enum::Value"`.
 
 ### Executable Sizes
 
 Compiled the object files into their own executable.
 Lower is better, bold is smallest, all measurements are in kilobytes.
 
-| Compiler    | Test Case   | enchantum     | magic_enum     | simple_enum     |
-|-------------|-------------|---------------|----------------|-----------------|
-| **Clang**   | Small       | **40**        | 95             | 2897            |
-|             | Big         | **56**        | 168            | 944             |
-|             | Large Range | **40**        | Unknown        | 23200           |
-|             | Ideal Range | **46**        | 134            | 308             |
+| Compiler    | Test Case   | enchantum     | magic_enum     | simple_enum     | `conjure_enum` |
+|-------------|-------------|---------------|----------------|-----------------|----------------|
+| **Clang**   | Small       | **40**        | 95             | 2897            | 243            |
+|             | Big         | **56**        | 168            | 944             | 357            |
+|             | Large Range | **40**        | Unknown        | 23200           | Unknown        |
+|             | Ideal Range | **46**        | 134            | 308             | 305            |
 
 
 ---
 
-
-
 # CMake Integration
 
-The **cmake** file provides the target `enchantum::enchantum` since this library is header-only it is very simple to use you can copy and paste the files and add the include directory or use **cmake** and the library as a submodule. 
+The cmake file provides the target `enchantum::enchantum` since this library is header-only it is very simple to use you can copy and paste the files and add the include directory or use cmake and the library as a submodule. 
 
 ```cpp
 add_subdirectory("third_party/enchantum")
