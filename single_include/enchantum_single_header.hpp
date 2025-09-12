@@ -326,9 +326,18 @@ struct enum_traits {
 private:
   using T = std::underlying_type_t<E>;
 public:
+  using zxshady_enchantum_is_not_specialized_tag = void;
   static constexpr auto          max = details::enum_range_of<E>(1);
   static constexpr decltype(max) min = details::enum_range_of<E>(-1);
 };
+
+namespace details {
+  template<typename T,typename = void>
+  inline constexpr bool has_specialized_traits = true;
+  template<typename T>
+  inline constexpr bool has_specialized_traits<T, typename enum_traits<T>::zxshady_enchantum_is_not_specialized_tag> = false;
+
+} // namespace details
 
 } // namespace enchantum
 
@@ -497,13 +506,9 @@ namespace details {
 
     struct {
       decltype(elements_local) elements;
-      Strings                  strings;
-    } data = {elements_local, [](const char* const strings) {
-                Strings ret{};
-                __builtin_memcpy(ret.data(), strings, ret.size());
-                return ret;
-              }(elements_local.strings)};
-
+      Strings                  strings{};
+    } data = {elements_local};
+    __builtin_memcpy(data.strings.data(), elements_local.strings, data.strings.size());
     return data;
   } // namespace details
 
@@ -532,7 +537,7 @@ namespace details {
 namespace enchantum {
 
 namespace details {
-  constexpr auto enum_in_array_name(const std::string_view raw_type_name, const bool is_scoped_enum) noexcept
+  constexpr auto enum_in_array_name(const string_view raw_type_name, const bool is_scoped_enum) noexcept
   {
     if (is_scoped_enum)
       return raw_type_name;
@@ -592,7 +597,7 @@ namespace details {
       }
     }
   }
-
+  
   template<typename E, bool NullTerminated, auto Min, std::size_t... Is>
   constexpr auto reflect(std::index_sequence<Is...>) noexcept
   {
@@ -623,7 +628,7 @@ namespace details {
       // (anonymous namespace)::a
       // this is needed to determine whether the above are cast expression if 2 braces are
       // next to eachother then it is a cast but only for anonymoused namespaced enums
-      constexpr std::size_t index_check = !enum_in_array_name.empty() && enum_in_array_name.front() == '(' ? 1 : 0;
+      constexpr std::size_t index_check = enum_in_array_name.size() != 0 && enum_in_array_name[0] == '(' ? 1 : 0;
 
       details::parse_string<is_bitflag<E>>(
         /*index_check=*/index_check,
@@ -651,13 +656,9 @@ namespace details {
 
     struct {
       decltype(elements_local) elements;
-      Strings                  strings;
-    } data = {elements_local, [](const char* const strings) {
-                Strings ret{};
-                __builtin_memcpy(ret.data(), strings, ret.size());
-                return ret;
-              }(elements_local.strings)};
-
+      Strings                  strings{};
+    } data = {elements_local};
+    __builtin_memcpy(data.strings.data(), elements_local.strings, data.strings.size());
     return data;
   } // namespace details
 
@@ -708,10 +709,10 @@ namespace details {
     using E = decltype(Enum);
     // if scoped
     if constexpr (!std::is_convertible_v<E, std::underlying_type_t<E>>) {
-      return s.front() == '(' ? s.size() - SZC("()0") : s.rfind(':') - 1;
+      return s[0] == '(' ? s.size() - SZC("()0") : s.rfind(':') - 1;
     }
     else {
-      if (s.front() == '(') {
+      if (s[0] == '(') {
         s.remove_prefix(SZC("("));
         s.remove_suffix(SZC(")0"));
       }
@@ -868,16 +869,12 @@ namespace details {
 
     struct {
       decltype(elements_local) elements;
-      Strings                  strings;
-    } data = {elements_local, [](const char* const strings) {
-                Strings     ret{};
-                const auto  size     = ret.size();
-                auto* const ret_data = ret.data();
-                for (std::size_t i = 0; i < size; ++i)
-                  ret_data[i] = strings[i];
-                return ret;
-              }(elements_local.strings)};
-
+      Strings                  strings{};
+    } data = {elements_local};
+    const auto  size        = data.strings.size();
+    auto* const data_string = data.strings.data();
+    for (std::size_t i = 0; i < size; ++i)
+      data_string[i] = elements_local.strings[i];
     return data;
   }
 
@@ -922,7 +919,7 @@ namespace details {
                          SZC(__FUNCSIG__) - SZC("auto __cdecl enchantum::details::enum_in_array_name_size<>(void) noexcept")};
 
     if constexpr (is_scoped_enum<decltype(Enum)>) {
-      if (s.front() == '(') {
+      if (s[0] == '(') {
         s.remove_prefix(SZC("(enum "));
         s.remove_suffix(SZC(")0x0"));
         return s.size();
@@ -930,7 +927,7 @@ namespace details {
       return s.substr(0, s.rfind(':') - 1).size();
     }
     else {
-      if (s.front() == '(') {
+      if (s[0] == '(') {
         s.remove_prefix(SZC("(enum "));
         s.remove_suffix(SZC(")0x0"));
       }
@@ -1064,16 +1061,13 @@ namespace details {
 
     struct {
       decltype(elements_local) elements;
-      Strings                  strings;
-    } data = {elements_local, [](const char* const strings) {
-                Strings     ret{};
-                const auto  size     = ret.size();
-                auto* const ret_data = ret.data();
-                for (std::size_t i = 0; i < size; ++i)
-                  ret_data[i] = strings[i];
-                return ret;
-              }(elements_local.strings)};
+      Strings                  strings{};
+    } data = {elements_local};
 
+    const auto  size     = data.strings.size();
+    auto* const data_string = data.strings.data();
+    for (std::size_t i = 0; i < size; ++i)
+      data_string[i] = elements_local.strings[i];
     return data;
   }
 } // namespace details
@@ -1087,6 +1081,12 @@ namespace details {
 #include <type_traits>
 #include <utility>
 
+#ifndef ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY
+  #define ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY 2
+#endif
+#if ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY < 0
+  #error ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY must not be a negative number.
+#endif
 namespace enchantum {
 
 #ifdef __cpp_lib_to_underlying
@@ -1126,9 +1126,8 @@ namespace details {
     return (sizeof_enum * CHAR_BIT) - is_signed;
   }
 
-  template<typename E,typename StringLengthType,std::size_t Size>
-  struct FinalReflectionResult
-  {
+  template<typename E, typename StringLengthType, std::size_t Size>
+  struct FinalReflectionResult {
     std::array<E, Size> values{};
     // +1 for easier iteration on on last string
     std::array<StringLengthType, Size + 1> string_indices{};
@@ -1143,15 +1142,67 @@ namespace details {
                                                              Max,
                                                              std::is_signed_v<std::underlying_type_t<E>>)>{});
 
-  template<typename E,bool NullTerminated>
-  constexpr auto get_reflection_data() noexcept {
+  // Thanks https://en.cppreference.com/w/cpp/utility/intcmp.html
+  template<typename T, typename U>
+  constexpr bool cmp_less(const T t, const U u) noexcept
+  {
+    if constexpr (std::is_signed_v<T> == std::is_signed_v<U>)
+      return t < u;
+    else if constexpr (std::is_signed_v<T>)
+      return t < 0 || std::make_unsigned_t<T>(t) < u;
+    else
+      return u >= 0 && t < std::make_unsigned_t<U>(u);
+  }
+
+  template<typename U>
+  constexpr bool cmp_less(const bool t, const U u) noexcept
+  {
+    return details::cmp_less(int(t), u);
+  }
+
+  template<typename T>
+  constexpr bool cmp_less(const T t, const bool u) noexcept
+  {
+    return details::cmp_less(t, int(u));
+  }
+
+  constexpr bool cmp_less(const bool t, const bool u) noexcept
+  {
+    return int(t) < int(u);
+  }
+
+  template<typename T, typename U>
+  constexpr T ClampToRange(U u)
+  {
+    using L = std::numeric_limits<T>;
+    if (details::cmp_less((L::max)(), u))
+      return (L::max)();
+    if (details::cmp_less(u, (L::min)()))
+      return (L::min)();
+    return T(u);
+  }
+  template<typename E, bool NullTerminated>
+  constexpr auto get_reflection_data() noexcept
+  {
     constexpr auto elements = reflection_data_impl<E, NullTerminated>.elements;
     using StringLengthType = std::conditional_t<(elements.total_string_length < UINT8_MAX), std::uint8_t, std::uint16_t>;
 
+#if ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY >= 2
+    if constexpr (
+  #if __clang_major__ >= 20
+      has_fixed_underlying_type<E> &&
+  #endif
+      !details::has_specialized_traits<E>) {
+      static_assert(elements.valid_count == reflection_data_impl<E, NullTerminated,
+        details::ClampToRange<std::underlying_type_t<E>>(enum_traits<E>::min * ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY),
+        details::ClampToRange<std::underlying_type_t<E>>(enum_traits<E>::max * ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY)
+    >.elements.valid_count,
+          "enchantum has detected that this enum is not fully reflected. Please look at https://github.com/ZXShady/enchantum/blob/main/docs/features.md#enchantum_check_out_of_bounds_by for more information");
+    }
+#endif
     FinalReflectionResult<E, StringLengthType, elements.valid_count> ret;
-
-    std::size_t      i            = 0;
-    StringLengthType string_index = 0;
+    std::size_t                                                      i            = 0;
+    StringLengthType                                                 string_index = 0;
     for (; i < elements.valid_count; ++i) {
       ret.values[i] = static_cast<E>(elements.values[i]);
       // "aabc"
@@ -1167,13 +1218,11 @@ namespace details {
 #if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif
-
     }
     ret.string_indices[i] = string_index;
     return ret;
   }
 
-  
   template<typename E, bool NullTerminated>
   inline constexpr auto reflection_data_string_storage = details::reflection_data_impl<E, NullTerminated>.strings;
 
@@ -1220,12 +1269,11 @@ inline constexpr auto entries = []() {
   return ret;
 }();
 
-namespace details
-{
+namespace details {
   template<typename E>
   constexpr auto get_values() noexcept
   {
-    constexpr auto             enums = entries<E>;
+    constexpr auto              enums = entries<E>;
     std::array<E, enums.size()> ret{};
     const auto* const           enums_data = enums.data();
     for (std::size_t i = 0; i < ret.size(); ++i)
@@ -1233,10 +1281,10 @@ namespace details
     return ret;
   }
 
-  template<typename E,typename String,bool NullTerminated>
+  template<typename E, typename String, bool NullTerminated>
   constexpr auto get_names() noexcept
   {
-    constexpr auto                  enums = entries<E, std::pair<E, String>, NullTerminated>;
+    constexpr auto                   enums = entries<E, std::pair<E, String>, NullTerminated>;
     std::array<String, enums.size()> ret{};
     const auto* const                enums_data = enums.data();
     for (std::size_t i = 0; i < ret.size(); ++i)
@@ -1244,7 +1292,7 @@ namespace details
     return ret;
   }
 
-}
+} // namespace details
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 inline constexpr auto values = details::get_values<E>();
@@ -1872,7 +1920,7 @@ template<typename String = string, ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
   String name;
   T      check_value = 0;
   for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
-    const auto v = static_cast<T>(values<E>[i]);
+    const auto v = static_cast<T>(values_generator<E>[i]);
     if (v == (static_cast<T>(value) & v)) {
       const auto s = names_generator<E>[i];
       if (!name.empty())
