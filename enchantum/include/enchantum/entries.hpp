@@ -1,7 +1,9 @@
 #pragma once
 
 #include "details/string_view.hpp"
-#if defined(__NVCOMPILER)
+#if defined(__RESHARPER__)
+  #include "details/enchantum_resharper_cpp.hpp"
+#elif defined(__NVCOMPILER)
   #include "details/enchantum_nvcc.hpp"
 #elif defined(__clang__)
   #include "details/enchantum_clang.hpp"
