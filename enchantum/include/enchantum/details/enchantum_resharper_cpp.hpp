@@ -11,63 +11,70 @@
 namespace enchantum {
 namespace details {
 
-  template<bool IsBitFlag, typename IntType>
-    constexpr void parse_string(
-      const char*const*         strs,
-      const IntType       min,
-      const std::size_t   array_size,
-      const bool          null_terminated,
-      IntType* const      values,
-      std::uint8_t* const string_lengths,
-      char* const         strings,
-      std::size_t&        total_string_length,
-      std::size_t&        valid_count)
+  // WORKAROUND
+  // resharper seems to not copy values of arrays correctly in constexpr contexts.
+  // it copies the last element of the array to the WHOLE array
+  // giving the array a default value other than default-init fixes the issue
+  // as for why 'Count' is explicitly taken although it is equal to sizeof...(Is)
+  // is to workaround another bug, which seems to think sizeof...(Is) is 0
+  template<std::size_t Count, typename Value, std::size_t... Is>
+  constexpr auto rscpp_make_defaulted_array_of(const Value value, std::index_sequence<Is...>)
   {
-    for (std::size_t index = 0; index < array_size; ++index) {
-      if (const auto* str = strs[index])
-      {
-        if constexpr (IsBitFlag)
-          values[valid_count] = index == 0 ? IntType{} : static_cast<IntType>(IntType{1} << (index - 1));
-        else
-          values[valid_count] = static_cast<IntType>(min + static_cast<IntType>(index));
-        const auto len = __builtin_strlen(str);
-        string_lengths[valid_count++] = len;
-        for (std::size_t i = 0; i < len; ++i)
-          strings[total_string_length + i] = str[i];
-        total_string_length += len + null_terminated;
-      }
-    }
+    return std::array<Value, Count>{(Is, void(), value)...};
   }
+
 
   template<typename E, bool NullTerminated, auto Min, std::size_t... Is>
   constexpr auto reflect(std::index_sequence<Is...>) noexcept
   {
-    using MinT       = decltype(Min);
-    using T          = std::underlying_type_t<E>;
-    using Underlying = std::make_unsigned_t<std::conditional_t<std::is_same_v<bool, T>, unsigned char, T>>;
+    using MinT = decltype(Min);
+    using T    = std::underlying_type_t<E>;
+    using U    = std::make_unsigned_t<std::conditional_t<std::is_same_v<bool, T>, unsigned char, T>>;
+    constexpr bool        IsBitFlag    = is_bitflag<E>;
+    constexpr std::size_t max_elements = sizeof...(Is) + IsBitFlag;
 
-    constexpr auto elements_local = [](){
-    const auto strs = [](auto dependant) {
-      constexpr bool always_true = sizeof(dependant) != 0;
-      // dummy 0
-      if constexpr (always_true && is_bitflag<E>)
-        return std::array<const char*,sizeof...(Is)+1>{__rscpp_enumerator_name(E(!always_true)),__rscpp_enumerator_name(static_cast<E>(Underlying(1) << Is))...};
-      else
-        return std::array<const char*,sizeof...(Is)+std::size_t(!always_true)>{__rscpp_enumerator_name(static_cast<E>(static_cast<MinT>(Is) + Min))...};
-    }(0);
+    constexpr auto elements_local = [] {
+      const char* names[max_elements]{};
+      T           values[max_elements]{};
+      std::size_t count = 0;
 
-    details::ReflectStringReturnValue<std::underlying_type_t<E>, strs.size()> ret;
+      if constexpr (IsBitFlag) {
+        if (const auto* name = __rscpp_enumerator_name(E(0))) {
+          names[count]    = name;
+          values[count++] = 0;
+        }
 
-    details::parse_string<is_bitflag<E>>(
-        /*str = */ strs.data(),
-        /*min = */ static_cast<std::underlying_type_t<E>>(Min),
-        /*array_size = */ strs.size(),
-        /*null_terminated= */ NullTerminated,
-        /*enum_values= */ ret.values,
-        /*string_lengths= */ ret.string_lengths,
-        /*strings= */ ret.strings,
-        /*total_string_length*/ ret.total_string_length,
-        /*valid_count*/ ret.valid_count);
+        for (std::size_t i = 0; i < max_elements; ++i) {
+          const auto val  = T(U(1) << i);
+          const auto name = __rscpp_enumerator_name(E(val));
+          if (name) {
+            names[count]    = name;
+            values[count++] = val;
+          }
+        }
+      }
+      else {
+        for (std::size_t i = 0; i < max_elements; ++i) {
+          const auto val  = T(MinT(i) + Min);
+          const auto name = __rscpp_enumerator_name(E(val));
+          if (name) {
+            names[count]    = name;
+            values[count++] = val;
+          }
+        }
+      }
+
+      auto ret = ReflectStringReturnValue<T, max_elements>{};
+      for (std::size_t i = 0; i < count; ++i) {
+        const auto        str = names[i] + prefix_length_or_zero<E>;
+        const std::size_t len = __builtin_strlen(str);
+        ret.values[i]         = values[i];
+        ret.string_lengths[i] = len;
+        for (std::size_t j = 0; j < len; ++j)
+          ret.strings[ret.total_string_length + j] = str[j];
+        ret.total_string_length += len + (NullTerminated ? 1 : 0);
+      }
+      ret.valid_count = count;
       return ret;
     }();
 
@@ -77,15 +84,13 @@ namespace details {
       decltype(elements_local) elements;
       Strings                  strings{};
     } data = {elements_local};
-    const auto  size        = data.strings.size();
-    auto* const data_string = data.strings.data();
+
+    const auto size = data.strings.size();
+    const auto str  = data.strings.data();
     for (std::size_t i = 0; i < size; ++i)
-      data_string[i] = elements_local.strings[i];
+      str[i] = elements_local.strings[i];
     return data;
-  } // namespace details
+  }
 
 } // namespace details
-
 } // namespace enchantum
-
-#undef SZC

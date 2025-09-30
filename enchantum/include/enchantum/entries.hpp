@@ -39,7 +39,6 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 
 
 namespace details {
-
   template<typename Int>
   constexpr std::size_t get_index_sequence_max(
     const bool        is_bitflag,
@@ -106,10 +105,7 @@ namespace details {
     return details::cmp_less(t, int(u));
   }
 
-  constexpr bool cmp_less(const bool t, const bool u) noexcept
-  {
-    return int(t) < int(u);
-  }
+  constexpr bool cmp_less(const bool t, const bool u) noexcept { return int(t) < int(u); }
 
   template<typename T, typename U>
   constexpr T ClampToRange(U u)
@@ -149,8 +145,8 @@ namespace details {
 
       ret.string_indices[i] = string_index;
 #if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
-  // false positives from T += T
-  // it does not make sense.
+      // false positives from T += T
+      // it does not make sense.
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wconversion"
 #endif
@@ -172,44 +168,56 @@ namespace details {
 
   template<typename E, bool NullTerminated>
   inline constexpr auto reflection_string_indices = reflection_data<E, NullTerminated>.string_indices;
+
+  template<typename E, typename Pair, bool NullTerminated, typename Reflected = int>
+  constexpr auto get_entries()
+  {
+#if defined(__NVCOMPILER)
+    // nvc++ had issues with that and did not allow it. it just did not work after testing in godbolt and I don't know why
+    const auto reflected = details::reflection_data<E, NullTerminated>;
+    const auto strings   = details::reflection_data_string_storage<E, NullTerminated>.data();
+#else
+    constexpr auto reflected = details::reflection_data<std::remove_cv_t<E>, NullTerminated>;
+    constexpr auto strings   = details::reflection_data_string_storage<std::remove_cv_t<E>, NullTerminated>.data();
+#endif
+    constexpr auto size = sizeof(reflected.values) / sizeof(reflected.values[0]);
+    static_assert(size != 0,
+                  "enchantum failed to reflect this enum.\n"
+                  "Please read https://github.com/ZXShady/enchantum/blob/main/docs/limitations.md before opening an "
+                  "issue\n"
+                  "with your enum type with all its namespace/classes it is defined inside to help the creator debug "
+                  "the "
+                  "issues.");
+
+    const auto& indices = reflected.string_indices;
+#if defined(__RESHARPER__)
+    auto ret = details::rscpp_make_defaulted_array_of<size>(Pair{reflected.values[0],
+                                                                 string_view(strings + indices[0],
+                                                                             indices[1] - indices[0] - NullTerminated)},
+                                                            std::make_index_sequence<size>{});
+#else
+    std::array<Pair, size> ret{};
+#endif
+    auto* const ret_data = ret.data();
+    for (std::size_t i = 0; i < size; ++i) {
+      auto& [e, s]     = ret_data[i];
+      e                = reflected.values[i];
+      using StringView = std::remove_cv_t<std::remove_reference_t<decltype(s)>>;
+      s                = StringView(strings + indices[i], indices[i + 1] - indices[i] - NullTerminated);
+    }
+    return ret;
+  }
 } // namespace details
 
 #ifdef __cpp_concepts
-template<Enum E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true>
+template<Enum E, typename Pair = std::pair<E, enchantum::string_view>, bool NullTerminated = true>
 #else
-template<typename E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true, std::enable_if_t<std::is_enum_v<E>, int> = 0>
+template<typename E,
+         typename Pair                            = std::pair<E, enchantum::string_view>,
+         bool NullTerminated                      = true,
+         std::enable_if_t<std::is_enum_v<E>, int> = 0>
 #endif
-inline constexpr auto entries = []() {
-
-#if defined(__NVCOMPILER)
-  // nvc++ had issues with that and did not allow it. it just did not work after testing in godbolt and I don't know why
-  const auto reflected = details::reflection_data<E, NullTerminated>;
-  const auto strings   = details::reflection_data_string_storage<E, NullTerminated>.data();
-#else
-  const auto reflected = details::reflection_data<std::remove_cv_t<E>, NullTerminated>;
-  const auto strings   = details::reflection_data_string_storage<std::remove_cv_t<E>, NullTerminated>.data();
-#endif
-  using Pairs = std::array<Pair, sizeof(reflected.values) / sizeof(reflected.values[0])>;
-  Pairs          ret{};
-  constexpr auto size = ret.size();
-  static_assert(size != 0,
-                "enchantum failed to reflect this enum.\n"
-                "Please read https://github.com/ZXShady/enchantum/blob/main/docs/limitations.md before opening an "
-                "issue\n"
-                "with your enum type with all its namespace/classes it is defined inside to help the creator debug the "
-                "issues.");
-  auto* const ret_data = ret.data();
-
-
-  for (std::size_t i = 0; i < size; ++i) {
-    auto& [e, s]     = ret_data[i];
-    e                = reflected.values[i];
-    using StringView = std::remove_cv_t<std::remove_reference_t<decltype(s)>>;
-    s                = StringView(strings + reflected.string_indices[i],
-                   reflected.string_indices[i + 1] - reflected.string_indices[i] - NullTerminated);
-  }
-  return ret;
-}();
+inline constexpr auto entries = enchantum::details::get_entries<E, Pair, NullTerminated>();
 
 namespace details {
   template<typename E>
