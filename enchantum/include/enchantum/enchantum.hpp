@@ -1,10 +1,14 @@
 #pragma once
 
-#include "common.hpp"
-#include "details/optional.hpp"
-#include "details/string_view.hpp"
-#include "entries.hpp"
-#include "generators.hpp"
+// IWYU pragma: begin_exports
+#include "common.hpp" // IWYU pragma: export
+#include "details/optional.hpp" // IWYU pragma: export
+#include "details/string_view.hpp" // IWYU pragma: export
+#include "entries.hpp" // IWYU pragma: export
+#include "generators.hpp" // IWYU pragma: export
+#include "type_name.hpp" // IWYU pragma: export
+// IWYU pragma: end_exports
+
 #include <type_traits>
 #include <utility>
 
@@ -29,7 +33,7 @@ namespace details {
       const auto b_data = b.data();
 
       for (std::size_t i = 0; i < a_size; ++i)
-        if (!binary_pred(a_data[i],b_data[i]))
+        if (!binary_pred(a_data[i], b_data[i]))
           return false;
       return true;
     }

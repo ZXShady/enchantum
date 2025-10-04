@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <utility>
+
 #if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   // false positives from T += T
   // it does not make sense.

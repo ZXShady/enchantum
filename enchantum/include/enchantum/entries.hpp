@@ -18,6 +18,8 @@
 #include "common.hpp"
 #include <type_traits>
 #include <utility>
+#include <array>
+#include <climits>
 
 #ifndef ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY
   #define ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY 2

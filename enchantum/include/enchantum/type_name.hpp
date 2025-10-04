@@ -1,6 +1,7 @@
 #pragma once
 #include "details/string_view.hpp"
 #include <array>
+#include <cstddef>
 
 namespace enchantum {
 

@@ -8,6 +8,9 @@
 #include <type_traits>
 #include <utility>
 
+#if defined(__has_include) && __has_include(<bits/char_traits.h>)
+  #include <bits/char_traits.h>
+#endif
 #include "string_view.hpp"
 
 #define ENCAHNTUM_DETAILS_GCC_MAJOR __GNUC__
