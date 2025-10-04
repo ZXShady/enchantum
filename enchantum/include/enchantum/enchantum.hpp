@@ -1,11 +1,11 @@
 #pragma once
 
-#include "common.hpp"
-#include "details/optional.hpp"
-#include "details/string_view.hpp"
-#include "entries.hpp"
-#include "generators.hpp"
-#include <type_traits>
+#include "details/optional.hpp" // IWYU pragma: export
+#include "details/string_view.hpp" // IWYU pragma: export
+#include "common.hpp" // IWYU pragma: export
+#include "entries.hpp" // IWYU pragma: export
+#include "generators.hpp" // IWYU pragma: export
+#include <type_traits> 
 #include <utility>
 
 #if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10

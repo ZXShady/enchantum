@@ -2,8 +2,11 @@
 #include "common.hpp"
 #include "details/string.hpp"
 #include "details/string_view.hpp"
+#include "details/optional.hpp"
+
 #include "enchantum.hpp"
 #include "generators.hpp"
+#include <cstddef>
 
 #if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic push

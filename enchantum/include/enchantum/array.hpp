@@ -2,6 +2,7 @@
 #include "enchantum.hpp"
 #include <array>
 #include <stdexcept>
+#include <type_traits>
 
 namespace enchantum {
 

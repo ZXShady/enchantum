@@ -1,24 +1,23 @@
 #pragma once
-#include "type_name.hpp"
-#include "details/optional.hpp"
-#include "details/string.hpp"
-#include "details/string_view.hpp"
-#include "details/shared.hpp"
-#include "details/format_util.hpp"
-#include "generators.hpp"
-#include "algorithms.hpp"
-#include "array.hpp"
-#include "bitset.hpp"
-#include "bitflags.hpp"
-#include "bitwise_operators.hpp"
-#include "enchantum.hpp"
-#include "entries.hpp"
-#include "iostream.hpp"
-#include "next_value.hpp"
-#include "bitset.hpp"
+#include "type_name.hpp" // IWYU pragma: export:
+#include "details/optional.hpp" // IWYU pragma: export:
+#include "details/string.hpp" // IWYU pragma: export:
+#include "details/string_view.hpp" // IWYU pragma: export:
+#include "details/shared.hpp" // IWYU pragma: export:
+#include "details/format_util.hpp" // IWYU pragma: export:
+#include "generators.hpp" // IWYU pragma: export:
+#include "algorithms.hpp" // IWYU pragma: export:
+#include "array.hpp" // IWYU pragma: export:
+#include "bitset.hpp" // IWYU pragma: export:
+#include "bitflags.hpp" // IWYU pragma: export:
+#include "bitwise_operators.hpp" // IWYU pragma: export:
+#include "enchantum.hpp" // IWYU pragma: export:
+#include "entries.hpp" // IWYU pragma: export:
+#include "iostream.hpp" // IWYU pragma: export:
+#include "next_value.hpp" // IWYU pragma: export:
 
 #if __has_include(<fmt/format.h>)
-  #include "fmt_format.hpp"
+  #include "fmt_format.hpp" // IWYU pragma: export:
 #elif (__cplusplus >= 202002 || (defined(_MSVC_LANG) && _MSVC_LANG >= 202002)) && __has_include(<format>)
-  #include "std_format.hpp"
+  #include "std_format.hpp" // IWYU pragma: export:
 #endif

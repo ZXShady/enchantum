@@ -2,6 +2,7 @@
 
 #include "enchantum.hpp"
 #include <utility>
+#include <cstddef>
 
 namespace enchantum {
 
