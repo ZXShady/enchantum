@@ -129,9 +129,10 @@ namespace details {
     std::size_t&        valid_count)
   {
     (void)min; // not always used
+    constexpr std::size_t skip_after_comma = SZC(", ");
     for (std::size_t index = 0; index < array_size; ++index) {
       if (*str == '(') {
-        str = std::char_traits<char>::find(str + least_length_when_casting, UINT8_MAX, ',') + SZC(", ");
+        str = std::char_traits<char>::find(str + least_length_when_casting, UINT8_MAX, ',') + skip_after_comma;
       }
       else {
         str += least_length_when_value;
@@ -146,7 +147,7 @@ namespace details {
         for (std::size_t i = 0; i < commapos; ++i)
           strings[total_string_length++] = str[i];
         total_string_length += null_terminated;
-        str += commapos + SZC(", ");
+        str += commapos + skip_after_comma;
       }
     }
   }
