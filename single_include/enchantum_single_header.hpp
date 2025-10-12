@@ -873,10 +873,10 @@ namespace details {
       decltype(elements_local) elements;
       Strings                  strings{};
     } data = {elements_local};
-    const auto  size        = data.strings.size();
     auto* const data_string = data.strings.data();
-    for (std::size_t i = 0; i < size; ++i)
-      data_string[i] = elements_local.strings[i];
+    const auto* const src_string = elements_local.strings;
+    for (std::size_t i = 0, size = data.strings.size(); i < size; ++i)
+      data_string[i] = src_string[i];
     return data;
   }
 
@@ -1067,10 +1067,10 @@ namespace details {
       Strings                  strings{};
     } data = {elements_local};
 
-    const auto  size     = data.strings.size();
     auto* const data_string = data.strings.data();
-    for (std::size_t i = 0; i < size; ++i)
-      data_string[i] = elements_local.strings[i];
+    const auto* const src_string = elements_local.strings;
+    for (std::size_t i = 0, size = data.strings.size(); i < size; ++i)
+      data_string[i] = src_string[i];
     return data;
   }
 } // namespace details
