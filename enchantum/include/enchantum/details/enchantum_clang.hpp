@@ -59,6 +59,7 @@ namespace details {
     std::size_t&        valid_count)
   {
     (void)index_check;
+    constexpr std::size_t skip_after_comma = SZC(", ");
     for (std::size_t index = 0; index < array_size; ++index) {
 #if __clang_major__ > 12
       // check if cast (starts with '(')
@@ -68,7 +69,7 @@ namespace details {
       if (str[0] == '-' || (str[0] >= '0' && str[0] <= '9'))
 #endif
       {
-        str = __builtin_char_memchr(str + least_length_when_casting, ',', UINT8_MAX) + SZC(", ");
+        str = __builtin_char_memchr(str + least_length_when_casting, ',', UINT8_MAX) + skip_after_comma;
       }
       else {
         str += least_length_when_value;
@@ -80,7 +81,7 @@ namespace details {
         string_lengths[valid_count++] = static_cast<std::uint8_t>(commapos);
         __builtin_memcpy(strings + total_string_length, str, commapos);
         total_string_length += commapos + null_terminated;
-        str += commapos + SZC(", ");
+        str += commapos + skip_after_comma;
       }
     }
   }

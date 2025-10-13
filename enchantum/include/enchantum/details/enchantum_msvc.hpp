@@ -84,6 +84,7 @@ namespace details {
         ? sizeof(char32_t)*2-1 : sizeof(std::uint64_t)*2-1 - (sizeof(IntType)==8); // subtract 1 more from uint64_t since I am adding it in skip_if_cast_count
 #endif
     // clang-format on
+    constexpr std::size_t skip_comma = SZC(",");
     for (std::size_t index = 0; index < array_size; ++index) {
 #if _MSC_VER <= 1924
       // if it starts with the number 0 (because of 0x0) then it is a value
@@ -125,7 +126,7 @@ namespace details {
         string_lengths[valid_count++] = static_cast<std::uint8_t>(i);
 
         total_string_length += null_terminated;
-        str += i + SZC(",");
+        str += i + skip_comma;
       }
     }
   }
@@ -179,10 +180,10 @@ namespace details {
       Strings                  strings{};
     } data = {elements_local};
 
-    const auto  size     = data.strings.size();
     auto* const data_string = data.strings.data();
-    for (std::size_t i = 0; i < size; ++i)
-      data_string[i] = elements_local.strings[i];
+    const auto* const src_string = elements_local.strings;
+    for (std::size_t i = 0, size = data.strings.size(); i < size; ++i)
+      data_string[i] = src_string[i];
     return data;
   }
 } // namespace details
