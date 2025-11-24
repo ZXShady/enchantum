@@ -211,36 +211,33 @@ namespace details {
   }
 } // namespace details
 
-#ifdef __cpp_concepts
-template<Enum E, typename Pair = std::pair<E, enchantum::string_view>, bool NullTerminated = true>
-#else
-template<typename E,
-         typename Pair                            = std::pair<E, enchantum::string_view>,
-         bool NullTerminated                      = true,
-         std::enable_if_t<std::is_enum_v<E>, int> = 0>
-#endif
-inline constexpr auto entries = enchantum::details::get_entries<E, Pair, NullTerminated>();
-
 namespace details {
   template<typename E>
   constexpr auto get_values() noexcept
   {
-    constexpr auto              enums = entries<E>;
-    std::array<E, enums.size()> ret{};
-    const auto* const           enums_data = enums.data();
-    for (std::size_t i = 0; i < ret.size(); ++i)
-      ret[i] = enums_data[i].first;
-    return ret;
+#if defined(__NVCOMPILER)
+    return details::reflection_data<E, true>.values;
+#else
+    return details::reflection_data<std::remove_cv_t<E>, true>.values;
+#endif
   }
 
   template<typename E, typename String, bool NullTerminated>
   constexpr auto get_names() noexcept
   {
-    constexpr auto                   enums = entries<E, std::pair<E, String>, NullTerminated>;
-    std::array<String, enums.size()> ret{};
-    const auto* const                enums_data = enums.data();
-    for (std::size_t i = 0; i < ret.size(); ++i)
-      ret[i] = enums_data[i].second;
+#if defined(__NVCOMPILER)
+    const auto strings   = details::reflection_data_string_storage<E, NullTerminated>.data();
+    const auto indices   = details::reflection_data<E, NullTerminated>.string_indices;
+#else
+    constexpr auto strings   = details::reflection_data_string_storage<std::remove_cv_t<E>, NullTerminated>.data();
+    constexpr auto indices   = details::reflection_data<std::remove_cv_t<E>, NullTerminated>.string_indices;
+#endif
+    constexpr auto size      = indices.size() - 1;
+
+    std::array<String, size> ret{};
+    for (std::size_t i = 0; i < size; ++i) {
+      ret[i] = String(strings + indices[i], indices[i + 1] - indices[i] - NullTerminated);
+    }
     return ret;
   }
 
@@ -256,14 +253,26 @@ template<typename E, typename String = string_view, bool NullTerminated = true, 
 #endif
 inline constexpr auto names = details::get_names<E, String, NullTerminated>();
 
-template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-inline constexpr auto min = entries<E>.front().first;
+
+#ifdef __cpp_concepts
+template<Enum E, typename Pair = std::pair<E, enchantum::string_view>, bool NullTerminated = true>
+#else
+template<typename E,
+         typename Pair                            = std::pair<E, enchantum::string_view>,
+         bool NullTerminated                      = true,
+         std::enable_if_t<std::is_enum_v<E>, int> = 0>
+#endif
+inline constexpr auto entries = enchantum::details::get_entries<E, Pair, NullTerminated>();
+
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-inline constexpr auto max = entries<E>.back().first;
+inline constexpr auto min = values<E>.front();
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-inline constexpr std::size_t count = entries<E>.size();
+inline constexpr auto max = values<E>.back();
+
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+inline constexpr std::size_t count = values<E>.size();
 
 
 template<typename E>
@@ -286,10 +295,10 @@ inline constexpr bool is_contiguous = static_cast<std::size_t>(
 template<typename E>
 inline constexpr bool is_contiguous_bitflag = [](const auto is_bitflag) {
   if constexpr (is_bitflag.value) {
-    constexpr auto& enums = entries<E>;
+    constexpr auto& enums = values<E>;
     using T               = std::underlying_type_t<E>;
     for (auto i = std::size_t{has_zero_flag<E>}; i < enums.size() - 1; ++i)
-      if (T(enums[i].first) << 1 != T(enums[i + 1].first))
+      if (T(enums[i]) << 1 != T(enums[i + 1]))
         return false;
     return true;
   }

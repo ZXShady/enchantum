@@ -8,6 +8,7 @@
 #include "generators.hpp" // IWYU pragma: export
 #include "type_name.hpp" // IWYU pragma: export
 // IWYU pragma: end_exports
+#include "details/algorithms.hpp"
 
 #include <type_traits>
 #include <utility>
@@ -81,10 +82,7 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
     return true;
   }
   else {
-    for (const auto v : values_generator<E>)
-      if (static_cast<T>(v) == value)
-        return true;
-    return false;
+    return details::binary_search(values<E>, static_cast<E>(value));
   }
 }
 
@@ -153,9 +151,8 @@ namespace details {
         }
       }
       else {
-        for (std::size_t i = 0; i < count<E>; ++i) {
-          if (values_generator<E>[i] == e)
-            return optional<std::size_t>(i);
+        if (const auto idx = details::binary_find_index(values<E>, e); idx != static_cast<std::size_t>(-1)) {
+          return optional<std::size_t>(idx);
         }
       }
       return optional<std::size_t>();
