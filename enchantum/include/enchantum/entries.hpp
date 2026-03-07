@@ -16,10 +16,10 @@
 #endif
 
 #include "common.hpp"
-#include <type_traits>
-#include <utility>
 #include <array>
 #include <climits>
+#include <type_traits>
+#include <utility>
 
 #ifndef ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY
   #define ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY 2
@@ -256,6 +256,13 @@ template<typename E, typename String = string_view, bool NullTerminated = true, 
 #endif
 inline constexpr auto names = details::get_names<E, String, NullTerminated>();
 
+
+#define ENCHANTUM_DECLARE_EMPTY(ENUM)                                                                         \
+  template<>                                                                                                  \
+  inline constexpr auto enchantum::entries<ENUM> = ::std::array<std::pair<ENUM, ::enchantum::string_view>, 0> \
+  {                                                                                                           \
+  }
+
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 inline constexpr auto min = entries<E>.front().first;
 
@@ -277,10 +284,12 @@ inline constexpr bool has_zero_flag = [](const auto is_bitflag) {
 }(std::bool_constant<is_bitflag<E>>{});
 
 template<typename E>
-inline constexpr bool is_contiguous = static_cast<std::size_t>(
-                                        enchantum::to_underlying(max<E>) - enchantum::to_underlying(min<E>)) +
-    1 ==
-  count<E>;
+inline constexpr bool is_contiguous = []() {
+  if constexpr (count<E> == 0)
+    return false;
+  else
+    return static_cast<std::size_t>(enchantum::to_underlying(max<E>) - enchantum::to_underlying(min<E>)) + 1 == count<E>;
+}();
 
 
 template<typename E>

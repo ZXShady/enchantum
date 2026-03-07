@@ -6,18 +6,17 @@ If you face any issues while using the library don't hesistate to open up an iss
 
 ## Forward Declared Enums
 
-This library cannot reflect on forward declared enums you will get a `static_assert` error.
+This library cannot reflect automaticly on forward declared enums you will get a `static_assert` error.
 
 The reason is to avoid [ODR](https://cppreference.com/w/cpp/language/definition.html) issues, where you reflect on a forward declared enum in one translation unit then reflect the full definition in another unit you will face [ODR](https://cppreference.com/w/cpp/language/definition.html) issues.
 
-But however this disallows reflection of empty enums.
+But however this disallows automatic detection of empty enums.
 
 ```cpp
 enum class Empty {};
 ```
 
-`Empty` cannot be reflected as a consequence of disabling forward declared enums.
-
+if you have an empty enum with no members and you wish to build a generic library using enchantum algorithms then you can use the [ENCHANTUM_DECLARE_EMPTY](/features.md#enchantum_declare_empty) macro to declare the enum as empty.
 ## Enum Range
 
 Enum values must be in the range [`ENCHANTUM_MIN_RANGE`,`ENCHANTUM_MAX_RANGE`] 
