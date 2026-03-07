@@ -25,7 +25,7 @@ Quick Reference
   - [is_contiguous_bitflag](#is_contiguous_bitflag)
   - [enum_traits](#enum_traits)
   - [BinaryPredicate](#binary_predicate)
-
+  
 **Functions**:
   - [to_string](#to_string)
   - [to_string_bitflag](#to_string_bitflag)
@@ -63,13 +63,13 @@ Quick Reference
 **Macros**:
   - [ENCHANTUM_DEFINE_BITWISE_FOR](#enchantum_define_bitwise_for)
   - [ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY](#enchantum_check_out_of_bounds_by)
+  - [ENCHANTUM_DECLARE_EMPTY](#enchantum_declare_empty)
   - [ENCHANTUM_ASSERT](#enchantum_assert)
   - [ENCHANTUM_THROW](#enchantum_throw)
   - [ENCHANTUM_ENABLE_MSVC_SPEEDUP](#enchantum_enable_msvc_speedup)
   - [ENCHANTUM_OPTIONAL](#enchantum_optional)
   - [ENCHANTUM_STRING](#enchantum_string)
   - [ENCHANTUM_STRING_VIEW](#enchantum_string_view)
-
 
 # Concepts
 ## Enum
@@ -1622,6 +1622,55 @@ enum class A : int {
 };
 // an assertion inside count<A> fires telling you that enchantum did not fully reflect this enum 
 static_assert(enchantum::count<A> == 2); // does not compile
+```
+
+
+### ENCHANTUM_DECLARE_EMPTY
+
+Thanks [DNKpp](https://github.com/DNKpp) for the idea, added by issue [#23](https://github.com/ZXShady/enchantum/issues/23)
+
+
+- **Description**: 
+A macro that tells enchantum that this enum has no members which causes
+- **Note** This macro for now must be declared in the global namespace, this restriction will be lifted in a next veresion
+
+* `count<E>` to be always 0
+* `to_string` and it's scoped counterpart to always fail and return an empty string
+* `cast<E>` and and it's scoped counterpart,`enum_to_index`,`index_to_enum<E>` to always fail and return an empty optional
+* `contains<E>` and it's scoped counterpart to always fail and return `false`
+* `entries<E>`,`names<E>`,`values<E>` and their optimized generator counterparts to always have `size()` return 0, and have `begin()` == `end()` therefore any iteration will exist instantly on them and calling `operator[]` with any index is undefined behavior.
+* instianstating `min<E>` or `max<E>` on empty enums will cause a hard error and not a SFINAE one.
+
+```cpp
+// defined in header `entries.hpp`
+#define ENCHANTUM_DECLARE_EMPTY(Enum) /*impl*/
+```
+
+- **Example:**
+```cpp
+#include <enchantum/enchantum.hpp>
+enum class Empty {};
+ENCHANTUM_DECLARE_EMPTY(Empty);
+
+template<typename T>
+void some_generic_algo(T e) 
+{
+  std::string_view string = enchantum::to_string(e);
+  if(string.empty())
+    return;
+  // continue with algorithm
+}
+
+enum class Colors 
+{
+  Red,Green
+};
+
+int main ()
+{
+  some_generic_algo(Colors::Red); // works and compiles
+  some_generic_algo(Empty{}); // works and compiles instead of having a sstatic_assert error
+}
 ```
 
 ### ENCHANTUM_ASSERT
