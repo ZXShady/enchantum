@@ -37,8 +37,7 @@ jobs:
           - { name: Ubuntu GCC 13,    os: ubuntu-latest, compiler: gcc, version: 13, flags: "-DCMAKE_CXX_COMPILER=g++" ,supports_cpp20: 'true'}
           - { name: Ubuntu GCC 14,    os: ubuntu-latest, compiler: gcc, version: 14, flags: "-DCMAKE_CXX_COMPILER=g++" ,supports_cpp20: 'true'}
           
-          #    Cannot install ATM
-          # - { name: Ubuntu GCC 15,    os: ubuntu-latest, compiler: gcc, version: 15, flags: "-DCMAKE_CXX_COMPILER=g++" }
+          - { name: Ubuntu GCC 15,    os: ubuntu-latest, compiler: gcc, version: 15, flags: "-DCMAKE_CXX_COMPILER=g++" }
           
           - { name: Ubuntu Clang 9,  os: ubuntu-22.04, compiler: clang, version: 9, flags: "-DCMAKE_CXX_COMPILER=clang++" ,supports_cpp20: 'false'}
 
@@ -55,8 +54,7 @@ jobs:
           - { name: Ubuntu Clang 19,  os: ubuntu-latest, compiler: clang, version: 19, flags: "-DCMAKE_CXX_COMPILER=clang++" ,supports_cpp20: 'true'}
           - { name: Ubuntu Clang 20,  os: ubuntu-latest, compiler: clang, version: 20, flags: "-DCMAKE_CXX_COMPILER=clang++" ,supports_cpp20: 'true'}
           
-          #  Disabled since it cannot be installed ATM
-          #- { name: Ubuntu Clang 21,  os: ubuntu-latest, compiler: clang, version: 21, flags: "-DCMAKE_CXX_COMPILER=clang++" }
+          - { name: Ubuntu Clang 21,  os: ubuntu-latest, compiler: clang, version: 21, flags: "-DCMAKE_CXX_COMPILER=clang++" }
         
     steps:
       - name: Checkout Code
