@@ -34,7 +34,7 @@ namespace details {
     if constexpr (is_scoped_enum<decltype(Enum)>) {
       if (s[0] == '(') {
         s.remove_prefix(SZC("(enum "));
-        s.remove_suffix(SZC(")0x0"));
+        s.remove_suffix(s.size() - s.find(')'));
         return s.size();
       }
       return s.substr(0, s.rfind(':') - 1).size();
@@ -42,7 +42,7 @@ namespace details {
     else {
       if (s[0] == '(') {
         s.remove_prefix(SZC("(enum "));
-        s.remove_suffix(SZC(")0x0"));
+        s.remove_suffix(s.size() - s.find(')'));
       }
       if (const auto pos = s.rfind(':'); pos != s.npos)
         return pos - 1;
