@@ -49,8 +49,7 @@ Quick Reference
   - [entries_generator](#entries_generator)
   - [names_generator](#names_generator)
   - [values_generator](#values_generator)
-  - [max](#max)
-  - [min](#min)
+  - [min/max](#minmax)
   - [count](#count)
   - [value_ors](#value_ors)
   - [type_name](#type_name)
@@ -566,28 +565,28 @@ constexpr std::optional<E> cast_bitflag(E value) noexcept;
 **Description**:
 These functions attempt to convert a delimited string or a raw enum value into a valid BitFlagEnum value.
 
-1. String to Bitflag (custom comparator)
+1. String to bit flag enum (custom comparator)
     Parses a delimited string of flag names and combines the corresponding enum values. A custom binary predicate is used to compare string segments.
 
-2. String to Bitflag
-    Same as (1) but uses == for name comparison.
+2. String to bit flag enum
+    Same as (1) but uses `==` for name comparison.
 
 3. Enum value safe cast
-    Validates whether the given BitFlagEnum value consists only of known valid flag combinations.
+    Validates whether the given `BitFlagEnum` value consists only of known valid flag combinations.
 
 **Parameters**:
 
 `name`: The string containing flag names, separated by the sep character.
 
-`sep`: A character used to delimit individual flag names (default: '|').
+`sep`: A character used to delimit individual flag names with default '|'.
 
 `binary_pred`: A predicate to compare the input string segments to the enum `names<E>`.
 
 `value`: An enum value to validate as a valid bitflag combination.
 
-**Returns**:
+**Returns**: 
 
-An `std::optional<E>` containing the constructed bitflag enum if valid; otherwise, `std::nullopt`.
+a `std::optional<E>` containing the constructed bitflag enum if valid; otherwise, `std::nullopt`.
 
 **Example**:
 ```cpp 
@@ -622,44 +621,33 @@ assert(enchantum::cast_bitflag(Permissions::Read | Permissions::Execute).has_val
 assert(!enchantum::cast_bitflag(static_cast<Permissions>(1 << 3)).has_value());
 ```
 
-### `min`
+### `min`/`max`
 
 ```cpp
+// defined in header `entries.hpp`
+
 template<Enum E>
 inline constexpr E min;
-```
 
-**Description**:  
-  Gives the minimum enum value
-
-**Example**:
-  ```cpp
-  enum class Status { Ok = -1, Error = 1, Unknown = 2 };
-
-  auto minValue = enchantum::min<Status>; // Status::Ok
-  std::cout << static_cast<int>(minValue) << std::endl;  // Outputs: -1
-  ```
-
----
-
-### `max`
-
-```cpp
 template<Enum E>
 inline constexpr E max;
 ```
 
 **Description**:  
-  Gives the maximum enum value
+  Gives the minimum and maximum enum values respectively
 
 **Example**:
 ```cpp
-#include <enchantum/enchantum.hpp>
+#include <enchantum/entries.hpp>
+enum class Status { Ok = -1, Error = 1, Unknown = 2 };
 
-enum class Status { Ok = -1, Error = 1, Unknown = 53 };
+int main() {
+  auto minValue = enchantum::min<Status>; // Status::Ok
+  std::cout << static_cast<int>(minValue) << std::endl;  // Outputs: -1
 
-auto maxValue = enchantum::max<Status>; // Status::Unknown
-std::cout << static_cast<int>(maxValue) << std::endl;  // Outputs: 53
+  auto maxValue = enchantum::max<Status>; // Status::Unknown
+  std::cout << static_cast<int>(maxValue) << std::endl;  // Outputs: 2
+}
 ```
 
 ---
@@ -882,7 +870,7 @@ inline constexpr /*implementation details*/ values_generator;
 **Description**:  
   Gives a generating iteratable object for enum values.
   This is different than `values`, since it does not store the values it creates them on the fly.
-  In general if you don't need actual storage and addressability of the enum values but merely iterate on them use the `values_generator` variable instead it yeilds better binary sizes.
+  In general if you don't need actual storage and addressability of the enum values but merely iterate on them use the `values_generator` variable instead it yeilds better binary sizes and runtime speed.
 
 > Example
 ```cpp
@@ -905,7 +893,7 @@ inline constexpr /*implementation details*/ names_generator;
 **Description**:  
   Gives a generating iteratable object for enum names.
   This is different than `names`, since it does not store the names it creates them on the fly.
-  In general if you don't need actual storage and addressability of the enum names but merely iterate on them use the `names_generator` variable instead it yeilds better binary sizes.
+  In general if you don't need actual storage and addressability of the enum names but merely iterate on them use the `names_generator` variable instead it yeilds better binary sizes and runtime speed.
 
 
 > Example
@@ -932,7 +920,7 @@ inline constexpr /*implementation details*/ entries_generator;
 **Description**:  
   Gives a generating iteratable object for enum names.
   This is different than `entries`, since it does not store the entries it creates the them on the fly.
-  In general if you don't need actual storage and addressability of the enum entries but merely iterate on them use the `entries_generator` variable instead it yeilds better binary sizes.
+  In general if you don't need actual storage and addressability of the enum entries but merely iterate on them use the `entries_generator` variable instead it yeilds better binary sizes and runtime speed.
 
 > Example
 ```cpp
@@ -1632,14 +1620,16 @@ Thanks [DNKpp](https://github.com/DNKpp) for the idea, added by issue [#23](http
 
 - **Description**: 
 A macro that tells enchantum that this enum has no members which causes
-- **Note** This macro for now must be declared in the global namespace, this restriction will be lifted in a next veresion
 
 * `count<E>` to be always 0
-* `to_string` and it's scoped counterpart to always fail and return an empty string
-* `cast<E>` and and it's scoped counterpart,`enum_to_index`,`index_to_enum<E>` to always fail and return an empty optional
-* `contains<E>` and it's scoped counterpart to always fail and return `false`
-* `entries<E>`,`names<E>`,`values<E>` and their optimized generator counterparts to always have `size()` return 0, and have `begin()` == `end()` therefore any iteration will exist instantly on them and calling `operator[]` with any index is undefined behavior.
-* instianstating `min<E>` or `max<E>` on empty enums will cause a hard error and not a SFINAE one.
+* `to_string`, and it's scoped counterpart to always fail and return an empty string
+* `cast<E>` and and it's scoped counterpart, `enum_to_index`, and `index_to_enum<E>` to always fail and return an empty optional
+* `contains<E>`, and it's scoped counterpart to always fail and return `false`
+* `entries<E>`, `names<E>`, and `values<E>` and their optimized generator counterparts to always have `size()` return 0, and have `begin()` == `end()` therefore any iteration will exist instantly on them and calling `operator[]` with any index is undefined behavior.
+* instantiating `min<E>` or `max<E>` on empty enums will cause a hard error and not a SFINAE one.
+
+**Note** This macro for now must be declared in the global namespace, this restriction will be lifted in a next veresion
+
 
 ```cpp
 // defined in header `entries.hpp`
@@ -1669,7 +1659,7 @@ enum class Colors
 int main ()
 {
   some_generic_algo(Colors::Red); // works and compiles
-  some_generic_algo(Empty{}); // works and compiles instead of having a sstatic_assert error
+  some_generic_algo(Empty{}); // works and compiles instead of having a static_assert error
 }
 ```
 

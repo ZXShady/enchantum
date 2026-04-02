@@ -26,9 +26,9 @@ Key Features
        -  `string <=> enum` conversions
        -  `enum <=> index` conversions
        -  enum validation functions like `cast` and `contains`
-       -  enum aware containers: `enchantum::bitset` and `enchantum::array`
+       -  enum aware containers adaptors like `enchantum::bitset` and `enchantum::array`
   - Extra features like:
-      - Scoped Functions
+      - Functions that output enums with their scope
       - Optional null terminator disabling
       - Optional prefix stripping for C-style enums
       - `0` values are reflected for bitflag enums 
@@ -54,8 +54,9 @@ Compiler Support: (Look at [CI](https://github.com/ZXShady/enchantum/actions))
   - GCC >= 9 
   - Clang >= 8
   - MSVC >= 19.24 VS16.4 (lower verions tested through godbolt)
+  - Resharper >= 2023
 
-Tested through basic tests on godbolt since I could not install it on CI
+Tested through basic tests on godbolt since I could not install it on CI, so support for them may not be the best.
   - ICX >= 2021.1.2 (Tested through godbolt [test link](https://godbolt.org/z/5naTha56K))
   - NVC++ >= 22.7 (minimum on godbolt [test link](https://godbolt.org/z/xr7xr6Y6v))
 
