@@ -9,6 +9,90 @@
 template<typename T>
 auto names_of = []() { static_assert(0 == sizeof(T)); };
 
+template<typename T>
+auto values_of = []() { static_assert(0 == sizeof(T)); };
+
+template<>
+std::array<std::string_view, 5> names_of<EnumUnderlyingsignedlong_longNoZero> = {"value_0","value_1","value_2","value_3","value_4"};
+template<>
+std::array<EnumUnderlyingsignedlong_longNoZero, 5> values_of<EnumUnderlyingsignedlong_longNoZero> = {EnumUnderlyingsignedlong_longNoZero::value_0,EnumUnderlyingsignedlong_longNoZero::value_1,EnumUnderlyingsignedlong_longNoZero::value_2,EnumUnderlyingsignedlong_longNoZero::value_3,EnumUnderlyingsignedlong_longNoZero::value_4};
+template<>
+std::array<std::string_view, 5> names_of<EnumUnderlyingsignedlong_long> = {"value_0","value_1","value_2","value_3","value_4"};
+template<>
+std::array<EnumUnderlyingsignedlong_long, 5> values_of<EnumUnderlyingsignedlong_long> = {EnumUnderlyingsignedlong_long::value_0,EnumUnderlyingsignedlong_long::value_1,EnumUnderlyingsignedlong_long::value_2,EnumUnderlyingsignedlong_long::value_3,EnumUnderlyingsignedlong_long::value_4};
+template<>
+std::array<std::string_view, 5> names_of<EnumUnderlyingunsignedlong_longNoZero> = {"value_0","value_1","value_2","value_3","value_4"};
+template<>
+std::array<EnumUnderlyingunsignedlong_longNoZero, 5> values_of<EnumUnderlyingunsignedlong_longNoZero> = {EnumUnderlyingunsignedlong_longNoZero::value_0,EnumUnderlyingunsignedlong_longNoZero::value_1,EnumUnderlyingunsignedlong_longNoZero::value_2,EnumUnderlyingunsignedlong_longNoZero::value_3,EnumUnderlyingunsignedlong_longNoZero::value_4};
+template<>
+std::array<std::string_view, 5> names_of<EnumUnderlyingunsignedlong_long> = {"value_0","value_1","value_2","value_3","value_4"};
+template<>
+std::array<EnumUnderlyingunsignedlong_long, 5> values_of<EnumUnderlyingunsignedlong_long> = {EnumUnderlyingunsignedlong_long::value_0,EnumUnderlyingunsignedlong_long::value_1,EnumUnderlyingunsignedlong_long::value_2,EnumUnderlyingunsignedlong_long::value_3,EnumUnderlyingunsignedlong_long::value_4};
+template<>
+std::array<std::string_view, 5> names_of<EnumUnderlyingsignedlongNoZero> = {"value_0","value_1","value_2","value_3","value_4"};
+template<>
+std::array<EnumUnderlyingsignedlongNoZero, 5> values_of<EnumUnderlyingsignedlongNoZero> = {EnumUnderlyingsignedlongNoZero::value_0,EnumUnderlyingsignedlongNoZero::value_1,EnumUnderlyingsignedlongNoZero::value_2,EnumUnderlyingsignedlongNoZero::value_3,EnumUnderlyingsignedlongNoZero::value_4};
+template<>
+std::array<std::string_view, 5> names_of<EnumUnderlyingsignedlong> = {"value_0","value_1","value_2","value_3","value_4"};
+template<>
+std::array<EnumUnderlyingsignedlong, 5> values_of<EnumUnderlyingsignedlong> = {EnumUnderlyingsignedlong::value_0,EnumUnderlyingsignedlong::value_1,EnumUnderlyingsignedlong::value_2,EnumUnderlyingsignedlong::value_3,EnumUnderlyingsignedlong::value_4};
+template<>
+std::array<std::string_view, 5> names_of<EnumUnderlyingunsignedlongNoZero> = {"value_0","value_1","value_2","value_3","value_4"};
+template<>
+std::array<EnumUnderlyingunsignedlongNoZero, 5> values_of<EnumUnderlyingunsignedlongNoZero> = {EnumUnderlyingunsignedlongNoZero::value_0,EnumUnderlyingunsignedlongNoZero::value_1,EnumUnderlyingunsignedlongNoZero::value_2,EnumUnderlyingunsignedlongNoZero::value_3,EnumUnderlyingunsignedlongNoZero::value_4};
+template<>
+std::array<std::string_view, 5> names_of<EnumUnderlyingunsignedlong> = {"value_0","value_1","value_2","value_3","value_4"};
+template<>
+std::array<EnumUnderlyingunsignedlong, 5> values_of<EnumUnderlyingunsignedlong> = {EnumUnderlyingunsignedlong::value_0,EnumUnderlyingunsignedlong::value_1,EnumUnderlyingunsignedlong::value_2,EnumUnderlyingunsignedlong::value_3,EnumUnderlyingunsignedlong::value_4};
+template<>
+std::array<std::string_view, 5> names_of<EnumUnderlyingsignedintNoZero> = {"value_0","value_1","value_2","value_3","value_4"};
+template<>
+std::array<EnumUnderlyingsignedintNoZero, 5> values_of<EnumUnderlyingsignedintNoZero> = {EnumUnderlyingsignedintNoZero::value_0,EnumUnderlyingsignedintNoZero::value_1,EnumUnderlyingsignedintNoZero::value_2,EnumUnderlyingsignedintNoZero::value_3,EnumUnderlyingsignedintNoZero::value_4};
+template<>
+std::array<std::string_view, 5> names_of<EnumUnderlyingsignedint> = {"value_0","value_1","value_2","value_3","value_4"};
+template<>
+std::array<EnumUnderlyingsignedint, 5> values_of<EnumUnderlyingsignedint> = {EnumUnderlyingsignedint::value_0,EnumUnderlyingsignedint::value_1,EnumUnderlyingsignedint::value_2,EnumUnderlyingsignedint::value_3,EnumUnderlyingsignedint::value_4};
+template<>
+std::array<std::string_view, 5> names_of<EnumUnderlyingunsignedintNoZero> = {"value_0","value_1","value_2","value_3","value_4"};
+template<>
+std::array<EnumUnderlyingunsignedintNoZero, 5> values_of<EnumUnderlyingunsignedintNoZero> = {EnumUnderlyingunsignedintNoZero::value_0,EnumUnderlyingunsignedintNoZero::value_1,EnumUnderlyingunsignedintNoZero::value_2,EnumUnderlyingunsignedintNoZero::value_3,EnumUnderlyingunsignedintNoZero::value_4};
+template<>
+std::array<std::string_view, 5> names_of<EnumUnderlyingunsignedint> = {"value_0","value_1","value_2","value_3","value_4"};
+template<>
+std::array<EnumUnderlyingunsignedint, 5> values_of<EnumUnderlyingunsignedint> = {EnumUnderlyingunsignedint::value_0,EnumUnderlyingunsignedint::value_1,EnumUnderlyingunsignedint::value_2,EnumUnderlyingunsignedint::value_3,EnumUnderlyingunsignedint::value_4};
+template<>
+std::array<std::string_view, 5> names_of<EnumUnderlyingsignedshortNoZero> = {"value_0","value_1","value_2","value_3","value_4"};
+template<>
+std::array<EnumUnderlyingsignedshortNoZero, 5> values_of<EnumUnderlyingsignedshortNoZero> = {EnumUnderlyingsignedshortNoZero::value_0,EnumUnderlyingsignedshortNoZero::value_1,EnumUnderlyingsignedshortNoZero::value_2,EnumUnderlyingsignedshortNoZero::value_3,EnumUnderlyingsignedshortNoZero::value_4};
+template<>
+std::array<std::string_view, 5> names_of<EnumUnderlyingsignedshort> = {"value_0","value_1","value_2","value_3","value_4"};
+template<>
+std::array<EnumUnderlyingsignedshort, 5> values_of<EnumUnderlyingsignedshort> = {EnumUnderlyingsignedshort::value_0,EnumUnderlyingsignedshort::value_1,EnumUnderlyingsignedshort::value_2,EnumUnderlyingsignedshort::value_3,EnumUnderlyingsignedshort::value_4};
+template<>
+std::array<std::string_view, 5> names_of<EnumUnderlyingunsignedshortNoZero> = {"value_0","value_1","value_2","value_3","value_4"};
+template<>
+std::array<EnumUnderlyingunsignedshortNoZero, 5> values_of<EnumUnderlyingunsignedshortNoZero> = {EnumUnderlyingunsignedshortNoZero::value_0,EnumUnderlyingunsignedshortNoZero::value_1,EnumUnderlyingunsignedshortNoZero::value_2,EnumUnderlyingunsignedshortNoZero::value_3,EnumUnderlyingunsignedshortNoZero::value_4};
+template<>
+std::array<std::string_view, 5> names_of<EnumUnderlyingunsignedshort> = {"value_0","value_1","value_2","value_3","value_4"};
+template<>
+std::array<EnumUnderlyingunsignedshort, 5> values_of<EnumUnderlyingunsignedshort> = {EnumUnderlyingunsignedshort::value_0,EnumUnderlyingunsignedshort::value_1,EnumUnderlyingunsignedshort::value_2,EnumUnderlyingunsignedshort::value_3,EnumUnderlyingunsignedshort::value_4};
+template<>
+std::array<std::string_view, 5> names_of<EnumUnderlyingsignedcharNoZero> = {"value_0","value_1","value_2","value_3","value_4"};
+template<>
+std::array<EnumUnderlyingsignedcharNoZero, 5> values_of<EnumUnderlyingsignedcharNoZero> = {EnumUnderlyingsignedcharNoZero::value_0,EnumUnderlyingsignedcharNoZero::value_1,EnumUnderlyingsignedcharNoZero::value_2,EnumUnderlyingsignedcharNoZero::value_3,EnumUnderlyingsignedcharNoZero::value_4};
+template<>
+std::array<std::string_view, 5> names_of<EnumUnderlyingsignedchar> = {"value_0","value_1","value_2","value_3","value_4"};
+template<>
+std::array<EnumUnderlyingsignedchar, 5> values_of<EnumUnderlyingsignedchar> = {EnumUnderlyingsignedchar::value_0,EnumUnderlyingsignedchar::value_1,EnumUnderlyingsignedchar::value_2,EnumUnderlyingsignedchar::value_3,EnumUnderlyingsignedchar::value_4};
+template<>
+std::array<std::string_view, 5> names_of<EnumUnderlyingunsignedcharNoZero> = {"value_0","value_1","value_2","value_3","value_4"};
+template<>
+std::array<EnumUnderlyingunsignedcharNoZero, 5> values_of<EnumUnderlyingunsignedcharNoZero> = {EnumUnderlyingunsignedcharNoZero::value_0,EnumUnderlyingunsignedcharNoZero::value_1,EnumUnderlyingunsignedcharNoZero::value_2,EnumUnderlyingunsignedcharNoZero::value_3,EnumUnderlyingunsignedcharNoZero::value_4};
+template<>
+std::array<std::string_view, 5> names_of<EnumUnderlyingunsignedchar> = {"value_0","value_1","value_2","value_3","value_4"};
+template<>
+std::array<EnumUnderlyingunsignedchar, 5> values_of<EnumUnderlyingunsignedchar> = {EnumUnderlyingunsignedchar::value_0,EnumUnderlyingunsignedchar::value_1,EnumUnderlyingunsignedchar::value_2,EnumUnderlyingunsignedchar::value_3,EnumUnderlyingunsignedchar::value_4};
+
 template<>
 std::array<std::string_view, 5> names_of<Color> = {"Aqua", "Purple", "Green", "Red", "Blue"};
 template<>
@@ -109,8 +193,6 @@ template<>
 std::array<std::string_view, 2> names_of<BoolEnumCStyle> = {"BoolEnumCStyle_False", "BoolEnumCStyle_True"};
 
 
-template<typename T>
-auto values_of = []() { static_assert(0 == sizeof(T)); };
 
 template<>
 auto values_of<Color> = std::array{Color::Aqua, Color::Purple, Color::Green, Color::Red, Color::Blue};

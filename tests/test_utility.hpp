@@ -360,6 +360,146 @@ enum BoolEnumCStyle : bool {
   BoolEnumCStyle_True
 };
 
+enum class EnumUnderlyingsignedlong_longNoZero : signed long long {
+  value_0 = 1,
+  value_1 = 2,
+  value_2 = 3,
+  value_3 = 4,
+  value_4 = 5,
+};
+enum class EnumUnderlyingsignedlong_long : signed long long {
+  value_0 = 0,
+  value_1 = 1,
+  value_2 = 2,
+  value_3 = 3,
+  value_4 = 4,
+};
+enum class EnumUnderlyingunsignedlong_longNoZero : unsigned long long {
+  value_0 = 1,
+  value_1 = 2,
+  value_2 = 3,
+  value_3 = 4,
+  value_4 = 5,
+};
+enum class EnumUnderlyingunsignedlong_long : unsigned long long {
+  value_0 = 0,
+  value_1 = 1,
+  value_2 = 2,
+  value_3 = 3,
+  value_4 = 4,
+};
+enum class EnumUnderlyingsignedlongNoZero : signed long {
+  value_0 = 1,
+  value_1 = 2,
+  value_2 = 3,
+  value_3 = 4,
+  value_4 = 5,
+};
+enum class EnumUnderlyingsignedlong : signed long {
+  value_0 = 0,
+  value_1 = 1,
+  value_2 = 2,
+  value_3 = 3,
+  value_4 = 4,
+};
+enum class EnumUnderlyingunsignedlongNoZero : unsigned long {
+  value_0 = 1,
+  value_1 = 2,
+  value_2 = 3,
+  value_3 = 4,
+  value_4 = 5,
+};
+enum class EnumUnderlyingunsignedlong : unsigned long {
+  value_0 = 0,
+  value_1 = 1,
+  value_2 = 2,
+  value_3 = 3,
+  value_4 = 4,
+};
+enum class EnumUnderlyingsignedintNoZero : signed int {
+  value_0 = 1,
+  value_1 = 2,
+  value_2 = 3,
+  value_3 = 4,
+  value_4 = 5,
+};
+enum class EnumUnderlyingsignedint : signed int {
+  value_0 = 0,
+  value_1 = 1,
+  value_2 = 2,
+  value_3 = 3,
+  value_4 = 4,
+};
+enum class EnumUnderlyingunsignedintNoZero : unsigned int {
+  value_0 = 1,
+  value_1 = 2,
+  value_2 = 3,
+  value_3 = 4,
+  value_4 = 5,
+};
+enum class EnumUnderlyingunsignedint : unsigned int {
+  value_0 = 0,
+  value_1 = 1,
+  value_2 = 2,
+  value_3 = 3,
+  value_4 = 4,
+};
+enum class EnumUnderlyingsignedshortNoZero : signed short {
+  value_0 = 1,
+  value_1 = 2,
+  value_2 = 3,
+  value_3 = 4,
+  value_4 = 5,
+};
+enum class EnumUnderlyingsignedshort : signed short {
+  value_0 = 0,
+  value_1 = 1,
+  value_2 = 2,
+  value_3 = 3,
+  value_4 = 4,
+};
+enum class EnumUnderlyingunsignedshortNoZero : unsigned short {
+  value_0 = 1,
+  value_1 = 2,
+  value_2 = 3,
+  value_3 = 4,
+  value_4 = 5,
+};
+enum class EnumUnderlyingunsignedshort : unsigned short {
+  value_0 = 0,
+  value_1 = 1,
+  value_2 = 2,
+  value_3 = 3,
+  value_4 = 4,
+};
+enum class EnumUnderlyingsignedcharNoZero : signed char {
+  value_0 = 1,
+  value_1 = 2,
+  value_2 = 3,
+  value_3 = 4,
+  value_4 = 5,
+};
+enum class EnumUnderlyingsignedchar : signed char {
+  value_0 = 0,
+  value_1 = 1,
+  value_2 = 2,
+  value_3 = 3,
+  value_4 = 4,
+};
+enum class EnumUnderlyingunsignedcharNoZero : unsigned char {
+  value_0 = 1,
+  value_1 = 2,
+  value_2 = 3,
+  value_3 = 4,
+  value_4 = 5,
+};
+enum class EnumUnderlyingunsignedchar : unsigned char {
+  value_0 = 0,
+  value_1 = 1,
+  value_2 = 2,
+  value_3 = 3,
+  value_4 = 4,
+};
 
 using namespace LongNamespaced::Namespace2;
 template<typename...>
@@ -381,7 +521,6 @@ using AllEnumsTestTypes = concat<
     UnderlyingTypeChar16_t,
     UnderlyingTypeChar32_t,
     UnderlyingTypeWChar_t,
-
     MinMaxValuesCStyle,
     BlockType,
     ContigNonZeroStartWith5CStyle,
@@ -397,6 +536,26 @@ using AllEnumsTestTypes = concat<
     Direction3D,
     Letters,
     CStyleFromA_To_G,
+    EnumUnderlyingsignedlong_longNoZero,
+    EnumUnderlyingsignedlong_long,
+    EnumUnderlyingunsignedlong_longNoZero,
+    EnumUnderlyingunsignedlong_long,
+    EnumUnderlyingsignedlongNoZero,
+    EnumUnderlyingsignedlong,
+    EnumUnderlyingunsignedlongNoZero,
+    EnumUnderlyingunsignedlong,
+    EnumUnderlyingsignedintNoZero,
+    EnumUnderlyingsignedint,
+    EnumUnderlyingunsignedintNoZero,
+    EnumUnderlyingunsignedint,
+    EnumUnderlyingsignedshortNoZero,
+    EnumUnderlyingsignedshort,
+    EnumUnderlyingunsignedshortNoZero,
+    EnumUnderlyingunsignedshort,
+    EnumUnderlyingsignedcharNoZero,
+    EnumUnderlyingsignedchar,
+    EnumUnderlyingunsignedcharNoZero,
+    EnumUnderlyingunsignedchar,
     Outer::Inner::Anon,
     Outer::Inner::CStyleAnon>>;
 
