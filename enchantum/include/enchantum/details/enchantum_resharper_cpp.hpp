@@ -44,7 +44,7 @@ namespace details {
           values[count++] = 0;
         }
 
-        for (std::size_t i = 0; i < max_elements; ++i) {
+        for (std::size_t i : { Is... }) {
           const auto val  = T(U(1) << i);
           const auto name = __rscpp_enumerator_name(E(val));
           if (name) {
