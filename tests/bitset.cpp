@@ -31,16 +31,21 @@ TEMPLATE_LIST_TEST_CASE("bitset identities", "[bitset]", AllEnumsTestTypes)
 
   SECTION("operator[]")
   {
+    const auto& cbitset = bitset;
     for (const auto value : enchantum::values<TestType>) {
       bitset[value] = true;
       REQUIRE(bitset.test(value));
+      REQUIRE(cbitset.test(value));
+
       bitset[value] = false;
       REQUIRE_FALSE(bitset.test(value));
+      REQUIRE_FALSE(cbitset.test(value));
     }
 
-    const auto& cbitset = bitset;
-    for (std::size_t i = 0; i < cbitset.size(); ++i)
+    for (std::size_t i = 0; i < cbitset.size(); ++i) {
+      REQUIRE_FALSE(bitset[i]);
       REQUIRE_FALSE(cbitset[i]);
+    }
   }
 
   SECTION("count")
@@ -114,10 +119,13 @@ TEST_CASE("bitset: to_string binary", "[bitset]")
 TEST_CASE("bitset: operator[] and reference access", "[bitset]")
 {
   enchantum::bitset<Color> colors;
+  const auto&              C_colors = colors;
 
   colors[Color::Purple] = true;
   REQUIRE(colors.test(Color::Purple));
+  REQUIRE(C_colors.test(Color::Purple));
 
   colors[Color::Purple] = false;
   REQUIRE_FALSE(colors.test(Color::Purple));
+  REQUIRE_FALSE(C_colors.test(Color::Purple));
 }

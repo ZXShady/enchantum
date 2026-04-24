@@ -70,9 +70,8 @@ public:
     return operator[](*enchantum::enum_to_index(index));
   }
 
-  constexpr bool test(const E pos)
+  constexpr bool test(const E pos) const
   {
-
     if (const auto i = enchantum::enum_to_index(pos))
       return test(*i);
     ENCHANTUM_THROW(std::out_of_range("enchantum::bitset::test(E pos,bool value) out of range exception"), pos);
