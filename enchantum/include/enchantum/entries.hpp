@@ -41,6 +41,7 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 
 
 namespace details {
+
   template<typename Int>
   constexpr std::size_t get_index_sequence_max(
     const bool        is_bitflag,
@@ -81,6 +82,12 @@ namespace details {
                                                              Min,
                                                              Max,
                                                              std::is_signed_v<std::underlying_type_t<E>>)>{});
+
+
+  template<typename E, auto Min, decltype(Min) Max>
+  inline constexpr bool has_a_value_in = details::is_out_of_range<E, Min>(
+    std::make_index_sequence<
+      details::get_index_sequence_max(false, has_fixed_underlying_type<E>, sizeof(E), Min, Max, std::is_signed_v<std::underlying_type_t<E>>)>{});
 
 
   // Thanks https://en.cppreference.com/w/cpp/utility/intcmp.html
@@ -124,20 +131,57 @@ namespace details {
   {
     constexpr auto elements = reflection_data_impl<E, NullTerminated>.elements;
     using StringLengthType = std::conditional_t<(elements.total_string_length < UINT8_MAX), std::uint8_t, std::uint16_t>;
-
 #if ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY >= 2
     if constexpr (
   #if __clang_major__ >= 20
       has_fixed_underlying_type<E> &&
   #endif
-      !details::has_specialized_traits<E>) {
+      !details::has_specialized_traits<E> && 
+      !is_bitflag<E> && 
+      !std::is_same_v<std::underlying_type_t<E>,bool>) {
+  #define ENCHANTUM_ERROR_STRING                                                    \
+    "enchantum has detected that this enum is not fully reflected. Please look at " \
+    "https://github.com/ZXShady/enchantum/blob/main/docs/"                          \
+    "features.md#enchantum_check_out_of_bounds_by "                                 \
+    "for more information"
+    // TODO: switch to new check for those 2 compilers
+  #if defined(__NVCOMPILER) || defined(__RESHARPER__)
       static_assert(elements.valid_count == reflection_data_impl<E, NullTerminated,
         details::ClampToRange<std::underlying_type_t<E>>(enum_traits<E>::min * ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY),
         details::ClampToRange<std::underlying_type_t<E>>(enum_traits<E>::max * ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY)
     >.elements.valid_count,
-          "enchantum has detected that this enum is not fully reflected. Please look at https://github.com/ZXShady/enchantum/blob/main/docs/features.md#enchantum_check_out_of_bounds_by for more information");
+          ENCHANTUM_ERROR_STRING);
+  #else
+      // check [min,max] * 2 but exluding [min,max]
+      using T = std::underlying_type_t<E>;
+
+      constexpr auto max = +enum_traits<E>::max;
+
+      constexpr auto scale = ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY;
+
+      constexpr auto tmax = std::numeric_limits<T>::max();
+
+      constexpr bool can_check_upper = max < tmax && max <= tmax / scale;
+
+      if constexpr (can_check_upper) {
+        constexpr bool upper_has_value = has_a_value_in<E, max + 1, max * scale>;
+
+        static_assert(!upper_has_value, ENCHANTUM_ERROR_STRING);
+        constexpr auto min = +enum_traits<E>::min;
+        constexpr auto tmin = std::numeric_limits<T>::min();
+        constexpr bool can_check_lower = min > tmin && min >=tmin / scale;
+        if constexpr (!upper_has_value && can_check_lower) {
+          if constexpr (min < 0)
+            static_assert(!has_a_value_in<E, min * scale, min - 1>, ENCHANTUM_ERROR_STRING);
+          else
+            static_assert(!has_a_value_in<E, min + 1, min * scale>, ENCHANTUM_ERROR_STRING);
+        }
+      }
+  #endif
     }
 #endif
+#undef ENCHANTUM_ERROR_STRING
+      
     FinalReflectionResult<E, StringLengthType, elements.valid_count> ret;
     std::size_t                                                      i            = 0;
     StringLengthType                                                 string_index = 0;

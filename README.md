@@ -260,20 +260,20 @@ Conjure enum was compiled with `FIX8_CONJURE_ENUM_MINIMAL` macro defined.
 
 | Compiler    | Test Case   | `enchantum`     | `magic_enum` | `simple_enum` | `conjure_enum` |
 |-------------|-------------|-----------------|--------------|---------------|----------------|
-| **GCC**     | Small       | **6.0**  (9.3)  |  47          | 21.5          | 97.1           |
-|             | Big         | **2.7**  (4.6)  |  21          | 6.3           | 81.7           |
-|             | Large Range | **15.9** (45.1) |  Timeout     | 313           | Unknown        |
-|             | Ideal Range | 3        (4.2)  |  8.1         | **2.7**       | 46.8           |
+| **GCC**     | Small       | **6.0**  (8.2)  |  47          | 21.5          | 97.1           |
+|             | Big         | **2.7**  (3.3)  |  21          | 6.3           | 81.7           |
+|             | Large Range | **15.9** (34.1) |  Timeout     | 313           | Unknown        |
+|             | Ideal Range | 3        (3.5)  |  8.1         | **2.7**       | 46.8           |
 |                                                                            |                |
-| **Clang**   | Small       | **5.8**  (8.7)  |  47          | 14            | 66.8           |
-|             | Big         | **2.3**  (3.6)  |  18          | 4.4           | 52.9           |
-|             | Large Range | **15.1** (36.6) |  Timeout     | 96.3          | Timeout        |
-|             | Ideal Range | 2.9      (3.5)  |  8.7         | **2.3**       | 32             |
+| **Clang**   | Small       | **5.8**  (8.3)  |  47          | 14            | 66.8           |
+|             | Big         | **2.3**  (3.1)  |  18          | 4.4           | 52.9           |
+|             | Large Range | **15.1** (26.7) |  Timeout     | 96.3          | Timeout        |
+|             | Ideal Range | 2.9      (3.8)  |  8.7         | **2.3**       | 32             |
 |                                                                                             |
-| **MSVC**    | Small       | **15.8** (50.7) |  80          | 186           | ERROR          |
-|             | Big         | **8.8**  (13.6) |  37          | 32.1          | 244.9          |
-|             | Large Range | **85.3** (265.1)|  Timeout     | Timeout       | Timeout        |
-|             | Ideal Range | 5.8      (18.1) |  17.9        | **4.7**       | 95.7           |
+| **MSVC**    | Small       | **15.8** (37.4) |  80          | 186           | ERROR          |
+|             | Big         | **8.8**  (10.3) |  37          | 32.1          | 244.9          |
+|             | Large Range | **85.3** (111.4)|  Timeout     | Timeout       | Timeout        |
+|             | Ideal Range | 5.8      (16)   |  17.9        | **4.7**       | 95.7           |
 
 `conjure_enum` in "Small" test case caused the compiler to emit
 

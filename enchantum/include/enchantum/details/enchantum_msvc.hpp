@@ -34,7 +34,7 @@ namespace details {
     if constexpr (is_scoped_enum<decltype(Enum)>) {
       if (s[0] == '(') {
         s.remove_prefix(SZC("(enum "));
-        s.remove_suffix(SZC(")0x0") + (sizeof(Enum)==8)); // MSVC adds a extra 0 at the end for some reason for 8 bit enums
+        s.remove_suffix(SZC(")0x0") + (sizeof(Enum) == 8)); // MSVC adds a extra 0 at the end for some reason for 8 bit enums
         return s.size();
       }
       return s.substr(0, s.rfind(':') - 1).size();
@@ -42,7 +42,7 @@ namespace details {
     else {
       if (s[0] == '(') {
         s.remove_prefix(SZC("(enum "));
-        s.remove_suffix(SZC(")0x0") + (sizeof(Enum) == 8)); // MSVC adds a extra 0 at the end for some reason for 8 bit enums  
+        s.remove_suffix(SZC(")0x0") + (sizeof(Enum) == 8)); // MSVC adds a extra 0 at the end for some reason for 8 bit enums
       }
       if (const auto pos = s.rfind(':'); pos != s.npos)
         return pos - 1;
@@ -55,6 +55,38 @@ namespace details {
   {
     //auto __cdecl f<class std::array<enum `anonymous namespace'::UnscopedAnon,32>{enum `anonymous-namespace'::UnscopedAnon
     return __FUNCSIG__ + SZC("auto __cdecl enchantum::details::var_name<");
+  }
+  template<typename IntType>
+  constexpr bool is_out_of_range_parse(const char*       str,
+                                       const bool        skip_work_if_neg,
+                                       const std::size_t least_length_when_casting,
+                                       const IntType     min,
+                                       const std::size_t array_size)
+  {
+    for (std::size_t index = 0; index < array_size; ++index) {
+#if _MSC_VER <= 1924
+      // if it starts with the number 0 (because of 0x0) then it is a value
+      // and you cannot start an enum name with a digit so this is safe
+      if (*str == '0') {
+#else
+      // if it starts with a '(' it is a cast!
+      if (*str == '(') {
+#endif
+        if (skip_work_if_neg != 0) {
+          const auto i = min + static_cast<IntType>(index);
+          str += least_length_when_casting + ((i < 0) * skip_work_if_neg);
+        }
+        else {
+          str += least_length_when_casting;
+        }
+        while (*str++ != ',')
+          /*intentionally empty*/;
+      }
+      else {
+        return true;
+      }
+    }
+    return false;
   }
 
   template<bool IsBitFlag, typename IntType>
@@ -179,12 +211,51 @@ namespace details {
       Strings                  strings{};
     } data = {elements_local};
 
-    const auto  size     = data.strings.size();
+    const auto  size        = data.strings.size();
     auto* const data_string = data.strings.data();
     for (std::size_t i = 0; i < size; ++i)
       data_string[i] = elements_local.strings[i];
     return data;
   }
+
+
+  template<typename E, auto Min, std::size_t... Is>
+  constexpr bool is_out_of_range(std::index_sequence<Is...>) noexcept
+  {
+    constexpr auto ArraySize = sizeof...(Is);
+    using MinT               = decltype(Min);
+    using Under              = std::underlying_type_t<E>;
+
+#if ENCHANTUM_ENABLE_MSVC_SPEEDUP
+    constexpr auto skip_work_if_neg = std::is_unsigned_v<Under> || sizeof(Under) <= 2 ? 0 :
+  // MSVC 19.31 and below don't cast int/unsigned int into `unsigned long long` (std::uint64_t)
+  // While higher versions do cast them
+  #if _MSC_VER <= 1931
+      sizeof(Under) == 4
+  #else
+      std::is_same_v<Under, char32_t>
+  #endif
+      ? sizeof(char32_t) * 2 - 1
+      : sizeof(std::uint64_t) * 2 - 1 -
+        (sizeof(Under) == 8); // subtract 1 more from uint64_t since I am adding it in skip_if_cast_count
+#else
+    constexpr auto skip_work_if_neg = false;
+#endif
+    const auto str           = details::var_name<static_cast<E>(static_cast<MinT>(Is) + Min)..., 0>();
+    const auto type_name_len = details::raw_type_name_func<E>().size() - 1;
+
+    return details::is_out_of_range_parse(
+      /*str = */ str,
+      skip_work_if_neg,
+#if _MSC_VER <= 1924
+      /*least_length_when_casting=*/SZC("0x0"),
+#else
+      /*least_length_when_casting=*/SZC("(enum ") + type_name_len + SZC(")0x0") + (sizeof(E) == 8),
+#endif
+      /*min = */ static_cast<std::underlying_type_t<E>>(Min),
+      /*array_size = */ ArraySize);
+  }
+
 } // namespace details
 } // namespace enchantum
 

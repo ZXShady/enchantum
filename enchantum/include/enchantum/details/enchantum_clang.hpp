@@ -43,6 +43,33 @@ namespace details {
     return __PRETTY_FUNCTION__ + SZC("auto enchantum::details::var_name() [Vs = <");
   }
 
+
+  constexpr bool is_out_of_range_parse(
+    std::size_t       index_check,
+    const char*       str,
+    const std::size_t least_length_when_casting,
+    const std::size_t array_size)
+  {
+    (void)index_check;
+    for (std::size_t index = 0; index < array_size; ++index) {
+#if __clang_major__ > 12
+      // check if cast (starts with '(')
+      if (str[index_check] == '(')
+#else
+      // check if it is a number or negative sign
+      if (str[0] == '-' || (str[0] >= '0' && str[0] <= '9'))
+#endif
+      {
+        str = __builtin_char_memchr(str + least_length_when_casting, ',', UINT8_MAX) + SZC(", ");
+      }
+      else {
+        return true;
+      }
+    }
+    return false;
+  }
+
+
   template<bool IsBitFlag, typename IntType>
   constexpr void parse_string(
     std::size_t         index_check,
@@ -84,7 +111,7 @@ namespace details {
       }
     }
   }
-  
+
   template<typename E, bool NullTerminated, auto Min, std::size_t... Is>
   constexpr auto reflect(std::index_sequence<Is...>) noexcept
   {
@@ -147,7 +174,30 @@ namespace details {
     } data = {elements_local};
     __builtin_memcpy(data.strings.data(), elements_local.strings, data.strings.size());
     return data;
-  } // namespace details
+  }
+
+  template<typename E, auto Min, std::size_t... Is>
+  constexpr bool is_out_of_range(std::index_sequence<Is...>) noexcept
+  {
+    using MinT       = decltype(Min);
+
+    constexpr auto ArraySize = sizeof...(Is);
+    const auto     str       = details::var_name<static_cast<E>(static_cast<MinT>(Is) + Min)...,0>();
+
+    constexpr auto enum_in_array_name = details::enum_in_array_name(raw_type_name<E>, is_scoped_enum<E>);
+    constexpr auto enum_in_array_len  = enum_in_array_name.size();
+    constexpr std::size_t index_check = enum_in_array_name.size() != 0 && enum_in_array_name[0] == '(' ? 1 : 0;
+    (void)enum_in_array_len; // not used until Clang 13
+    return details::is_out_of_range_parse(
+      /*index_check=*/index_check,
+      /*str = */ str,
+#if __clang_major__ > 12
+      /*least_length_when_casting=*/SZC("(") + enum_in_array_len + SZC(")0"),
+#else
+      /*least_length_when_casting=*/1,
+#endif
+      /*array_size = */ ArraySize);
+  } 
 
 } // namespace details
 

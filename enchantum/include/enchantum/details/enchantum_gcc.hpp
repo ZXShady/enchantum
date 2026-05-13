@@ -13,7 +13,7 @@
 #endif
 #include "string_view.hpp"
 
-#define ENCAHNTUM_DETAILS_GCC_MAJOR __GNUC__
+#define ENCHANTUM_DETAILS_GCC_MAJOR __GNUC__
 #if __GNUC__ <= 10
 // for out of bounds conversions for C style enums
   #pragma GCC diagnostic push
@@ -55,8 +55,8 @@ namespace details {
   template<auto V>
   constexpr auto gcc10_workaround() noexcept
   {
-    using E = decltype(V);
-    using T = std::underlying_type_t<E>;
+    using E               = decltype(V);
+    using T               = std::underlying_type_t<E>;
     constexpr auto prefix = SZC("constexpr auto enchantum::details::gcc10_workaround() [with auto V = ");
     constexpr auto begin  = __PRETTY_FUNCTION__ + prefix;
     if constexpr (begin[0] == '(') {
@@ -111,6 +111,18 @@ namespace details {
   constexpr auto var_name() noexcept
   {
     return __PRETTY_FUNCTION__ + SZC("constexpr auto enchantum::details::var_name() [with auto ...Vs = {");
+  }
+
+
+  constexpr bool is_out_of_range_parse(const char* str, const std::size_t least_length_when_casting, const std::size_t array_size)
+  {
+    for (std::size_t index = 0; index < array_size; ++index) {
+      if (*str == '(')
+        str = std::char_traits<char>::find(str + least_length_when_casting, UINT8_MAX, ',') + SZC(", ");
+      else
+        return true;
+    }
+    return false;
   }
 
 
@@ -202,13 +214,38 @@ namespace details {
     struct {
       decltype(elements_local) elements;
       Strings                  strings{};
-    } data = {elements_local};
+    } data                  = {elements_local};
     const auto  size        = data.strings.size();
     auto* const data_string = data.strings.data();
     for (std::size_t i = 0; i < size; ++i)
       data_string[i] = elements_local.strings[i];
     return data;
   }
+
+  template<typename E, auto Min, std::size_t... Is>
+  constexpr bool is_out_of_range(std::index_sequence<Is...>) noexcept
+  {
+    constexpr auto ArraySize = sizeof...(Is);
+    using Under              = std::underlying_type_t<E>;
+
+#if __GNUC__ <= 10
+    // GCC 10 does not have it
+  #define CAST(type, value) static_cast<type>(value)
+#else
+    // __builtin_bit_cast used to silence errors when casting out of unscoped enums range
+  #define CAST(type, value) __builtin_bit_cast(type, value)
+#endif
+    constexpr auto str = details::var_name<CAST(E, static_cast<Under>(static_cast<decltype(Min)>(Is) + Min))..., 0>();
+#undef CAST
+
+    constexpr auto length_of_enum_in_template_array_casting = details::length_of_enum_in_template_array_if_casting<E>();
+
+    return details::is_out_of_range_parse(
+      /*str = */ str,
+      /*least_length_when_casting=*/SZC("(") + length_of_enum_in_template_array_casting + SZC(")0"),
+      /*array_size = */ ArraySize);
+  }
+
 
 } // namespace details
 
