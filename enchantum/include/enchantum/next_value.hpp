@@ -19,12 +19,12 @@ namespace details {
     [[nodiscard]] constexpr optional<E> operator()(const E value, const std::ptrdiff_t n = 1) const noexcept
     {
       if (!enchantum::contains(value))
-        return optional<E>{};
+        return optional<E>();
 
       const auto index = static_cast<std::ptrdiff_t>(*enchantum::enum_to_index(value)) + (n * N);
       if (index >= 0 && index < static_cast<std::ptrdiff_t>(count<E>))
-        return optional<E>{values_generator<E>[static_cast<std::size_t>(index)]};
-      return optional<E>{};
+        return optional<E>(values_generator<E>[static_cast<std::size_t>(index)]);
+      return optional<E>();
     }
   };
 

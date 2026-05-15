@@ -120,6 +120,18 @@ namespace details {
     }
   }
 
+  constexpr const char* find_char(const char* s, const std::size_t count, const char c) noexcept
+  {
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+    return std::char_traits<char>::find(s, count, c);
+#else
+    for (std::size_t i = 0; i < count; ++i)
+      if (s[i] == c)
+        return s + i;
+    return nullptr;
+#endif
+  }
+
   template<typename E, E... Vs>
   constexpr auto var_name() noexcept
   {
@@ -131,7 +143,7 @@ namespace details {
   {
     for (std::size_t index = 0; index < array_size; ++index) {
       if (*str == '(')
-        str = std::char_traits<char>::find(str + least_length_when_casting, UINT8_MAX, ',') + SZC(", ");
+        str = details::find_char(str + least_length_when_casting, UINT8_MAX, ',') + SZC(", ");
       else
         return true;
     }
@@ -156,13 +168,11 @@ namespace details {
     (void)min; // not always used
     for (std::size_t index = 0; index < array_size; ++index) {
       if (*str == '(') {
-        str = std::char_traits<char>::find(str + least_length_when_casting, UINT8_MAX, ',') + SZC(", ");
+        str = details::find_char(str + least_length_when_casting, UINT8_MAX, ',') + SZC(", ");
       }
       else {
         str += least_length_when_value;
-        // although gcc implementation of std::char_traits::find is using a for loop internally
-        // copying the code of the function makes it way slower to compile, this was surprising.
-        const auto commapos = static_cast<std::size_t>(std::char_traits<char>::find(str, UINT8_MAX, ',') - str);
+        const auto commapos = static_cast<std::size_t>(details::find_char(str, UINT8_MAX, ',') - str);
         if (IsBitFlag)
           values[valid_count] = index == 0 ? IntType{} : static_cast<IntType>(IntType{1} << (index - 1));
         else

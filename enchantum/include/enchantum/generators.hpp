@@ -158,7 +158,12 @@ namespace details {
         return String(strings + p[this->index], p[this->index + 1] - p[this->index] - NullTerminated);
       }
 
-      [[nodiscard]] constexpr String operator[](const std::ptrdiff_t i) const noexcept { return *(*this + i); }
+      [[nodiscard]] constexpr String operator[](const std::ptrdiff_t i) const noexcept
+      {
+        auto it = *this;
+        it += i;
+        return *it;
+      }
     };
 
     [[nodiscard]] static constexpr auto begin() { return iterator{}; }
@@ -166,7 +171,9 @@ namespace details {
 
     [[nodiscard]] constexpr auto operator[](const std::size_t i) const noexcept
     {
-      return *(begin() + static_cast<std::ptrdiff_t>(i));
+      auto it = begin();
+      it += static_cast<std::ptrdiff_t>(i);
+      return *it;
     }
   };
 
@@ -202,7 +209,12 @@ namespace details {
         return dereference(std::integral_constant<bool, is_contiguous<E>>{},
                            std::integral_constant<bool, is_contiguous_bitflag<E>>{});
       }
-      [[nodiscard]] constexpr E operator[](const std::ptrdiff_t i) const noexcept { return *(*this + i); }
+      [[nodiscard]] constexpr E operator[](const std::ptrdiff_t i) const noexcept
+      {
+        auto it = *this;
+        it += i;
+        return *it;
+      }
     };
 
     [[nodiscard]] static constexpr auto begin() { return iterator{}; }
@@ -210,7 +222,9 @@ namespace details {
 
     [[nodiscard]] constexpr auto operator[](const std::size_t i) const noexcept
     {
-      return *(begin() + static_cast<std::ptrdiff_t>(i));
+      auto it = begin();
+      it += static_cast<std::ptrdiff_t>(i);
+      return *it;
     }
   };
 
@@ -227,7 +241,12 @@ namespace details {
           names_generator_t<E, string_view, NullTerminated>{}[static_cast<std::size_t>(this->index)],
         };
       }
-      [[nodiscard]] constexpr Pair operator[](const std::ptrdiff_t i) const noexcept { return *(*this + i); }
+      [[nodiscard]] constexpr Pair operator[](const std::ptrdiff_t i) const noexcept
+      {
+        auto it = *this;
+        it += i;
+        return *it;
+      }
     };
 
     [[nodiscard]] static constexpr auto begin() { return iterator{}; }
@@ -235,7 +254,9 @@ namespace details {
 
     [[nodiscard]] constexpr auto operator[](const std::size_t i) const noexcept
     {
-      return *(begin() + static_cast<std::ptrdiff_t>(i));
+      auto it = begin();
+      it += static_cast<std::ptrdiff_t>(i);
+      return *it;
     }
   };
 

@@ -28,8 +28,8 @@ namespace details {
     static_assert(is_bitflag<E>, "");
     using T = std::underlying_type_t<E>;
     T ret{};
-    for (const auto val : values_generator<E>)
-      ret |= static_cast<T>(val);
+    for (std::size_t i = 0; i < count<E>; ++i)
+      ret |= static_cast<T>(values_generator<E>[i]);
     return static_cast<E>(ret);
   }
 } // namespace details

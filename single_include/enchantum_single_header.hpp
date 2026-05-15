@@ -257,6 +257,7 @@ namespace details {
   {
     using R = typename std::common_type<T, U>::type;
     return static_cast<R>(a) < static_cast<R>(b) ? static_cast<R>(b) : static_cast<R>(a);
+  }
 
   template<typename T, typename U>
   constexpr auto Min(T a, U b)
@@ -1116,6 +1117,18 @@ namespace details {
     }
   }
 
+  constexpr const char* find_char(const char* s, const std::size_t count, const char c) noexcept
+  {
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+    return std::char_traits<char>::find(s, count, c);
+#else
+    for (std::size_t i = 0; i < count; ++i)
+      if (s[i] == c)
+        return s + i;
+    return nullptr;
+#endif
+  }
+
   template<typename E, E... Vs>
   constexpr auto var_name() noexcept
   {
@@ -1127,7 +1140,7 @@ namespace details {
   {
     for (std::size_t index = 0; index < array_size; ++index) {
       if (*str == '(')
-        str = std::char_traits<char>::find(str + least_length_when_casting, UINT8_MAX, ',') + SZC(", ");
+        str = details::find_char(str + least_length_when_casting, UINT8_MAX, ',') + SZC(", ");
       else
         return true;
     }
@@ -1152,13 +1165,11 @@ namespace details {
     (void)min; // not always used
     for (std::size_t index = 0; index < array_size; ++index) {
       if (*str == '(') {
-        str = std::char_traits<char>::find(str + least_length_when_casting, UINT8_MAX, ',') + SZC(", ");
+        str = details::find_char(str + least_length_when_casting, UINT8_MAX, ',') + SZC(", ");
       }
       else {
         str += least_length_when_value;
-        // although gcc implementation of std::char_traits::find is using a for loop internally
-        // copying the code of the function makes it way slower to compile, this was surprising.
-        const auto commapos = static_cast<std::size_t>(std::char_traits<char>::find(str, UINT8_MAX, ',') - str);
+        const auto commapos = static_cast<std::size_t>(details::find_char(str, UINT8_MAX, ',') - str);
         if (IsBitFlag)
           values[valid_count] = index == 0 ? IntType{} : static_cast<IntType>(IntType{1} << (index - 1));
         else
@@ -2236,7 +2247,12 @@ namespace details {
         return String(strings + p[this->index], p[this->index + 1] - p[this->index] - NullTerminated);
       }
 
-      [[nodiscard]] constexpr String operator[](const std::ptrdiff_t i) const noexcept { return *(*this + i); }
+      [[nodiscard]] constexpr String operator[](const std::ptrdiff_t i) const noexcept
+      {
+        auto it = *this;
+        it += i;
+        return *it;
+      }
     };
 
     [[nodiscard]] static constexpr auto begin() { return iterator{}; }
@@ -2244,7 +2260,9 @@ namespace details {
 
     [[nodiscard]] constexpr auto operator[](const std::size_t i) const noexcept
     {
-      return *(begin() + static_cast<std::ptrdiff_t>(i));
+      auto it = begin();
+      it += static_cast<std::ptrdiff_t>(i);
+      return *it;
     }
   };
 
@@ -2280,7 +2298,12 @@ namespace details {
         return dereference(std::integral_constant<bool, is_contiguous<E>>{},
                            std::integral_constant<bool, is_contiguous_bitflag<E>>{});
       }
-      [[nodiscard]] constexpr E operator[](const std::ptrdiff_t i) const noexcept { return *(*this + i); }
+      [[nodiscard]] constexpr E operator[](const std::ptrdiff_t i) const noexcept
+      {
+        auto it = *this;
+        it += i;
+        return *it;
+      }
     };
 
     [[nodiscard]] static constexpr auto begin() { return iterator{}; }
@@ -2288,7 +2311,9 @@ namespace details {
 
     [[nodiscard]] constexpr auto operator[](const std::size_t i) const noexcept
     {
-      return *(begin() + static_cast<std::ptrdiff_t>(i));
+      auto it = begin();
+      it += static_cast<std::ptrdiff_t>(i);
+      return *it;
     }
   };
 
@@ -2305,7 +2330,12 @@ namespace details {
           names_generator_t<E, string_view, NullTerminated>{}[static_cast<std::size_t>(this->index)],
         };
       }
-      [[nodiscard]] constexpr Pair operator[](const std::ptrdiff_t i) const noexcept { return *(*this + i); }
+      [[nodiscard]] constexpr Pair operator[](const std::ptrdiff_t i) const noexcept
+      {
+        auto it = *this;
+        it += i;
+        return *it;
+      }
     };
 
     [[nodiscard]] static constexpr auto begin() { return iterator{}; }
@@ -2313,7 +2343,9 @@ namespace details {
 
     [[nodiscard]] constexpr auto operator[](const std::size_t i) const noexcept
     {
-      return *(begin() + static_cast<std::ptrdiff_t>(i));
+      auto it = begin();
+      it += static_cast<std::ptrdiff_t>(i);
+      return *it;
     }
   };
 
@@ -2444,8 +2476,8 @@ namespace details {
   constexpr bool contains_impl(typename std::underlying_type<E>::type value, std::false_type, std::false_type) noexcept
   {
     using T = typename std::underlying_type<E>::type;
-    for (const auto v : values_generator<E>)
-      if (static_cast<T>(v) == value)
+    for (std::size_t i = 0; i < count<E>; ++i)
+      if (static_cast<T>(values_generator<E>[i]) == value)
         return true;
     return false;
   }
@@ -2518,9 +2550,11 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
   if (size < minmax.first || size > minmax.second)
     return false;
 
-  for (const auto s : names_generator<E>)
+  for (std::size_t i = 0; i < count<E>; ++i) {
+    const auto s = names_generator<E>[i];
     if (s == name)
       return true;
+  }
   return false;
 }
 
@@ -2528,9 +2562,11 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E), typename BinaryPred>
 [[nodiscard]] constexpr bool contains(const string_view name, const BinaryPred binary_pred) noexcept
 {
-  for (const auto s : names_generator<E>)
+  for (std::size_t i = 0; i < count<E>; ++i) {
+    const auto s = names_generator<E>[i];
     if (details::call_predicate(binary_pred, name, s))
       return true;
+  }
   return false;
 }
 
@@ -2649,8 +2685,8 @@ namespace details {
     static_assert(is_bitflag<E>, "");
     using T = std::underlying_type_t<E>;
     T ret{};
-    for (const auto val : values_generator<E>)
-      ret |= static_cast<T>(val);
+    for (std::size_t i = 0; i < count<E>; ++i)
+      ret |= static_cast<T>(values_generator<E>[i]);
     return static_cast<E>(ret);
   }
 } // namespace details
@@ -3357,12 +3393,12 @@ namespace details {
     [[nodiscard]] constexpr optional<E> operator()(const E value, const std::ptrdiff_t n = 1) const noexcept
     {
       if (!enchantum::contains(value))
-        return optional<E>{};
+        return optional<E>();
 
       const auto index = static_cast<std::ptrdiff_t>(*enchantum::enum_to_index(value)) + (n * N);
       if (index >= 0 && index < static_cast<std::ptrdiff_t>(count<E>))
-        return optional<E>{values_generator<E>[static_cast<std::size_t>(index)]};
-      return optional<E>{};
+        return optional<E>(values_generator<E>[static_cast<std::size_t>(index)]);
+      return optional<E>();
     }
   };
 

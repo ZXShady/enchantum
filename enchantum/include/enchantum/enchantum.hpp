@@ -106,8 +106,8 @@ namespace details {
   constexpr bool contains_impl(typename std::underlying_type<E>::type value, std::false_type, std::false_type) noexcept
   {
     using T = typename std::underlying_type<E>::type;
-    for (const auto v : values_generator<E>)
-      if (static_cast<T>(v) == value)
+    for (std::size_t i = 0; i < count<E>; ++i)
+      if (static_cast<T>(values_generator<E>[i]) == value)
         return true;
     return false;
   }
@@ -180,9 +180,11 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
   if (size < minmax.first || size > minmax.second)
     return false;
 
-  for (const auto s : names_generator<E>)
+  for (std::size_t i = 0; i < count<E>; ++i) {
+    const auto s = names_generator<E>[i];
     if (s == name)
       return true;
+  }
   return false;
 }
 
@@ -190,9 +192,11 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E), typename BinaryPred>
 [[nodiscard]] constexpr bool contains(const string_view name, const BinaryPred binary_pred) noexcept
 {
-  for (const auto s : names_generator<E>)
+  for (std::size_t i = 0; i < count<E>; ++i) {
+    const auto s = names_generator<E>[i];
     if (details::call_predicate(binary_pred, name, s))
       return true;
+  }
   return false;
 }
 
