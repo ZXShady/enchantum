@@ -67,10 +67,10 @@ constexpr auto visit(Func func, Enums... enums) noexcept(noexcept(std::declval<F
 namespace details {
 
   template<typename E, typename Func, std::size_t... I>
-  constexpr auto for_each(Func& f, std::index_sequence<I...>)
+  constexpr void for_each(Func& f, std::index_sequence<I...>)
   {
-    // Clang 13 to 15 says ths syntax is invalid if I dont put more `()`
-    (void)((f(std::integral_constant<E, values<E>[I]> {}), ...));
+    using expander = int[];
+    (void)expander{0, ((void)f(std::integral_constant<E, values<E>[I]> {}), 0)...};
   }
 
 } // namespace details

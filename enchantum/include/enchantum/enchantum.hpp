@@ -144,8 +144,10 @@ namespace details {
       return optional<std::size_t>(0); // assumes 0 is the index of value `0`
 
     using U = typename std::make_unsigned<T>::type;
-    return optional<std::size_t>(std::size_t(has_zero) + details::countr_zero(static_cast<U>(e)) -
-                                details::countr_zero(static_cast<U>(values_generator<E>[static_cast<std::size_t>(has_zero)])));
+    const auto value_offset = static_cast<std::size_t>(details::countr_zero(static_cast<U>(e)));
+    const auto base_offset =
+      static_cast<std::size_t>(details::countr_zero(static_cast<U>(values_generator<E>[static_cast<std::size_t>(has_zero)])));
+    return optional<std::size_t>(std::size_t(has_zero) + value_offset - base_offset);
   }
 
   template<typename E>

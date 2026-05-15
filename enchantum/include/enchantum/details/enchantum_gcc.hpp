@@ -122,14 +122,11 @@ namespace details {
 
   constexpr const char* find_char(const char* s, const std::size_t count, const char c) noexcept
   {
-#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
-    return std::char_traits<char>::find(s, count, c);
-#else
-    for (std::size_t i = 0; i < count; ++i)
-      if (s[i] == c)
+    for (std::size_t i = 0; i < count; ++i) {
+      if (s[i] == c || s[i] == '\0')
         return s + i;
+    }
     return nullptr;
-#endif
   }
 
   template<typename E, E... Vs>
@@ -142,8 +139,12 @@ namespace details {
   constexpr bool is_out_of_range_parse(const char* str, const std::size_t least_length_when_casting, const std::size_t array_size)
   {
     for (std::size_t index = 0; index < array_size; ++index) {
-      if (*str == '(')
-        str = details::find_char(str + least_length_when_casting, UINT8_MAX, ',') + SZC(", ");
+      if (*str == '(') {
+        const auto comma = details::find_char(str + least_length_when_casting, UINT8_MAX, ',');
+        if (comma == nullptr || *comma == '\0')
+          return false;
+        str = comma + SZC(", ");
+      }
       else
         return true;
     }
@@ -168,11 +169,17 @@ namespace details {
     (void)min; // not always used
     for (std::size_t index = 0; index < array_size; ++index) {
       if (*str == '(') {
-        str = details::find_char(str + least_length_when_casting, UINT8_MAX, ',') + SZC(", ");
+        const auto comma = details::find_char(str + least_length_when_casting, UINT8_MAX, ',');
+        if (comma == nullptr || *comma == '\0')
+          return;
+        str = comma + SZC(", ");
       }
       else {
         str += least_length_when_value;
-        const auto commapos = static_cast<std::size_t>(details::find_char(str, UINT8_MAX, ',') - str);
+        const auto comma = details::find_char(str, UINT8_MAX, ',');
+        if (comma == nullptr)
+          return;
+        const auto commapos = static_cast<std::size_t>(comma - str);
         if (IsBitFlag)
           values[valid_count] = index == 0 ? IntType{} : static_cast<IntType>(IntType{1} << (index - 1));
         else
@@ -181,7 +188,9 @@ namespace details {
         for (std::size_t i = 0; i < commapos; ++i)
           strings[total_string_length++] = str[i];
         total_string_length += null_terminated;
-        str += commapos + SZC(", ");
+        if (*comma == '\0')
+          return;
+        str = comma + SZC(", ");
       }
     }
   }

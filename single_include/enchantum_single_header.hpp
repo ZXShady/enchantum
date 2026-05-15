@@ -1119,14 +1119,11 @@ namespace details {
 
   constexpr const char* find_char(const char* s, const std::size_t count, const char c) noexcept
   {
-#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
-    return std::char_traits<char>::find(s, count, c);
-#else
-    for (std::size_t i = 0; i < count; ++i)
-      if (s[i] == c)
+    for (std::size_t i = 0; i < count; ++i) {
+      if (s[i] == c || s[i] == '\0')
         return s + i;
+    }
     return nullptr;
-#endif
   }
 
   template<typename E, E... Vs>
@@ -1139,8 +1136,12 @@ namespace details {
   constexpr bool is_out_of_range_parse(const char* str, const std::size_t least_length_when_casting, const std::size_t array_size)
   {
     for (std::size_t index = 0; index < array_size; ++index) {
-      if (*str == '(')
-        str = details::find_char(str + least_length_when_casting, UINT8_MAX, ',') + SZC(", ");
+      if (*str == '(') {
+        const auto comma = details::find_char(str + least_length_when_casting, UINT8_MAX, ',');
+        if (comma == nullptr || *comma == '\0')
+          return false;
+        str = comma + SZC(", ");
+      }
       else
         return true;
     }
@@ -1165,11 +1166,17 @@ namespace details {
     (void)min; // not always used
     for (std::size_t index = 0; index < array_size; ++index) {
       if (*str == '(') {
-        str = details::find_char(str + least_length_when_casting, UINT8_MAX, ',') + SZC(", ");
+        const auto comma = details::find_char(str + least_length_when_casting, UINT8_MAX, ',');
+        if (comma == nullptr || *comma == '\0')
+          return;
+        str = comma + SZC(", ");
       }
       else {
         str += least_length_when_value;
-        const auto commapos = static_cast<std::size_t>(details::find_char(str, UINT8_MAX, ',') - str);
+        const auto comma = details::find_char(str, UINT8_MAX, ',');
+        if (comma == nullptr)
+          return;
+        const auto commapos = static_cast<std::size_t>(comma - str);
         if (IsBitFlag)
           values[valid_count] = index == 0 ? IntType{} : static_cast<IntType>(IntType{1} << (index - 1));
         else
@@ -1178,7 +1185,9 @@ namespace details {
         for (std::size_t i = 0; i < commapos; ++i)
           strings[total_string_length++] = str[i];
         total_string_length += null_terminated;
-        str += commapos + SZC(", ");
+        if (*comma == '\0')
+          return;
+        str = comma + SZC(", ");
       }
     }
   }
@@ -2004,8 +2013,9 @@ namespace details {
   struct has_zero_flag_impl<E, true> {
     static constexpr bool value() noexcept
     {
-      for (const auto v : values<E>)
-        if (static_cast<typename std::underlying_type<E>::type>(v) == 0)
+      constexpr auto& vals = values<E>;
+      for (std::size_t i = 0; i < vals.size(); ++i)
+        if (static_cast<typename std::underlying_type<E>::type>(vals[i]) == 0)
           return true;
       return false;
     }
@@ -2239,7 +2249,9 @@ namespace details {
     [[nodiscard]] static constexpr std::size_t size() noexcept { return count<E>; }
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
+      using base       = sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())>;
       using value_type = String;
+      using base::operator+=;
       [[nodiscard]] constexpr String operator*() const noexcept
       {
         const auto* const p       = details::reflection_string_indices<E, NullTerminated>.data();
@@ -2271,7 +2283,9 @@ namespace details {
     [[nodiscard]] static constexpr std::size_t size() noexcept { return count<E>; }
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
+      using base       = sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())>;
       using value_type = E;
+      using base::operator+=;
       [[nodiscard]] constexpr E dereference(std::true_type, std::false_type) const noexcept
       {
         using T = typename std::underlying_type<E>::type;
@@ -2322,7 +2336,9 @@ namespace details {
     [[nodiscard]] static constexpr std::size_t size() noexcept { return count<E>; }
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
+      using base       = sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())>;
       using value_type = Pair;
+      using base::operator+=;
       [[nodiscard]] constexpr Pair operator*() const noexcept
       {
         return Pair{
@@ -2514,8 +2530,10 @@ namespace details {
       return optional<std::size_t>(0); // assumes 0 is the index of value `0`
 
     using U = typename std::make_unsigned<T>::type;
-    return optional<std::size_t>(std::size_t(has_zero) + details::countr_zero(static_cast<U>(e)) -
-                                details::countr_zero(static_cast<U>(values_generator<E>[static_cast<std::size_t>(has_zero)])));
+    const auto value_offset = static_cast<std::size_t>(details::countr_zero(static_cast<U>(e)));
+    const auto base_offset =
+      static_cast<std::size_t>(details::countr_zero(static_cast<U>(values_generator<E>[static_cast<std::size_t>(has_zero)])));
+    return optional<std::size_t>(std::size_t(has_zero) + value_offset - base_offset);
   }
 
   template<typename E>
@@ -2907,10 +2925,10 @@ constexpr auto visit(Func func, Enums... enums) noexcept(noexcept(std::declval<F
 namespace details {
 
   template<typename E, typename Func, std::size_t... I>
-  constexpr auto for_each(Func& f, std::index_sequence<I...>)
+  constexpr void for_each(Func& f, std::index_sequence<I...>)
   {
-    // Clang 13 to 15 says ths syntax is invalid if I dont put more `()`
-    (void)((f(std::integral_constant<E, values<E>[I]> {}), ...));
+    using expander = int[];
+    (void)expander{0, ((void)f(std::integral_constant<E, values<E>[I]> {}), 0)...};
   }
 
 } // namespace details
@@ -2929,7 +2947,7 @@ namespace enchantum {
 
 template<typename E, typename V, typename Container = std::array<V, count<E>>>
 class array : public Container {
-  static_assert(std::is_enum<E>::value);
+  static_assert(std::is_enum<E>::value, "enchantum::array requires an enum type");
 public:
   using container_type = Container;
   using index_type     = E;
@@ -2982,7 +3000,7 @@ namespace details {
 
 template<typename E, typename Container = details::bitset<count<E>>>
 class bitset : public Container {
-  static_assert(std::is_enum<E>::value);
+  static_assert(std::is_enum<E>::value, "enchantum::bitset requires an enum type");
 public:
 
   using container_type = Container;

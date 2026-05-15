@@ -150,7 +150,9 @@ namespace details {
     [[nodiscard]] static constexpr std::size_t size() noexcept { return count<E>; }
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
+      using base       = sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())>;
       using value_type = String;
+      using base::operator+=;
       [[nodiscard]] constexpr String operator*() const noexcept
       {
         const auto* const p       = details::reflection_string_indices<E, NullTerminated>.data();
@@ -182,7 +184,9 @@ namespace details {
     [[nodiscard]] static constexpr std::size_t size() noexcept { return count<E>; }
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
+      using base       = sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())>;
       using value_type = E;
+      using base::operator+=;
       [[nodiscard]] constexpr E dereference(std::true_type, std::false_type) const noexcept
       {
         using T = typename std::underlying_type<E>::type;
@@ -233,7 +237,9 @@ namespace details {
     [[nodiscard]] static constexpr std::size_t size() noexcept { return count<E>; }
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
+      using base       = sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())>;
       using value_type = Pair;
+      using base::operator+=;
       [[nodiscard]] constexpr Pair operator*() const noexcept
       {
         return Pair{

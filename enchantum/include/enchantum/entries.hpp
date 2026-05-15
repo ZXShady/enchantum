@@ -425,8 +425,9 @@ namespace details {
   struct has_zero_flag_impl<E, true> {
     static constexpr bool value() noexcept
     {
-      for (const auto v : values<E>)
-        if (static_cast<typename std::underlying_type<E>::type>(v) == 0)
+      constexpr auto& vals = values<E>;
+      for (std::size_t i = 0; i < vals.size(); ++i)
+        if (static_cast<typename std::underlying_type<E>::type>(vals[i]) == 0)
           return true;
       return false;
     }
