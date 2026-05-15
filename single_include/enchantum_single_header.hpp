@@ -3357,20 +3357,20 @@ namespace scoped {
 
 namespace enchantum {
 namespace iostream_operators {
-  template<typename E>
-  bool extract_enum_from_string(const std::string& s, E& value, std::true_type)
+  template<typename String, typename E>
+  bool extract_enum_from_string(const String& s, E& value, std::true_type)
   {
-    if (const auto v = enchantum::cast_bitflag<E>(s)) {
+    if (const auto v = enchantum::cast_bitflag<E>(string_view(s.data(), s.size()))) {
       value = *v;
       return true;
     }
     return false;
   }
 
-  template<typename E>
-  bool extract_enum_from_string(const std::string& s, E& value, std::false_type)
+  template<typename String, typename E>
+  bool extract_enum_from_string(const String& s, E& value, std::false_type)
   {
-    if (const auto v = enchantum::cast<E>(s)) {
+    if (const auto v = enchantum::cast<E>(string_view(s.data(), s.size()))) {
       value = *v;
       return true;
     }

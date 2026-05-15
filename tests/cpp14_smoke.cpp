@@ -1,9 +1,11 @@
 #include <enchantum/bitflags.hpp>
 #include <enchantum/enchantum.hpp>
+#include <enchantum/iostream.hpp>
 #include <enchantum/next_value.hpp>
 #include <enchantum/scoped.hpp>
 
 #include <cassert>
+#include <sstream>
 #include <string>
 #include <type_traits>
 
@@ -91,4 +93,15 @@ int main()
   const auto scoped_permission =
     enchantum::scoped::cast_bitflag<Permission>(enchantum::string_view("Permission::Read|Permission::Write", 34));
   assert(scoped_permission && *scoped_permission == (Permission::Read | Permission::Write));
+
+  std::istringstream color_stream("Blue");
+  using namespace enchantum::iostream_operators;
+  Color streamed_color{};
+  color_stream >> streamed_color;
+  assert(color_stream && streamed_color == Color::Blue);
+
+  std::istringstream permission_stream("Read|Execute");
+  Permission streamed_permission{};
+  permission_stream >> streamed_permission;
+  assert(permission_stream && streamed_permission == (Permission::Read | Permission::Execute));
 }

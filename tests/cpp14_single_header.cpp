@@ -2,6 +2,7 @@
 #include "../single_include/enchantum_single_header.hpp"
 
 #include <cassert>
+#include <sstream>
 #include <string>
 
 namespace single_header_tests {
@@ -82,4 +83,15 @@ int main()
   const auto scoped_permission =
     enchantum::scoped::cast_bitflag<SinglePermission>(enchantum::string_view("SinglePermission::Read|SinglePermission::Write", 46));
   assert(scoped_permission && *scoped_permission == (SinglePermission::Read | SinglePermission::Write));
+
+  std::istringstream color_stream("Blue");
+  using namespace enchantum::iostream_operators;
+  SingleColor streamed_color{};
+  color_stream >> streamed_color;
+  assert(color_stream && streamed_color == SingleColor::Blue);
+
+  std::istringstream permission_stream("Read|Execute");
+  SinglePermission streamed_permission{};
+  permission_stream >> streamed_permission;
+  assert(permission_stream && streamed_permission == (SinglePermission::Read | SinglePermission::Execute));
 }
