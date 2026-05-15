@@ -4,7 +4,7 @@ All non-`void` functions are `[[nodiscard]]` unless explicitly said otherwise.
 
 **Note**: Documentation Incomplete.
 
-*all the concepts are replaced by SFINAE equalivents when compiling in C++17 mode*
+*all the concepts are replaced by SFINAE equalivents when compiling in pre-C++20 modes*
 
 Quick Reference
 
@@ -66,9 +66,10 @@ Quick Reference
   - [ENCHANTUM_ASSERT](#enchantum_assert)
   - [ENCHANTUM_THROW](#enchantum_throw)
   - [ENCHANTUM_ENABLE_MSVC_SPEEDUP](#enchantum_enable_msvc_speedup)
-  - [ENCHANTUM_OPTIONAL](#enchantum_optional)
+  - [ENCHANTUM_ALIAS_OPTIONAL](#enchantum_alias_optional)
   - [ENCHANTUM_STRING](#enchantum_string)
-  - [ENCHANTUM_STRING_VIEW](#enchantum_string_view)
+  - [ENCHANTUM_ALIAS_STRING_VIEW](#enchantum_alias_string_view)
+  - [C++14 Alias Configuration](#c14-alias-configuration)
 
 # Concepts
 ## Enum
@@ -1705,15 +1706,15 @@ A boolean macro that speeds up msvc compile times but may cause issues with extr
 #endif
 ```
 
-### ENCHANTUM_OPTIONAL
+### ENCHANTUM_ALIAS_OPTIONAL
 
 - **Description**: 
 A macro for customizing the optional type used in the library it is by default `std::optional`
 ```cpp
 // in all headers
-#ifndef ENCHANTUM_OPTIONAL
+#ifndef ENCHANTUM_ALIAS_OPTIONAL
 #include <optional>
-#define ENCHANTUM_OPTIONAL using std::optional;
+#define ENCHANTUM_ALIAS_OPTIONAL template<typename T> using optional = std::optional<T>;
 #endif
 ```
 
@@ -1729,15 +1730,15 @@ A macro for customizing the string type used in the library it is by default `st
 #endif
 ```
 
-### ENCHANTUM_STRING_VIEW
+### ENCHANTUM_ALIAS_STRING_VIEW
 
 - **Description**: 
 A macro for customizing the string view type used in the library it is by default `std::string_view`
 ```cpp
 // in all headers
-#ifndef ENCHANTUM_STRING_VIEW
+#ifndef ENCHANTUM_ALIAS_STRING_VIEW
 #include <string_view>
-#define ENCHANTUM_STRING_VIEW using std::string_view;
+#define ENCHANTUM_ALIAS_STRING_VIEW using string_view = std::string_view;
 #endif
 ```
 
@@ -1765,7 +1766,20 @@ where `my_enchantum_config.hpp` is
 
 ```cpp
 #include "my_optional.hpp"
-#define  ENCHANTUM_OPTIONAL template<typename T> using optional = my_optional<T>;
+#define ENCHANTUM_ALIAS_OPTIONAL template<typename T> using optional = my_optional<T>;
 #include "my_string.hpp"
-#define  ENCHANTUM_STRING using string = my_string;
+#define ENCHANTUM_ALIAS_STRING using string = my_string;
 ```
+
+### C++14 Alias Configuration
+
+C++14 does not provide `std::optional` or `std::string_view`. To use enchantum in C++14 mode, provide aliases through `ENCHANTUM_CONFIG_FILE`:
+
+```cpp
+#define ENCHANTUM_ALIAS_STRING_VIEW using string_view = my_string_view;
+#define ENCHANTUM_ALIAS_OPTIONAL \
+  template<typename T>           \
+  using optional = my_optional<T>;
+```
+
+The string-view replacement must provide `data()`, `size()`, `empty()`, `operator[]`, `find`, `rfind`, `substr`, `remove_prefix`, and `remove_suffix`. The optional replacement must provide default construction, construction from a value, boolean conversion, `has_value()`, and dereference.

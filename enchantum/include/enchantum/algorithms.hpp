@@ -44,7 +44,7 @@ namespace details {
 #if 0
 template<Enum E, std::invocable<E> Func>
 constexpr auto visit(Func func, E e) 
-noexcept(std::is_nothrow_invocable_v<Func, E>)
+noexcept(noexcept(std::declval<Func>()(std::declval<E>())))
 {
   using Ret = decltype(func(e));
   
@@ -55,7 +55,7 @@ noexcept(std::is_nothrow_invocable_v<Func, E>)
   }(std::make_index_sequence<count<E>>());
 }
 template<Enum... Enums, std::invocable<Enums...> Func>
-constexpr auto visit(Func func, Enums... enums) noexcept(std::is_nothrow_invocable_v<Func, Enums...>)
+constexpr auto visit(Func func, Enums... enums) noexcept(noexcept(std::declval<Func>()(std::declval<Enums>()...)))
 {
   using Ret = decltype(func(enums...));
   return [&]<std::size_t... Idx>(std::index_sequence<Idx...>) {

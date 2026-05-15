@@ -23,25 +23,36 @@ namespace enchantum {
 
 namespace details {
   template<typename BinaryPredicate>
+  constexpr bool call_predicate_impl(const BinaryPredicate binary_pred, const string_view a, const string_view b, std::true_type)
+  {
+    const auto a_size = a.size();
+    if (a_size != b.size())
+      return false;
+    const auto a_data = a.data();
+    const auto b_data = b.data();
+
+    for (std::size_t i = 0; i < a_size; ++i)
+      if (!binary_pred(a_data[i], b_data[i]))
+        return false;
+    return true;
+  }
+
+  template<typename BinaryPredicate>
+  constexpr bool call_predicate_impl(const BinaryPredicate binary_pred, const string_view a, const string_view b, std::false_type)
+  {
+    static_assert(enchantum::details::is_invocable<const BinaryPredicate&, const string_view&, const string_view&>::value,
+                  "BinaryPredicate must be callable with either two chars or two string_views");
+    return binary_pred(a, b);
+  }
+
+  template<typename BinaryPredicate>
   constexpr bool call_predicate(const BinaryPredicate binary_pred, const string_view a, const string_view b)
   {
-    if constexpr (std::is_invocable_v<const BinaryPredicate&, const char&, const char&>) {
-      const auto a_size = a.size();
-      if (a_size != b.size())
-        return false;
-      const auto a_data = a.data();
-      const auto b_data = b.data();
-
-      for (std::size_t i = 0; i < a_size; ++i)
-        if (!binary_pred(a_data[i], b_data[i]))
-          return false;
-      return true;
-    }
-    else {
-      static_assert(std::is_invocable_v<const BinaryPredicate&, const string_view&, const string_view&>,
-                    "BinaryPredicate must be callable with atleast 2 char or 2 string_views");
-      return binary_pred(a, b);
-    }
+    return call_predicate_impl(binary_pred,
+                               a,
+                               b,
+                               enchantum::details::bool_constant<
+                                 enchantum::details::is_invocable<const BinaryPredicate&, const char&, const char&>::value>{});
   }
 
   constexpr std::pair<std::size_t, std::size_t> minmax_string_size(const string_view* begin, const string_view* const end)
@@ -60,32 +71,99 @@ namespace details {
 } // namespace details
 
 
-template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-[[nodiscard]] constexpr bool contains(const std::underlying_type_t<E> value) noexcept
-{
-  using T = std::underlying_type_t<E>;
-  if constexpr (count<E> != 0)
-    if (value < T(min<E>) || value > T(max<E>))
-      return false;
+namespace details {
+  template<typename E, bool Empty>
+  struct contains_bounds {
+    static constexpr bool outside(typename std::underlying_type<E>::type value) noexcept
+    {
+      using T = typename std::underlying_type<E>::type;
+      return value < T(min<E>) || value > T(max<E>);
+    }
+  };
 
-  if constexpr (is_contiguous_bitflag<E>) {
-    if constexpr (has_zero_flag<E>)
-      if (value == 0)
-        return true;
-    const auto u = static_cast<std::make_unsigned_t<T>>(value);
+  template<typename E>
+  struct contains_bounds<E, true> {
+    static constexpr bool outside(typename std::underlying_type<E>::type) noexcept { return false; }
+  };
 
-    // std::has_single_bit
+  template<typename E>
+  constexpr bool contains_impl(typename std::underlying_type<E>::type value, std::true_type, std::false_type) noexcept
+  {
+    using T = typename std::underlying_type<E>::type;
+    if (has_zero_flag<E> ? value == 0 : false)
+      return true;
+    const auto u = static_cast<typename std::make_unsigned<T>::type>(value);
     return u != 0 && (u & (u - 1)) == 0;
   }
-  else if constexpr (is_contiguous<E>) {
+
+  template<typename E>
+  constexpr bool contains_impl(typename std::underlying_type<E>::type, std::false_type, std::true_type) noexcept
+  {
     return true;
   }
-  else {
+
+  template<typename E>
+  constexpr bool contains_impl(typename std::underlying_type<E>::type value, std::false_type, std::false_type) noexcept
+  {
+    using T = typename std::underlying_type<E>::type;
     for (const auto v : values_generator<E>)
       if (static_cast<T>(v) == value)
         return true;
     return false;
   }
+
+  template<typename E>
+  constexpr bool contains_value(typename std::underlying_type<E>::type value) noexcept
+  {
+    if (details::contains_bounds<E, count<E> == 0>::outside(value))
+      return false;
+
+    return details::contains_impl<E>(value,
+                                     std::integral_constant<bool, is_contiguous_bitflag<E>>{},
+                                     std::integral_constant<bool, is_contiguous<E>>{});
+  }
+
+  template<typename E>
+  constexpr optional<std::size_t> enum_to_index_impl(const E e, std::true_type, std::false_type) noexcept
+  {
+    using T = typename std::underlying_type<E>::type;
+    if (details::contains_value<E>(static_cast<T>(e)))
+      return optional<std::size_t>(std::size_t(T(e) - T(min<E>)));
+    return optional<std::size_t>();
+  }
+
+  template<typename E>
+  constexpr optional<std::size_t> enum_to_index_impl(const E e, std::false_type, std::true_type) noexcept
+  {
+    using T = typename std::underlying_type<E>::type;
+    if (!details::contains_value<E>(static_cast<T>(e)))
+      return optional<std::size_t>();
+
+    const bool has_zero = has_zero_flag<E>;
+    if (has_zero ? static_cast<T>(e) == 0 : false)
+      return optional<std::size_t>(0); // assumes 0 is the index of value `0`
+
+    using U = typename std::make_unsigned<T>::type;
+    return optional<std::size_t>(std::size_t(has_zero) + details::countr_zero(static_cast<U>(e)) -
+                                details::countr_zero(static_cast<U>(values_generator<E>[static_cast<std::size_t>(has_zero)])));
+  }
+
+  template<typename E>
+  constexpr optional<std::size_t> enum_to_index_impl(const E e, std::false_type, std::false_type) noexcept
+  {
+    for (std::size_t i = 0; i < count<E>; ++i) {
+      if (values_generator<E>[i] == e)
+        return optional<std::size_t>(i);
+    }
+    return optional<std::size_t>();
+  }
+} // namespace details
+
+
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+[[nodiscard]] constexpr bool contains(const std::underlying_type_t<E> value) noexcept
+{
+  return details::contains_value<E>(value);
 }
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
@@ -98,7 +176,8 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 [[nodiscard]] constexpr bool contains(const string_view name) noexcept
 {
   constexpr auto minmax = details::minmax_string_size(names<E>.data(), names<E>.data() + names<E>.size());
-  if (const auto size = name.size(); size < minmax.first || size > minmax.second)
+  const auto size = name.size();
+  if (size < minmax.first || size > minmax.second)
     return false;
 
   for (const auto s : names_generator<E>)
@@ -133,32 +212,9 @@ namespace details {
     template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
     [[nodiscard]] constexpr optional<std::size_t> operator()(const E e) const noexcept
     {
-      using T = std::underlying_type_t<E>;
-
-      if constexpr (is_contiguous<E> && count<E> != 0) {
-        if (enchantum::contains(e)) {
-          return optional<std::size_t>(std::size_t(T(e) - T(min<E>)));
-        }
-      }
-      else if constexpr (is_contiguous_bitflag<E>) {
-        if (enchantum::contains(e)) {
-          constexpr bool has_zero = has_zero_flag<E>;
-          if constexpr (has_zero)
-            if (static_cast<T>(e) == 0)
-              return optional<std::size_t>(0); // assumes 0 is the index of value `0`
-
-          using U = std::make_unsigned_t<T>;
-          return has_zero + details::countr_zero(static_cast<U>(e)) -
-            details::countr_zero(static_cast<U>(values_generator<E>[has_zero]));
-        }
-      }
-      else {
-        for (std::size_t i = 0; i < count<E>; ++i) {
-          if (values_generator<E>[i] == e)
-            return optional<std::size_t>(i);
-        }
-      }
-      return optional<std::size_t>();
+      return details::enum_to_index_impl<E>(e,
+                                            std::integral_constant<bool, is_contiguous<E> && count<E> != 0>{},
+                                            std::integral_constant<bool, is_contiguous_bitflag<E>>{});
     }
   };
 
@@ -175,7 +231,8 @@ namespace details {
     [[nodiscard]] constexpr optional<E> operator()(const string_view name) const noexcept
     {
       constexpr auto minmax = details::minmax_string_size(names<E>.data(), names<E>.data() + names<E>.size());
-      if (const auto size = name.size(); size < minmax.first || size > minmax.second)
+      const auto size = name.size();
+      if (size < minmax.first || size > minmax.second)
         return optional<E>(); // nullopt
 
       for (std::size_t i = 0; i < count<E>; ++i) {
@@ -202,12 +259,12 @@ namespace details {
 } // namespace details
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-inline constexpr details::index_to_enum_functor<E> index_to_enum{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::index_to_enum_functor<E> index_to_enum{};
 
-inline constexpr details::enum_to_index_functor enum_to_index{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::enum_to_index_functor enum_to_index{};
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-inline constexpr details::cast_functor<E> cast{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::cast_functor<E> cast{};
 
 
 namespace details {
@@ -222,7 +279,7 @@ namespace details {
   };
 
 } // namespace details
-inline constexpr details::to_string_functor to_string{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::to_string_functor to_string{};
 
 
 } // namespace enchantum

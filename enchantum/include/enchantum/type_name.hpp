@@ -1,6 +1,5 @@
 #pragma once
 #include "details/string_view.hpp"
-#include <array>
 #include <cstddef>
 
 namespace enchantum {
@@ -9,7 +8,8 @@ namespace details {
 #define SZC(x) (sizeof(x) - 1)
   constexpr string_view extract_name_from_type_name(const string_view type_name) noexcept
   {
-    if (const auto n = type_name.rfind(':'); n != type_name.npos)
+    const auto n = type_name.rfind(':');
+    if (n != type_name.npos)
       return type_name.substr(n + 1);
     else
       return type_name;
@@ -35,8 +35,8 @@ namespace details {
                                      SZC(">(void) noexcept"));
 
     // clang-format off
-    constexpr auto prefix = std::is_enum_v<T> ? SZC("enum ") : 
-        std::is_class_v<T> ?  SZC("struct ") - (s[0] == 'c') :
+    constexpr auto prefix = std::is_enum<T>::value ? SZC("enum ") :
+        std::is_class<T>::value ?  SZC("struct ") - (s[0] == 'c') :
         0;
 // clang-format on
 #elif defined(__GNUG__)
@@ -46,7 +46,7 @@ namespace details {
                                    SZC(__PRETTY_FUNCTION__) -
                                      SZC("constexpr auto enchantum::details::raw_type_name_func() [with _ = ]"));
 #endif
-    std::array<char, 1 + s.size() - prefix> ret{};
+    details::array<char, 1 + s.size() - prefix> ret{};
     auto* const                             ret_data = ret.data();
     const auto* const                       s_data   = s.data();
 
@@ -56,13 +56,13 @@ namespace details {
   }
 
   template<typename T>
-  inline constexpr auto raw_type_name_func_var = raw_type_name_func<T>();
+  ENCHANTUM_DETAILS_INLINE_VAR constexpr auto raw_type_name_func_var = raw_type_name_func<T>();
 
 
   template<typename T>
   constexpr auto type_name_func() noexcept
   {
-    static_assert(!std::is_function_v<std::remove_pointer_t<T>> && !std::is_member_function_pointer_v<T>,
+    static_assert(!std::is_function<std::remove_pointer_t<T>>::value && !std::is_member_function_pointer<T>::value,
                   "enchantum::type_name<T> does not work well with function pointers or functions or member function\n"
                   "pointers");
 
@@ -70,26 +70,26 @@ namespace details {
     static_assert(array[array.size() - 2] != '>', "enchantum::type_name<T> does not work well with a templated type");
 
     constexpr auto  s     = details::extract_name_from_type_name(string_view(array.data(), array.size() - 1));
-    std::array<char, s.size() + 1> ret{};
+    details::array<char, s.size() + 1> ret{};
     for (std::size_t i = 0; i < s.size(); ++i)
       ret[i] = s[i];
     return ret;
   }
 
   template<typename T>
-  inline constexpr auto type_name_func_var = type_name_func<T>();
+  ENCHANTUM_DETAILS_INLINE_VAR constexpr auto type_name_func_var = type_name_func<T>();
 
 #undef SZC
 
 } // namespace details
 
 template<typename T>
-inline constexpr auto type_name = string_view(details::type_name_func_var<T>.data(),
-                                              details::type_name_func_var<T>.size() - 1);
+ENCHANTUM_DETAILS_INLINE_VAR constexpr auto type_name = string_view(details::type_name_func_var<T>.data(),
+                                                                    details::type_name_func_var<T>.size() - 1);
 
 template<typename T>
-inline constexpr auto raw_type_name = string_view(details::raw_type_name_func_var<T>.data(),
-                                                  details::raw_type_name_func_var<T>.size() - 1);
+ENCHANTUM_DETAILS_INLINE_VAR constexpr auto raw_type_name = string_view(details::raw_type_name_func_var<T>.data(),
+                                                                        details::raw_type_name_func_var<T>.size() - 1);
 
 
 } // namespace enchantum

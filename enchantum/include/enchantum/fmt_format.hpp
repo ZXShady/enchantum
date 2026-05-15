@@ -10,7 +10,7 @@ template<enchantum::Enum E>
 struct fmt::formatter<E>
 #else
 template<typename E>
-struct fmt::formatter<E, char, std::enable_if_t<std::is_enum_v<E>>>
+struct fmt::formatter<E, char, std::enable_if_t<std::is_enum<E>::value>>
 #endif
 : fmt::formatter<string_view> {
   template<typename FmtContext>

@@ -17,21 +17,31 @@
 
 namespace enchantum {
 
+namespace details {
+  struct equal_to_string_view {
+    constexpr bool operator()(const string_view a, const string_view b) const noexcept { return a == b; }
+  };
+
+  template<typename E>
+  constexpr E value_ors_impl()
+  {
+    static_assert(is_bitflag<E>, "");
+    using T = std::underlying_type_t<E>;
+    T ret{};
+    for (const auto val : values_generator<E>)
+      ret |= static_cast<T>(val);
+    return static_cast<E>(ret);
+  }
+} // namespace details
+
 template<typename E>
-inline constexpr E value_ors = [] {
-  static_assert(is_bitflag<E>, "");
-  using T = std::underlying_type_t<E>;
-  T ret{};
-  for (const auto val : values_generator<E>)
-    ret |= static_cast<T>(val);
-  return static_cast<E>(ret);
-}();
+ENCHANTUM_DETAILS_INLINE_VAR constexpr E value_ors = details::value_ors_impl<E>();
 
 
 template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 [[nodiscard]] constexpr bool contains_bitflag(const std::underlying_type_t<E> value) noexcept
 {
-  if constexpr (!has_zero_flag<E>)
+  if (!has_zero_flag<E>)
     if (value == 0)
       return false;
 
@@ -74,19 +84,19 @@ template<typename String = string, ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 [[nodiscard]] constexpr String to_string_bitflag(const E value, const char sep = '|')
 {
   using T = std::underlying_type_t<E>;
-  if constexpr (has_zero_flag<E>)
+  if (has_zero_flag<E>)
     if (static_cast<T>(value) == 0)
-      return String(names_generator<E>[0]);
+      return String(names_generator<E>[0].data(), names_generator<E>[0].size());
 
   String name;
   T      check_value = 0;
-  for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
+  for (auto i = static_cast<std::size_t>(has_zero_flag<E>); i < count<E>; ++i) {
     const auto v = static_cast<T>(values_generator<E>[i]);
     if (v == (static_cast<T>(value) & v)) {
       const auto s = names_generator<E>[i];
       if (!name.empty())
         name.append(1, sep);           // append separator if not the first value
-      name.append(s.data(), s.size()); // not using operator += since this may not be std::string_view always
+      name.append(s.data(), s.size());
       check_value |= v;
     }
   }
@@ -117,7 +127,7 @@ template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E), typename BinaryPred>
 template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 [[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep = '|') noexcept
 {
-  return enchantum::cast_bitflag<E>(s, sep, [](const auto& a, const auto& b) { return a == b; });
+  return enchantum::cast_bitflag<E>(s, sep, details::equal_to_string_view{});
 }
 
 template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>

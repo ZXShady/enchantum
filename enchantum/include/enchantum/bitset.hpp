@@ -19,7 +19,7 @@ namespace details {
 
 template<typename E, typename Container = details::bitset<count<E>>>
 class bitset : public Container {
-  static_assert(std::is_enum_v<E>);
+  static_assert(std::is_enum<E>::value);
 public:
 
   using container_type = Container;
@@ -42,7 +42,7 @@ public:
         const auto s = enchantum::names_generator<E>[i];
         if (!name.empty())
           name += sep;
-        name.append(s.data(), s.size()); // not using operator += since this may not be std::string_view always
+        name.append(s.data(), s.size());
       }
     }
     return name;

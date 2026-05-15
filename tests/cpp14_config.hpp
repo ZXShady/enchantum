@@ -1,0 +1,95 @@
+#pragma once
+
+#include <cstddef>
+
+namespace tests_cpp14 {
+
+template<typename T>
+struct optional {
+  constexpr optional() = default;
+  constexpr optional(T v) : value(v), has_value_(true) {}
+
+  constexpr explicit operator bool() const noexcept { return has_value_; }
+  constexpr bool has_value() const noexcept { return has_value_; }
+  constexpr const T& operator*() const noexcept { return value; }
+  constexpr T& operator*() noexcept { return value; }
+
+  T    value{};
+  bool has_value_ = false;
+};
+
+struct string_view {
+  static constexpr std::size_t npos = static_cast<std::size_t>(-1);
+
+  constexpr string_view() = default;
+  constexpr string_view(const char* s) : begin_(s), end_(s + length(s)) {}
+  constexpr string_view(const char* s, std::size_t size) : begin_(s), end_(s + size) {}
+
+  static constexpr std::size_t length(const char* s) noexcept
+  {
+    std::size_t count = 0;
+    while (s[count] != '\0')
+      ++count;
+    return count;
+  }
+
+  constexpr const char* data() const noexcept { return begin_; }
+  constexpr std::size_t size() const noexcept { return static_cast<std::size_t>(end_ - begin_); }
+  constexpr bool        empty() const noexcept { return begin_ == end_; }
+
+  constexpr const char* begin() const noexcept { return begin_; }
+  constexpr const char* end() const noexcept { return end_; }
+
+  constexpr char operator[](std::size_t i) const noexcept { return begin_[i]; }
+
+  constexpr void remove_prefix(std::size_t amount) noexcept { begin_ += amount; }
+  constexpr void remove_suffix(std::size_t amount) noexcept { end_ -= amount; }
+
+  constexpr string_view substr(std::size_t offset) const noexcept
+  {
+    return offset > size() ? string_view(end_, 0) : string_view(begin_ + offset, size() - offset);
+  }
+
+  constexpr string_view substr(std::size_t offset, std::size_t count) const noexcept
+  {
+    return offset > size() ? string_view(end_, 0) : string_view(begin_ + offset, count > size() - offset ? size() - offset : count);
+  }
+
+  constexpr std::size_t find(char c, std::size_t pos = 0) const noexcept
+  {
+    for (std::size_t i = pos; i < size(); ++i)
+      if (begin_[i] == c)
+        return i;
+    return npos;
+  }
+
+  constexpr std::size_t rfind(char c) const noexcept
+  {
+    for (std::size_t i = size(); i != 0; --i)
+      if (begin_[i - 1] == c)
+        return i - 1;
+    return npos;
+  }
+
+  const char* begin_ = nullptr;
+  const char* end_   = nullptr;
+};
+
+constexpr bool operator==(string_view a, string_view b) noexcept
+{
+  if (a.size() != b.size())
+    return false;
+  for (std::size_t i = 0; i < a.size(); ++i)
+    if (a[i] != b[i])
+      return false;
+  return true;
+}
+
+constexpr bool operator!=(string_view a, string_view b) noexcept { return !(a == b); }
+
+} // namespace tests_cpp14
+
+#define ENCHANTUM_ALIAS_STRING_VIEW using string_view = tests_cpp14::string_view;
+#define ENCHANTUM_ALIAS_OPTIONAL \
+  template<typename T>             \
+  using optional = tests_cpp14::optional<T>;

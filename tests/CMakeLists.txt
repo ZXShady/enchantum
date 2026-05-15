@@ -29,6 +29,8 @@ else()
 endif()
 
 file(GLOB SRCS "*.cpp" "*.hpp")
+list(REMOVE_ITEM SRCS "${CMAKE_CURRENT_SOURCE_DIR}/cpp14_smoke.cpp")
+list(REMOVE_ITEM SRCS "${CMAKE_CURRENT_SOURCE_DIR}/cpp14_single_header.cpp")
 
 
 get_target_property(STD tests CXX_STANDARD)
@@ -68,6 +70,28 @@ target_compile_definitions(tests_config PRIVATE ENCHANTUM_CONFIG_FILE="config_te
 target_sources(tests_config PRIVATE config_test/config.cpp config_test/config.hpp)
 target_include_directories(tests_config PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(tests_config Catch2::Catch2WithMain enchantum::enchantum)
+
+add_executable(tests_cpp14 cpp14_smoke.cpp cpp14_config.hpp)
+target_compile_features(tests_cpp14 PRIVATE cxx_std_14)
+set_target_properties(tests_cpp14 PROPERTIES
+  CXX_STANDARD 14
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+target_compile_definitions(tests_cpp14 PRIVATE ENCHANTUM_CONFIG_FILE="cpp14_config.hpp")
+target_include_directories(tests_cpp14 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(tests_cpp14 PRIVATE enchantum::enchantum)
+add_test(NAME tests_cpp14 COMMAND tests_cpp14)
+
+add_executable(tests_cpp14_single_header cpp14_single_header.cpp cpp14_config.hpp)
+target_compile_features(tests_cpp14_single_header PRIVATE cxx_std_14)
+set_target_properties(tests_cpp14_single_header PROPERTIES
+  CXX_STANDARD 14
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+target_include_directories(tests_cpp14_single_header PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+add_test(NAME tests_cpp14_single_header COMMAND tests_cpp14_single_header)
 
 include(CTest)
 include(Catch)

@@ -1,6 +1,6 @@
 # Enchantum
 
-**Enchantum** (short for "enchant enum") is a modern **C++17** header-only library for **compile-time enum reflection**. It provides fast, lightweight access to enum values, names, and bitflags all without macros or boilerplate.
+**Enchantum** (short for "enchant enum") is a modern **C++14 and later** header-only library for **compile-time enum reflection**. It provides fast, lightweight access to enum values, names, and bitflags all without macros or boilerplate.
 
 > Every year, countless turtles perish due to the pollution caused by slow, bloated build times.  
  Save the turtles — and your compile times — by switching to enchantum!
@@ -55,6 +55,8 @@ Compiler Support: (Look at [CI](https://github.com/ZXShady/enchantum/actions))
   - Clang >= 8
   - MSVC >= 19.24 VS16.4 (lower verions tested through godbolt)
   - Resharper >= 2023
+
+C++14 support requires configuring `ENCHANTUM_ALIAS_OPTIONAL` and `ENCHANTUM_ALIAS_STRING_VIEW` to optional-compatible and string-view-compatible types. C++17 and later use `std::optional` and `std::string_view` by default.
 
 Tested through basic tests on godbolt since I could not install it on CI, so support for them may not be the best.
   - ICX >= 2021.1.2 (Tested through godbolt [test link](https://godbolt.org/z/5naTha56K))
@@ -168,7 +170,7 @@ There are several enum reflection libraries out there — so why choose **enchan
 - Macro-free (non intrusive).
 - No modifications needed for existing enums.
 - Allows specifying ranges for specific enums when needed.
-- Supports C++17.
+- Supports C++14 and later. C++14 users must provide `optional` and `string_view` aliases through `ENCHANTUM_CONFIG_FILE` because those types are standard only in C++17 and later.
 - Nicer compiler errors.
 - Supports wide strings.
 - Efficient executable binary size.

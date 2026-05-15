@@ -1,0 +1,175 @@
+name: C++14 Regression Checks
+
+on:
+  push:
+    branches: [ci/cpp14-regression-checks]
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  compatibility:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu GCC Latest
+            os: ubuntu-latest
+            compiler: gcc
+            setup: gcc-14
+            flags: -DCMAKE_CXX_COMPILER=g++
+            cpp20: true
+          - name: Ubuntu Clang Latest
+            os: ubuntu-latest
+            compiler: clang
+            setup: llvm-18
+            flags: -DCMAKE_CXX_COMPILER=clang++
+            cpp20: true
+          - name: macOS Clang Latest
+            os: macos-latest
+            compiler: system
+            flags: -DCMAKE_CXX_COMPILER=clang++
+            cpp20: true
+          - name: Windows MSVC 2022
+            os: windows-2022
+            compiler: msvc
+            flags: ""
+            cpp20: true
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install CMake and Ninja
+        uses: lukka/get-cmake@latest
+
+      - name: Setup MSVC Dev Command Prompt
+        if: matrix.compiler == 'msvc'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Setup GCC
+        if: matrix.compiler == 'gcc'
+        uses: aminya/setup-cpp@v1
+        with:
+          compiler: ${{ matrix.setup }}
+
+      - name: Setup Clang
+        if: matrix.compiler == 'clang'
+        uses: aminya/setup-cpp@v1
+        with:
+          compiler: ${{ matrix.setup }}
+
+      - name: Setup Build Script
+        run: chmod +x .github/scripts/build_and_test.sh
+
+      - name: Build (C++14)
+        run: .github/scripts/build_and_test.sh 14 "${{ matrix.flags }}"
+
+      - name: Build (C++17)
+        run: .github/scripts/build_and_test.sh 17 "${{ matrix.flags }}"
+
+      - name: Build (C++20)
+        if: matrix.cpp20
+        run: .github/scripts/build_and_test.sh 20 "${{ matrix.flags }}"
+
+  regression-timing:
+    name: Regression Timing (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu GCC 14
+            os: ubuntu-latest
+            compiler: gcc
+            setup: gcc-14
+            flags: -DCMAKE_CXX_COMPILER=g++
+          - name: Windows MSVC 2022
+            os: windows-2022
+            compiler: msvc
+            flags: ""
+
+    steps:
+      - name: Checkout Candidate
+        uses: actions/checkout@v4
+        with:
+          path: candidate
+
+      - name: Checkout Baseline
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: baseline
+
+      - name: Install CMake and Ninja
+        uses: lukka/get-cmake@latest
+
+      - name: Setup MSVC Dev Command Prompt
+        if: matrix.compiler == 'msvc'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Setup GCC
+        if: matrix.compiler == 'gcc'
+        uses: aminya/setup-cpp@v1
+        with:
+          compiler: ${{ matrix.setup }}
+
+      - name: Measure Build Times
+        run: |
+          set -euo pipefail
+
+          measure() {
+            local repo="$1"
+            local label="$2"
+            local std="$3"
+            local target="$4"
+            local dir="${repo}/build-timing-cpp${std}-${target}"
+
+            rm -rf "$dir"
+            local start end elapsed
+            start=$(date +%s)
+            cmake -S "$repo" -B "$dir" -G Ninja ${{ matrix.flags }} -DCMAKE_BUILD_TYPE=Release -DENCHANTUM_BUILD_TESTS=ON -DCMAKE_CXX_STANDARD="$std" -DCMAKE_CXX_EXTENSIONS=OFF
+            cmake --build "$dir" --target "$target" --parallel 1
+            end=$(date +%s)
+            elapsed=$((end - start))
+            echo "${label},cpp${std},${target},${elapsed}" | tee -a timing.csv
+          }
+
+          echo "label,standard,target,seconds" > timing.csv
+          measure baseline baseline 17 tests
+          measure candidate candidate 17 tests
+          measure baseline baseline 20 tests
+          measure candidate candidate 20 tests
+
+          python3 - <<'PY'
+          import csv
+
+          rows = list(csv.DictReader(open('timing.csv', newline='')))
+          values = {(row['label'], row['standard'], row['target']): int(row['seconds']) for row in rows}
+
+          with open('timing-summary.md', 'w', newline='') as out:
+              out.write('| Standard | Target | Baseline Seconds | Candidate Seconds | Delta Seconds | Delta Percent |\n')
+              out.write('| --- | --- | ---: | ---: | ---: | ---: |\n')
+              for standard in ['cpp17', 'cpp20']:
+                  key_base = ('baseline', standard, 'tests')
+                  key_candidate = ('candidate', standard, 'tests')
+                  base = values[key_base]
+                  candidate = values[key_candidate]
+                  delta = candidate - base
+                  percent = (delta / base * 100.0) if base else 0.0
+                  out.write(f'| {standard} | tests | {base} | {candidate} | {delta:+d} | {percent:+.1f}% |\n')
+          PY
+
+          cat timing-summary.md
+
+      - name: Upload Timing Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: timing-${{ matrix.name }}
+          path: |
+            timing.csv
+            timing-summary.md

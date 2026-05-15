@@ -1,7 +1,95 @@
 #pragma once
 
+
+#include <type_traits>
+#include <utility>
+#include <cstddef>
+
+#if defined(_MSVC_LANG)
+  #define ENCHANTUM_DETAILS_CXX_STD _MSVC_LANG
+#else
+  #define ENCHANTUM_DETAILS_CXX_STD __cplusplus
+#endif
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+  #include <array>
+#endif
+
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+  #define ENCHANTUM_DETAILS_INLINE_VAR inline
+#else
+  #define ENCHANTUM_DETAILS_INLINE_VAR
+#endif
+
+namespace enchantum {
+namespace details {
+
+template<typename...>
+using void_t = void;
+
+template<bool B>
+using bool_constant = std::integral_constant<bool, B>;
+
+template<typename F, typename... Args>
+struct is_invocable {
+private:
+  template<typename U>
+  static auto test(int) -> decltype(std::declval<U>()(std::declval<Args>()...), std::true_type{});
+
+  template<typename>
+  static std::false_type test(...);
+
+public:
+  static constexpr bool value = decltype(test<F>(0))::value;
+};
+
+template<typename T>
+struct type_identity {
+  using type = T;
+};
+
+template<typename T, std::size_t N>
+struct cxx14_array {
+  T elems[N == 0 ? 1 : N]{};
+
+  constexpr T*       data() noexcept { return elems; }
+  constexpr const T* data() const noexcept { return elems; }
+
+  constexpr T&       operator[](std::size_t i) noexcept { return elems[i]; }
+  constexpr const T& operator[](std::size_t i) const noexcept { return elems[i]; }
+
+  constexpr T&       front() noexcept { return elems[0]; }
+  constexpr const T& front() const noexcept { return elems[0]; }
+
+  constexpr T&       back() noexcept { return elems[N == 0 ? 0 : N - 1]; }
+  constexpr const T& back() const noexcept { return elems[N == 0 ? 0 : N - 1]; }
+
+  constexpr T*       begin() noexcept { return elems; }
+  constexpr const T* begin() const noexcept { return elems; }
+
+  constexpr T*       end() noexcept { return elems + N; }
+  constexpr const T* end() const noexcept { return elems + N; }
+
+  constexpr std::size_t size() const noexcept { return N; }
+};
+
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+template<typename T, std::size_t N>
+using array = std::array<T, N>;
+#else
+template<typename T, std::size_t N>
+using array = cxx14_array<T, N>;
+#endif
+
+} // namespace details
+} // namespace enchantum
+
+
 #ifdef ENCHANTUM_CONFIG_FILE
   #include ENCHANTUM_CONFIG_FILE
+#endif
+
+#if !defined(ENCHANTUM_ALIAS_STRING_VIEW) && ENCHANTUM_DETAILS_CXX_STD < 201703L
+  #error "C++14 users must define ENCHANTUM_ALIAS_STRING_VIEW to a string_view-compatible alias."
 #endif
 
 #ifndef ENCHANTUM_ALIAS_STRING_VIEW
@@ -12,100 +100,18 @@ namespace enchantum {
 #ifdef ENCHANTUM_ALIAS_STRING_VIEW
 ENCHANTUM_ALIAS_STRING_VIEW;
 #else
-using ::std::string_view;
+using ::std ::string_view;
 #endif
 
 } // namespace enchantum
-#include <array>
 
-namespace enchantum {
-
-namespace details {
-#define SZC(x) (sizeof(x) - 1)
-  constexpr string_view extract_name_from_type_name(const string_view type_name) noexcept
-  {
-    if (const auto n = type_name.rfind(':'); n != type_name.npos)
-      return type_name.substr(n + 1);
-    else
-      return type_name;
-  }
-
-  template<typename T>
-  constexpr auto raw_type_name_func() noexcept
-  {
-#if defined(__NVCOMPILER)
-    constexpr std::size_t prefix = 0;
-    constexpr auto s = string_view(__PRETTY_FUNCTION__ + SZC("constexpr auto enchantum::details::raw_type_name_func() noexcept [with T = "),
-            SZC(__PRETTY_FUNCTION__) - SZC("constexpr auto enchantum::details::raw_type_name_func() noexcept [with T = ]"));
-#elif defined(__clang__)
-    constexpr std::size_t prefix = 0;
-    constexpr auto s = string_view(__PRETTY_FUNCTION__ + SZC("auto enchantum::details::raw_type_name_func() [_ = "),
-                                   SZC(__PRETTY_FUNCTION__) - SZC("auto enchantum::details::raw_type_name_func() [_ = ]"));
-#elif defined(_MSC_VER)
-    constexpr auto s = string_view(__FUNCSIG__ + SZC("auto __cdecl enchantum::details::raw_type_name_func<"),
-                                   SZC(__FUNCSIG__) - SZC("auto __cdecl enchantum::details::raw_type_name_func<") -
-                                     SZC(">(void) noexcept"));
-
-    // clang-format off
-    constexpr auto prefix = std::is_enum_v<T> ? SZC("enum ") : 
-        std::is_class_v<T> ?  SZC("struct ") - (s[0] == 'c') :
-        0;
-// clang-format on
-#elif defined(__GNUG__)
-    constexpr std::size_t prefix = 0;
-    constexpr auto        s      = string_view(__PRETTY_FUNCTION__ +
-                                     SZC("constexpr auto enchantum::details::raw_type_name_func() [with _ = "),
-                                   SZC(__PRETTY_FUNCTION__) -
-                                     SZC("constexpr auto enchantum::details::raw_type_name_func() [with _ = ]"));
-#endif
-    std::array<char, 1 + s.size() - prefix> ret{};
-    auto* const                             ret_data = ret.data();
-    const auto* const                       s_data   = s.data();
-
-    for (std::size_t i = 0; i < ret.size() - 1; ++i)
-      ret_data[i] = s_data[i + prefix];
-    return ret;
-  }
-
-  template<typename T>
-  inline constexpr auto raw_type_name_func_var = raw_type_name_func<T>();
-
-  template<typename T>
-  constexpr auto type_name_func() noexcept
-  {
-    static_assert(!std::is_function_v<std::remove_pointer_t<T>> && !std::is_member_function_pointer_v<T>,
-                  "enchantum::type_name<T> does not work well with function pointers or functions or member function\n"
-                  "pointers");
-
-    constexpr auto& array = raw_type_name_func_var<T>;
-    static_assert(array[array.size() - 2] != '>', "enchantum::type_name<T> does not work well with a templated type");
-
-    constexpr auto  s     = details::extract_name_from_type_name(string_view(array.data(), array.size() - 1));
-    std::array<char, s.size() + 1> ret{};
-    for (std::size_t i = 0; i < s.size(); ++i)
-      ret[i] = s[i];
-    return ret;
-  }
-
-  template<typename T>
-  inline constexpr auto type_name_func_var = type_name_func<T>();
-
-#undef SZC
-
-} // namespace details
-
-template<typename T>
-inline constexpr auto type_name = string_view(details::type_name_func_var<T>.data(),
-                                              details::type_name_func_var<T>.size() - 1);
-
-template<typename T>
-inline constexpr auto raw_type_name = string_view(details::raw_type_name_func_var<T>.data(),
-                                                  details::raw_type_name_func_var<T>.size() - 1);
-
-} // namespace enchantum
 
 #ifdef ENCHANTUM_CONFIG_FILE
   #include ENCHANTUM_CONFIG_FILE
+#endif
+
+#if !defined(ENCHANTUM_ALIAS_OPTIONAL) && ENCHANTUM_DETAILS_CXX_STD < 201703L
+  #error "C++14 users must define ENCHANTUM_ALIAS_OPTIONAL to an optional-compatible template alias."
 #endif
 
 #ifndef ENCHANTUM_ALIAS_OPTIONAL
@@ -121,6 +127,7 @@ using ::std::optional;
 
 } // namespace enchantum
 
+
 #ifdef ENCHANTUM_CONFIG_FILE
   #include ENCHANTUM_CONFIG_FILE
 #endif
@@ -128,6 +135,7 @@ using ::std::optional;
 #ifndef ENCHANTUM_ALIAS_STRING
   #include <string>
 #endif
+
 
 namespace enchantum {
 #ifdef ENCHANTUM_ALIAS_STRING
@@ -137,13 +145,12 @@ using ::std::string;
 #endif
 
 } // namespace enchantum
-
 #ifdef __cpp_concepts
   #include <concepts>
 #endif
 #include <limits>
-#include <string_view>
 #include <type_traits>
+#include <utility>
 
 #ifndef ENCHANTUM_ASSERT
   #include <cassert>
@@ -166,34 +173,36 @@ using ::std::string;
 
 namespace enchantum {
 
-template<typename T, bool = std::is_enum_v<T>>
-inline constexpr bool is_scoped_enum = false;
+template<typename T, bool = std::is_enum<T>::value>
+ENCHANTUM_DETAILS_INLINE_VAR constexpr bool is_scoped_enum = false;
 
 template<typename E>
-inline constexpr bool is_scoped_enum<E, true> = !std::is_convertible_v<E, std::underlying_type_t<E>>;
+ENCHANTUM_DETAILS_INLINE_VAR constexpr bool is_scoped_enum<E, true> = !std::is_convertible<E, std::underlying_type_t<E>>::value;
 
 template<typename E>
-inline constexpr bool is_unscoped_enum = std::is_enum_v<E> && !is_scoped_enum<E>;
+ENCHANTUM_DETAILS_INLINE_VAR constexpr bool is_unscoped_enum = std::is_enum<E>::value && !is_scoped_enum<E>;
 
 template<typename E, typename = void>
-inline constexpr bool has_fixed_underlying_type = false;
+ENCHANTUM_DETAILS_INLINE_VAR constexpr bool has_fixed_underlying_type = false;
 
 template<typename E>
-inline constexpr bool has_fixed_underlying_type<E, decltype(void(E{0}))> = std::is_enum_v<E>;
+ENCHANTUM_DETAILS_INLINE_VAR constexpr bool has_fixed_underlying_type<E, decltype(void(E{0}))> = std::is_enum<E>::value;
+
 
 #ifdef __cpp_concepts
 
 template<typename T>
-concept Enum = std::is_enum_v<T>;
+concept Enum = std::is_enum<T>::value;
 
 template<Enum E>
-inline constexpr bool is_bitflag = requires(E e) {
+ENCHANTUM_DETAILS_INLINE_VAR constexpr bool is_bitflag = requires(E e) {
   requires std::same_as<decltype(e & e), bool> || std::same_as<decltype(e & e), E>;
   { ~e } -> std::same_as<E>;
   { e | e } -> std::same_as<E>;
   { e &= e } -> std::same_as<E&>;
   { e |= e } -> std::same_as<E&>;
 };
+
 
 template<typename T>
 concept SignedEnum = Enum<T> && std::signed_integral<std::underlying_type_t<T>>;
@@ -202,7 +211,7 @@ template<typename T>
 concept UnsignedEnum = Enum<T> && !SignedEnum<T>;
 
 template<typename T>
-concept ScopedEnum = Enum<T> && (!std::is_convertible_v<T, std::underlying_type_t<T>>);
+concept ScopedEnum = Enum<T> && (!std::is_convertible<T, std::underlying_type_t<T>>::value);
 
 template<typename T>
 concept UnscopedEnum = Enum<T> && !ScopedEnum<T>;
@@ -218,45 +227,65 @@ concept EnumFixedUnderlying = Enum<T> && requires { T{0}; };
 
 #else
 
+
 template<typename E, typename = void>
-inline constexpr bool is_bitflag = false;
+ENCHANTUM_DETAILS_INLINE_VAR constexpr bool is_bitflag = false;
 
 // clang-format off
 template<typename E>
-inline constexpr bool is_bitflag<E, 
-    std::void_t<
+ENCHANTUM_DETAILS_INLINE_VAR constexpr bool is_bitflag<E,
+    enchantum::details::void_t<
     decltype(E{} & E{}),
-    decltype(~E{}), 
-    decltype(E{} | E{}), 
-    decltype(std::declval<E&>() &= E{}), 
+    decltype(~E{}),
+    decltype(E{} | E{}),
+    decltype(std::declval<E&>() &= E{}),
     decltype(std::declval<E&>() |= E{})
-    >> =  std::is_enum_v<E>
-    &&    (std::is_same_v<decltype(E{} & E{}),bool>  || std::is_same_v<decltype(E{} & E{}), E>) 
-    &&    std::is_same_v<decltype(~E{}), E> 
-    &&    std::is_same_v<decltype(E{} | E{}), E>
-    &&    std::is_same_v<decltype(std::declval<E&>() &= E{}), E&>
-    &&    std::is_same_v<decltype(std::declval<E&>() |= E{}), E&>
+    >> =  std::is_enum<E>::value
+    &&    (std::is_same<decltype(E{} & E{}),bool>::value  || std::is_same<decltype(E{} & E{}), E>::value)
+    &&    std::is_same<decltype(~E{}), E>::value
+    &&    std::is_same<decltype(E{} | E{}), E>::value
+    &&    std::is_same<decltype(std::declval<E&>() &= E{}), E&>::value
+    &&    std::is_same<decltype(std::declval<E&>() |= E{}), E&>::value
     ;
 // clang-format on
 #endif
+
 
 namespace details {
   template<typename T, typename U>
   constexpr auto Max(T a, U b)
   {
-    return a < b ? b : a;
-  }
+    using R = typename std::common_type<T, U>::type;
+    return static_cast<R>(a) < static_cast<R>(b) ? static_cast<R>(b) : static_cast<R>(a);
+
   template<typename T, typename U>
   constexpr auto Min(T a, U b)
   {
-    return a > b ? b : a;
+    using R = typename std::common_type<T, U>::type;
+    return static_cast<R>(a) > static_cast<R>(b) ? static_cast<R>(b) : static_cast<R>(a);
   }
-#if !defined(__NVCOMPILER) && defined(__clang__) && __clang_major__ >= 20
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L && !defined(__NVCOMPILER) && defined(__clang__) && __clang_major__ >= 20
   template<typename E, auto V, typename = void>
-  inline constexpr bool is_valid_cast = false;
+  ENCHANTUM_DETAILS_INLINE_VAR constexpr bool is_valid_cast = false;
 
   template<typename E, auto V>
-  inline constexpr bool is_valid_cast<E, V, std::void_t<std::integral_constant<E, static_cast<E>(V)>>> = true;
+  ENCHANTUM_DETAILS_INLINE_VAR constexpr bool is_valid_cast<E, V, enchantum::details::void_t<std::integral_constant<E, static_cast<E>(V)>>> = true;
+
+  template<typename E, std::underlying_type_t<E> range, decltype(range) old_range>
+  constexpr auto valid_cast_range_recurse() noexcept;
+
+  template<typename E, std::underlying_type_t<E> range, decltype(range) old_range, bool IsValid>
+  struct valid_cast_range_recurse_impl;
+
+  template<typename E, std::underlying_type_t<E> range, decltype(range) old_range>
+  struct valid_cast_range_recurse_impl<E, range, old_range, true> {
+    static constexpr auto value() noexcept { return valid_cast_range_recurse<E, range * 2, range>(); }
+  };
+
+  template<typename E, std::underlying_type_t<E> range, decltype(range) old_range>
+  struct valid_cast_range_recurse_impl<E, range, old_range, false> {
+    static constexpr auto value() noexcept { return old_range > 0 ? old_range * 2 - 1 : old_range; }
+  };
 
   template<typename E, std::underlying_type_t<E> range, decltype(range) old_range>
   constexpr auto valid_cast_range_recurse() noexcept
@@ -269,57 +298,89 @@ namespace details {
     // while clang makes it a subsituation failure which we can check for
     // using std::inegral_constant makes sure this is a constant expression situation
     // for SFINAE to occur
-    if constexpr (is_valid_cast<E, range>)
-      return valid_cast_range_recurse<E, range * 2, range>();
-    else
-      return old_range > 0 ? old_range * 2 - 1 : old_range;
+    return valid_cast_range_recurse_impl<E, range, old_range, is_valid_cast<E, range>>::value();
   }
+
   template<typename E, int max_range>
-  constexpr auto valid_cast_range() noexcept
+  constexpr auto valid_cast_range_impl(std::integral_constant<int, 0>) noexcept
+  {
+    using T = std::underlying_type_t<E>;
+    return T{0};
+  }
+
+  template<typename E, int max_range>
+  constexpr auto valid_cast_range_impl(std::integral_constant<int, 1>) noexcept
   {
     using T = std::underlying_type_t<E>;
     using L = std::numeric_limits<T>;
+    return is_valid_cast<E, (L::max)()> ? L::max() : details::valid_cast_range_recurse<E, max_range, 0>();
+  }
 
-    if constexpr (max_range == 0)
-      return T{0};
-    else if constexpr (max_range > 0 && is_valid_cast<E, (L::max)()>)
-      return L::max();
-    else if constexpr (max_range < 0 && is_valid_cast<E, (L::min)()>)
-      return L::min();
-    else
-      return details::valid_cast_range_recurse<E, max_range, 0>();
+  template<typename E, int max_range>
+  constexpr auto valid_cast_range_impl(std::integral_constant<int, -1>) noexcept
+  {
+    using T = std::underlying_type_t<E>;
+    using L = std::numeric_limits<T>;
+    return is_valid_cast<E, (L::min)()> ? L::min() : details::valid_cast_range_recurse<E, max_range, 0>();
+  }
+
+  template<typename E, int max_range>
+  constexpr auto valid_cast_range() noexcept
+  {
+    return details::valid_cast_range_impl<E, max_range>(std::integral_constant<int, (max_range > 0) - (max_range < 0)>{});
   }
 
 #endif
 
   template<typename E>
+  constexpr auto enum_range_of_bool(const int max_range, std::true_type)
+  {
+    return max_range > 0;
+  }
+
+  template<typename E>
+  constexpr auto enum_range_of_signed(const int max_range, std::true_type)
+  {
+    using T = std::underlying_type_t<E>;
+    using L = std::numeric_limits<T>;
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L && !defined(__NVCOMPILER) && defined(__clang__) && __clang_major__ >= 20
+    constexpr auto Max = has_fixed_underlying_type<E> ? (L::max)() : details::valid_cast_range<E, 1>();
+    constexpr auto Min = has_fixed_underlying_type<E> ? (L::min)() : details::valid_cast_range<E, -1>();
+#else
+    constexpr auto Max = (L::max)();
+    constexpr auto Min = (L::min)();
+#endif
+    return max_range > 0 ? details::Min(ENCHANTUM_MAX_RANGE, Max) : details::Max(ENCHANTUM_MIN_RANGE, Min);
+  }
+
+  template<typename E>
+  constexpr auto enum_range_of_signed(const int max_range, std::false_type)
+  {
+    using T = std::underlying_type_t<E>;
+    using L = std::numeric_limits<T>;
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L && !defined(__NVCOMPILER) && defined(__clang__) && __clang_major__ >= 20
+    constexpr auto Max = has_fixed_underlying_type<E> ? (L::max)() : details::valid_cast_range<E, 1>();
+#else
+    constexpr auto Max = (L::max)();
+#endif
+    return max_range > 0 ? details::Min(static_cast<unsigned int>(ENCHANTUM_MAX_RANGE), Max) : 0;
+  }
+
+  template<typename E>
+  constexpr auto enum_range_of_bool(const int max_range, std::false_type)
+  {
+    using T = std::underlying_type_t<E>;
+    return enum_range_of_signed<E>(max_range, std::integral_constant<bool, std::is_signed<T>::value>{});
+  }
+
+  template<typename E>
   constexpr auto enum_range_of(const int max_range)
   {
     using T = std::underlying_type_t<E>;
-    if constexpr (std::is_same_v<bool, T>) {
-      return max_range > 0;
-    }
-    else {
-      using L = std::numeric_limits<T>;
-#if !defined(__NVCOMPILER) && defined(__clang__) && __clang_major__ >= 20
-      constexpr auto Max = has_fixed_underlying_type<E> ? (L::max)() : details::valid_cast_range<E, 1>();
-      constexpr auto Min = has_fixed_underlying_type<E>
-        ? (L::min)()
-        : details::valid_cast_range<E, std::is_signed_v<T> ? -1 : 0>();
-#else
-      constexpr auto Max = (L::max)();
-      constexpr auto Min = (L::min)();
-#endif
-      (void)Min; // Only used in signed branch
-      if constexpr (std::is_signed_v<T>) {
-        return max_range > 0 ? details::Min(ENCHANTUM_MAX_RANGE, Max) : details::Max(ENCHANTUM_MIN_RANGE, Min);
-      }
-      else {
-        return max_range > 0 ? details::Min(static_cast<unsigned int>(ENCHANTUM_MAX_RANGE), Max) : 0;
-      }
-    }
+    return enum_range_of_bool<E>(max_range, std::is_same<bool, T>{});
   }
 } // namespace details
+
 
 template<typename E>
 struct enum_traits {
@@ -333,9 +394,9 @@ public:
 
 namespace details {
   template<typename T,typename = void>
-  inline constexpr bool has_specialized_traits = true;
+  ENCHANTUM_DETAILS_INLINE_VAR constexpr bool has_specialized_traits = true;
   template<typename T>
-  inline constexpr bool has_specialized_traits<T, typename enum_traits<T>::zxshady_enchantum_is_not_specialized_tag> = false;
+  ENCHANTUM_DETAILS_INLINE_VAR constexpr bool has_specialized_traits<T, typename enum_traits<T>::zxshady_enchantum_is_not_specialized_tag> = false;
 
 } // namespace details
 
@@ -345,9 +406,102 @@ namespace details {
   #define ENCHANTUM_DETAILS_ENUM_CONCEPT(Name)         Enum Name
   #define ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(Name) BitFlagEnum Name
 #else
-  #define ENCHANTUM_DETAILS_ENUM_CONCEPT(Name)         typename Name, std::enable_if_t<std::is_enum_v<Name>, int> = 0
+  #define ENCHANTUM_DETAILS_ENUM_CONCEPT(Name)         typename Name, std::enable_if_t<std::is_enum<Name>::value, int> = 0
   #define ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(Name) typename Name, std::enable_if_t<is_bitflag<Name>, int> = 0
 #endif
+#include <cstddef>
+
+namespace enchantum {
+
+namespace details {
+#define SZC(x) (sizeof(x) - 1)
+  constexpr string_view extract_name_from_type_name(const string_view type_name) noexcept
+  {
+    const auto n = type_name.rfind(':');
+    if (n != type_name.npos)
+      return type_name.substr(n + 1);
+    else
+      return type_name;
+  }
+
+  template<typename T>
+  constexpr auto raw_type_name_func() noexcept
+  {
+#if defined(__RESHARPER__)
+      constexpr std::size_t prefix =0;
+    constexpr auto s = string_view(__rscpp_type_name<T>());
+#elif defined(__NVCOMPILER)
+    constexpr std::size_t prefix = 0;
+    constexpr auto s = string_view(__PRETTY_FUNCTION__ + SZC("constexpr auto enchantum::details::raw_type_name_func() noexcept [with T = "),
+            SZC(__PRETTY_FUNCTION__) - SZC("constexpr auto enchantum::details::raw_type_name_func() noexcept [with T = ]"));
+#elif defined(__clang__)
+    constexpr std::size_t prefix = 0;
+    constexpr auto s = string_view(__PRETTY_FUNCTION__ + SZC("auto enchantum::details::raw_type_name_func() [_ = "),
+                                   SZC(__PRETTY_FUNCTION__) - SZC("auto enchantum::details::raw_type_name_func() [_ = ]"));
+#elif defined(_MSC_VER)
+    constexpr auto s = string_view(__FUNCSIG__ + SZC("auto __cdecl enchantum::details::raw_type_name_func<"),
+                                   SZC(__FUNCSIG__) - SZC("auto __cdecl enchantum::details::raw_type_name_func<") -
+                                     SZC(">(void) noexcept"));
+
+    // clang-format off
+    constexpr auto prefix = std::is_enum<T>::value ? SZC("enum ") :
+        std::is_class<T>::value ?  SZC("struct ") - (s[0] == 'c') :
+        0;
+// clang-format on
+#elif defined(__GNUG__)
+    constexpr std::size_t prefix = 0;
+    constexpr auto        s      = string_view(__PRETTY_FUNCTION__ +
+                                     SZC("constexpr auto enchantum::details::raw_type_name_func() [with _ = "),
+                                   SZC(__PRETTY_FUNCTION__) -
+                                     SZC("constexpr auto enchantum::details::raw_type_name_func() [with _ = ]"));
+#endif
+    details::array<char, 1 + s.size() - prefix> ret{};
+    auto* const                             ret_data = ret.data();
+    const auto* const                       s_data   = s.data();
+
+    for (std::size_t i = 0; i < ret.size() - 1; ++i)
+      ret_data[i] = s_data[i + prefix];
+    return ret;
+  }
+
+  template<typename T>
+  ENCHANTUM_DETAILS_INLINE_VAR constexpr auto raw_type_name_func_var = raw_type_name_func<T>();
+
+
+  template<typename T>
+  constexpr auto type_name_func() noexcept
+  {
+    static_assert(!std::is_function<std::remove_pointer_t<T>>::value && !std::is_member_function_pointer<T>::value,
+                  "enchantum::type_name<T> does not work well with function pointers or functions or member function\n"
+                  "pointers");
+
+    constexpr auto& array = raw_type_name_func_var<T>;
+    static_assert(array[array.size() - 2] != '>', "enchantum::type_name<T> does not work well with a templated type");
+
+    constexpr auto  s     = details::extract_name_from_type_name(string_view(array.data(), array.size() - 1));
+    details::array<char, s.size() + 1> ret{};
+    for (std::size_t i = 0; i < s.size(); ++i)
+      ret[i] = s[i];
+    return ret;
+  }
+
+  template<typename T>
+  ENCHANTUM_DETAILS_INLINE_VAR constexpr auto type_name_func_var = type_name_func<T>();
+
+#undef SZC
+
+} // namespace details
+
+template<typename T>
+ENCHANTUM_DETAILS_INLINE_VAR constexpr auto type_name = string_view(details::type_name_func_var<T>.data(),
+                                                                    details::type_name_func_var<T>.size() - 1);
+
+template<typename T>
+ENCHANTUM_DETAILS_INLINE_VAR constexpr auto raw_type_name = string_view(details::raw_type_name_func_var<T>.data(),
+                                                                        details::raw_type_name_func_var<T>.size() - 1);
+
+
+} // namespace enchantum
 #include <array>
 #include <climits>
 #include <cstddef>
@@ -357,11 +511,12 @@ namespace details {
 namespace enchantum {
 namespace details {
 
+
   template<typename E, typename = void>
-  inline constexpr std::size_t prefix_length_or_zero = 0;
+  ENCHANTUM_DETAILS_INLINE_VAR constexpr std::size_t prefix_length_or_zero = 0;
 
   template<typename E>
-  inline constexpr auto prefix_length_or_zero<E, decltype((void)enum_traits<E>::prefix_length)> = std::size_t{
+  ENCHANTUM_DETAILS_INLINE_VAR constexpr auto prefix_length_or_zero<E, decltype((void)enum_traits<E>::prefix_length)> = std::size_t{
     enum_traits<E>::prefix_length};
 
   template<typename Underlying, std::size_t ArraySize>
@@ -377,11 +532,104 @@ namespace details {
 
 } // namespace details
 } // namespace enchantum
+#if defined(__RESHARPER__)
 
-#if defined(__NVCOMPILER)
-  
+#include <cstdint>
+#include <initializer_list>
+#include <type_traits>
+#include <utility>
 
-#include <array>
+namespace enchantum {
+namespace details {
+
+  // WORKAROUND
+  // resharper seems to not copy values of arrays correctly in constexpr contexts.
+  // it copies the last element of the array to the WHOLE array
+  // giving the array a default value other than default-init fixes the issue
+  // as for why 'Count' is explicitly taken although it is equal to sizeof...(Is)
+  // is to workaround another bug, which seems to think sizeof...(Is) is 0
+  template<std::size_t Count, typename Value, std::size_t... Is>
+  constexpr auto rscpp_make_defaulted_array_of(const Value value, std::index_sequence<Is...>)
+  {
+    return details::array<Value, Count>{(Is, void(), value)...};
+  }
+
+
+  template<typename E, bool NullTerminated, typename MinT, MinT Min, std::size_t... Is>
+  constexpr auto reflect_elements(std::index_sequence<Is...>) noexcept
+  {
+    using T    = std::underlying_type_t<E>;
+    using U    = std::make_unsigned_t<std::conditional_t<std::is_same<bool, T>::value, unsigned char, T>>;
+    constexpr bool        IsBitFlag    = is_bitflag<E>;
+    constexpr std::size_t max_elements = sizeof...(Is) + IsBitFlag;
+
+    const char* names[max_elements]{};
+    T           values[max_elements]{};
+    std::size_t count = 0;
+
+    if (IsBitFlag) {
+      const auto* zero_name = __rscpp_enumerator_name(E(0));
+      if (zero_name) {
+        names[count]    = zero_name;
+        values[count++] = 0;
+      }
+
+      for (std::size_t i : {Is...}) {
+        const auto val  = T(U(1) << i);
+        const auto name = __rscpp_enumerator_name(E(val));
+        if (name) {
+          names[count]    = name;
+          values[count++] = val;
+        }
+      }
+    }
+    else {
+      for (std::size_t i = 0; i < max_elements; ++i) {
+        const auto val  = T(MinT(i) + Min);
+        const auto name = __rscpp_enumerator_name(E(val));
+        if (name) {
+          names[count]    = name;
+          values[count++] = val;
+        }
+      }
+    }
+
+    auto ret = ReflectStringReturnValue<T, max_elements>{};
+    for (std::size_t i = 0; i < count; ++i) {
+      const auto        str = names[i] + prefix_length_or_zero<E>;
+      const std::size_t len = __builtin_strlen(str);
+      ret.values[i]         = values[i];
+      ret.string_lengths[i] = len;
+      for (std::size_t j = 0; j < len; ++j)
+        ret.strings[ret.total_string_length + j] = str[j];
+      ret.total_string_length += len + (NullTerminated ? 1 : 0);
+    }
+    ret.valid_count = count;
+    return ret;
+  }
+
+  template<typename E, bool NullTerminated, typename MinT, MinT Min, std::size_t... Is>
+  constexpr auto reflect(std::index_sequence<Is...>) noexcept
+  {
+    constexpr auto elements_local = reflect_elements<E, NullTerminated, MinT, Min>(std::index_sequence<Is...>{});
+
+    using Strings = details::array<char, elements_local.total_string_length>;
+
+    struct {
+      decltype(elements_local) elements;
+      Strings                  strings{};
+    } data = {elements_local};
+
+    const auto size = data.strings.size();
+    const auto str  = data.strings.data();
+    for (std::size_t i = 0; i < size; ++i)
+      str[i] = elements_local.strings[i];
+    return data;
+  }
+
+} // namespace details
+} // namespace enchantum
+#elif defined(__NVCOMPILER)
 #include <cassert>
 #include <climits>
 #include <cstdint>
@@ -390,28 +638,38 @@ namespace details {
 namespace enchantum {
 
 namespace details {
+#define SZC(x) (sizeof(x) - 1)
+
   constexpr std::size_t find_semicolon(const char* s)
   {
     for (std::size_t i = 0; true; ++i)
       if (s[i] == ';')
         return i;
   }
+
+  constexpr const char* find_nvcc_values_pack(const char* s) noexcept
+  {
+    for (std::size_t i = 0; true; ++i) {
+      if (s[i] == 'V' && s[i + 1] == ' ' && s[i + 2] == '=' && s[i + 3] == ' ' && s[i + 4] == '{')
+        return s + i + SZC("V = {");
+    }
+  }
+
   constexpr std::size_t enum_in_array_name_size(const string_view raw_type_name, const bool is_scoped_enum) noexcept
   {
     if (is_scoped_enum)
       return raw_type_name.size();
 
-    if (const auto pos = raw_type_name.rfind(':'); pos != string_view::npos)
+    const auto pos = raw_type_name.rfind(':');
+    if (pos != string_view::npos)
       return pos - 1;
     return 0;
   }
 
-#define SZC(x) (sizeof(x) - 1)
-
-  template<auto... V>
+  template<typename E, E... V>
   constexpr auto var_name() noexcept
   {
-    return __PRETTY_FUNCTION__ + SZC("constexpr auto enchantum::details::var_name() noexcept [with _ *V = (_ *)0; ");
+    return details::find_nvcc_values_pack(__PRETTY_FUNCTION__);
   }
 
   template<bool IsBitFlag, typename IntType>
@@ -430,79 +688,81 @@ namespace details {
   {
     for (std::size_t index = 0; index < array_size; ++index) {
       // check if cast (starts with '(')
-      str += SZC("_ *V = ");
       if (str[0] == '(') {
         str += least_length_when_casting;
-        while (*str++ != ';')
+        while (*str++ != ',')
           /*intentionally empty*/;
         str += SZC(" ");
       }
       else {
         str += least_length_when_value;
-        const auto commapos = details::find_semicolon(str);
-        if constexpr (IsBitFlag)
+        const auto commapos = static_cast<std::size_t>(__builtin_char_memchr(str, ',', UINT8_MAX) - str);
+        if (IsBitFlag)
           values[valid_count] = index == 0 ? IntType{} : static_cast<IntType>(IntType{1} << (index - 1));
         else
           values[valid_count] = static_cast<IntType>(min + static_cast<IntType>(index));
         string_lengths[valid_count++] = static_cast<std::uint8_t>(commapos);
         __builtin_memcpy(strings + total_string_length, str, commapos);
         total_string_length += commapos + null_terminated;
-        str += commapos + SZC("; ");
+        str += commapos + SZC(", ");
       }
     }
   }
 
-  template<typename E, bool NullTerminated, auto Min, std::size_t... Is>
-  constexpr auto reflect(std::index_sequence<Is...>) noexcept
+  template<typename E, typename MinT, MinT Min, typename Underlying, std::size_t... Is>
+  constexpr const char* reflect_var_name(std::true_type) noexcept
   {
-    using MinT = decltype(Min);
-    using T    = std::underlying_type_t<E>;
+    return details::var_name<E, E{}, static_cast<E>(Underlying(1) << Is)..., E{}>();
+  }
 
-    constexpr auto elements_local = []() {
-      constexpr auto ArraySize = sizeof...(Is) + is_bitflag<E>;
+  template<typename E, typename MinT, MinT Min, typename Underlying, std::size_t... Is>
+  constexpr const char* reflect_var_name(std::false_type) noexcept
+  {
+    return details::var_name<E, static_cast<E>(static_cast<MinT>(Is) + Min)..., E{}>();
+  }
+
+  template<typename E, bool NullTerminated, typename MinT, MinT Min, std::size_t... Is>
+  constexpr auto reflect_elements(std::index_sequence<Is...>) noexcept
+  {
+    using T = std::underlying_type_t<E>;
+    using Underlying = std::make_unsigned_t<std::conditional_t<std::is_same<bool, T>::value, unsigned char, T>>;
+    constexpr auto ArraySize = sizeof...(Is) + is_bitflag<E>;
 #pragma diag_suppress implicit_return_from_non_void_function
-      const auto str = [](auto dependant) {
-        constexpr bool always_true = sizeof(dependant) != 0;
-        // forces NVCC to shorten the string types
-        struct _ {};
-        // using a pointer since C++17 only allows pointers to class types not the class types themselves
-        constexpr _* A{};
-        using Underlying = std::make_unsigned_t<std::conditional_t<std::is_same_v<bool, T>, unsigned char, T>>;
-        // dummy 0
-        if constexpr (always_true && is_bitflag<E>) // sizeof... to make contest dependant
-          return details::var_name<A, static_cast<E>(!always_true), static_cast<E>(Underlying(1) << Is)..., 0>();
-        else
-          return details::var_name<A, static_cast<E>(static_cast<MinT>(Is) + Min)..., int(!always_true)>();
-      }(0);
+    const auto str = details::reflect_var_name<E, MinT, Min, Underlying, Is...>(std::integral_constant<bool, is_bitflag<E>>{});
 #pragma diag_default implicit_return_from_non_void_function
 
-      constexpr auto enum_in_array_len = details::enum_in_array_name_size(raw_type_name<E>, is_scoped_enum<E>);
-      // Ubuntu Clang 20 complains about using local constexpr variables in a local struct
-      ReflectStringReturnValue<std::underlying_type_t<E>, ArraySize> ret;
+    constexpr auto enum_in_array_len = details::enum_in_array_name_size(raw_type_name<E>, is_scoped_enum<E>);
+    // Ubuntu Clang 20 complains about using local constexpr variables in a local struct
+    ReflectStringReturnValue<std::underlying_type_t<E>, ArraySize> ret;
 
-      // ((anonymous namespace)::A)0
-      // (anonymous namespace)::a
-      // this is needed to determine whether the above are cast expression if 2 braces are
-      // next to eachother then it is a cast but only for anonymoused namespaced enums
+    // ((anonymous namespace)::A)0
+    // (anonymous namespace)::a
+    // this is needed to determine whether the above are cast expression if 2 braces are
+    // next to eachother then it is a cast but only for anonymoused namespaced enums
 
-      details::parse_string<is_bitflag<E>>(
-        /*str = */ str,
-        /*least_length_when_casting=*/SZC("(") + enum_in_array_len + SZC(")0"),
-        /*least_length_when_value=*/details::prefix_length_or_zero<E> +
-          (enum_in_array_len != 0 ? enum_in_array_len + SZC("::") : 0),
-        /*min = */ static_cast<T>(Min),
-        /*array_size = */ ArraySize,
-        /*null_terminated= */ NullTerminated,
-        /*enum_values= */ ret.values,
-        /*string_lengths= */ ret.string_lengths,
-        /*strings= */ ret.strings,
-        /*total_string_length*/ ret.total_string_length,
-        /*valid_count*/ ret.valid_count);
+    details::parse_string<is_bitflag<E>>(
+      /*str = */ str,
+      /*least_length_when_casting=*/SZC("(") + enum_in_array_len + SZC(")0"),
+      /*least_length_when_value=*/details::prefix_length_or_zero<E> +
+        (enum_in_array_len != 0 ? enum_in_array_len + SZC("::") : 0),
+      /*min = */ static_cast<T>(Min),
+      /*array_size = */ ArraySize,
+      /*null_terminated= */ NullTerminated,
+      /*enum_values= */ ret.values,
+      /*string_lengths= */ ret.string_lengths,
+      /*strings= */ ret.strings,
+      /*total_string_length*/ ret.total_string_length,
+      /*valid_count*/ ret.valid_count);
 
-      return ret;
-    }();
+    return ret;
+  }
 
-    using Strings = std::array<char, elements_local.total_string_length>;
+  template<typename E, bool NullTerminated, typename MinT, MinT Min, std::size_t... Is>
+  constexpr auto reflect(std::index_sequence<Is...>) noexcept
+  {
+    constexpr auto elements_local = reflect_elements<E, NullTerminated, MinT, Min>(std::index_sequence<Is...>{});
+
+    using Strings = details::array<char, elements_local.total_string_length>;
 
     struct {
       decltype(elements_local) elements;
@@ -515,7 +775,6 @@ namespace details {
 } // namespace details
 } // namespace enchantum
 #elif defined(__clang__)
-  
 
 // Clang <= 12 outputs "NUMBER" if casting
 // Clang > 12 outputs "(E)NUMBER".
@@ -527,7 +786,6 @@ namespace details {
   #endif
 #endif
 
-#include <array>
 #include <cassert>
 #include <climits>
 #include <cstdint>
@@ -542,19 +800,55 @@ namespace details {
     if (is_scoped_enum)
       return raw_type_name;
 
-    if (const auto pos = raw_type_name.rfind(':'); pos != string_view::npos)
+    const auto pos = raw_type_name.rfind(':');
+    if (pos != string_view::npos)
       return raw_type_name.substr(0, pos - 1);
     return string_view();
   }
 
 #define SZC(x) (sizeof(x) - 1)
 
-  template<auto... Vs>
+  constexpr const char* find_clang_values_pack(const char* s) noexcept
+  {
+    for (std::size_t i = 0; true; ++i) {
+      if (s[i] == 'V' && s[i + 1] == 's' && s[i + 2] == ' ' && s[i + 3] == '=' && s[i + 4] == ' ' && s[i + 5] == '<')
+        return s + i + SZC("Vs = <");
+    }
+  }
+
+  template<typename E, E... Vs>
   constexpr auto var_name() noexcept
   {
     // "auto enchantum::details::var_name() [Vs = <(A)0, a, b, c, e, d, (A)6>]"
-    return __PRETTY_FUNCTION__ + SZC("auto enchantum::details::var_name() [Vs = <");
+    return details::find_clang_values_pack(__PRETTY_FUNCTION__);
   }
+
+
+  constexpr bool is_out_of_range_parse(
+    std::size_t       index_check,
+    const char*       str,
+    const std::size_t least_length_when_casting,
+    const std::size_t array_size)
+  {
+    (void)index_check;
+    for (std::size_t index = 0; index < array_size; ++index) {
+#if __clang_major__ > 12
+      // check if cast (starts with '(')
+      if (str[index_check] == '(')
+#else
+      // check if it is a number or negative sign
+      if (str[0] == '-' || (str[0] >= '0' && str[0] <= '9'))
+#endif
+      {
+        str = __builtin_char_memchr(str + least_length_when_casting, ',', UINT8_MAX) + SZC(", ");
+      }
+      else {
+        return true;
+      }
+    }
+    return false;
+  }
+
 
   template<bool IsBitFlag, typename IntType>
   constexpr void parse_string(
@@ -586,7 +880,7 @@ namespace details {
       else {
         str += least_length_when_value;
         const auto commapos = static_cast<std::size_t>(__builtin_char_memchr(str, ',', UINT8_MAX) - str);
-        if constexpr (IsBitFlag)
+        if (IsBitFlag)
           values[valid_count] = index == 0 ? IntType{} : static_cast<IntType>(IntType{1} << (index - 1));
         else
           values[valid_count] = static_cast<IntType>(min + static_cast<IntType>(index));
@@ -597,62 +891,67 @@ namespace details {
       }
     }
   }
-  
-  template<typename E, bool NullTerminated, auto Min, std::size_t... Is>
+
+  template<typename E, typename MinT, MinT Min, typename Underlying, std::size_t... Is>
+  constexpr const char* reflect_var_name(std::true_type) noexcept
+  {
+    return details::var_name<E, E{}, static_cast<E>(Underlying(1) << Is)..., E{}>();
+  }
+
+  template<typename E, typename MinT, MinT Min, typename Underlying, std::size_t... Is>
+  constexpr const char* reflect_var_name(std::false_type) noexcept
+  {
+    return details::var_name<E, static_cast<E>(static_cast<MinT>(Is) + Min)..., E{}>();
+  }
+
+  template<typename E, bool NullTerminated, typename MinT, MinT Min, std::size_t... Is>
+  constexpr auto reflect_elements(std::index_sequence<Is...>) noexcept
+  {
+    using T          = std::underlying_type_t<E>;
+    using Underlying = std::make_unsigned_t<std::conditional_t<std::is_same<bool, T>::value, unsigned char, T>>;
+
+    constexpr auto ArraySize = sizeof...(Is) + is_bitflag<E>;
+    const auto     str       = details::reflect_var_name<E, MinT, Min, Underlying, Is...>(std::integral_constant<bool, is_bitflag<E>>{});
+
+    constexpr auto enum_in_array_name = details::enum_in_array_name(raw_type_name<E>, is_scoped_enum<E>);
+    constexpr auto enum_in_array_len  = enum_in_array_name.size();
+    // Ubuntu Clang 20 complains about using local constexpr variables in a local struct
+    ReflectStringReturnValue<std::underlying_type_t<E>, ArraySize> ret;
+
+    // ((anonymous namespace)::A)0
+    // (anonymous namespace)::a
+    // this is needed to determine whether the above are cast expression if 2 braces are
+    // next to eachother then it is a cast but only for anonymoused namespaced enums
+    constexpr std::size_t index_check = enum_in_array_name.size() != 0 && enum_in_array_name[0] == '(' ? 1 : 0;
+
+    details::parse_string<is_bitflag<E>>(
+      /*index_check=*/index_check,
+      /*str = */ str,
+#if __clang_major__ > 12
+      /*least_length_when_casting=*/SZC("(") + enum_in_array_len + SZC(")0"),
+#else
+      /*least_length_when_casting=*/1,
+#endif
+      /*least_length_when_value=*/details::prefix_length_or_zero<E> +
+        (enum_in_array_len != 0 ? enum_in_array_len + SZC("::") : 0),
+      /*min = */ static_cast<T>(Min),
+      /*array_size = */ ArraySize,
+      /*null_terminated= */ NullTerminated,
+      /*enum_values= */ ret.values,
+      /*string_lengths= */ ret.string_lengths,
+      /*strings= */ ret.strings,
+      /*total_string_length*/ ret.total_string_length,
+      /*valid_count*/ ret.valid_count);
+
+    return ret;
+  }
+
+  template<typename E, bool NullTerminated, typename MinT, MinT Min, std::size_t... Is>
   constexpr auto reflect(std::index_sequence<Is...>) noexcept
   {
-    using MinT       = decltype(Min);
-    using T          = std::underlying_type_t<E>;
-    using Underlying = std::make_unsigned_t<std::conditional_t<std::is_same_v<bool, T>, unsigned char, T>>;
+    constexpr auto elements_local = reflect_elements<E, NullTerminated, MinT, Min>(std::index_sequence<Is...>{});
 
-    constexpr auto elements_local = []() {
-      constexpr auto ArraySize = sizeof...(Is) + is_bitflag<E>;
-      const auto     str       = [](auto dependant) {
-        constexpr bool always_true = sizeof(dependant) != 0;
-        // dummy 0
-        if constexpr (always_true && is_bitflag<E>) // sizeof... to make contest dependant
-        {
-          return details::var_name<static_cast<E>(!always_true), static_cast<E>(Underlying(1) << Is)..., 0>();
-        }
-        else {
-          return details::var_name<static_cast<E>(static_cast<MinT>(Is) + Min)..., int(!always_true)>();
-        }
-      }(0);
-
-      constexpr auto enum_in_array_name = details::enum_in_array_name(raw_type_name<E>, is_scoped_enum<E>);
-      constexpr auto enum_in_array_len  = enum_in_array_name.size();
-      // Ubuntu Clang 20 complains about using local constexpr variables in a local struct
-      ReflectStringReturnValue<std::underlying_type_t<E>, ArraySize> ret;
-
-      // ((anonymous namespace)::A)0
-      // (anonymous namespace)::a
-      // this is needed to determine whether the above are cast expression if 2 braces are
-      // next to eachother then it is a cast but only for anonymoused namespaced enums
-      constexpr std::size_t index_check = enum_in_array_name.size() != 0 && enum_in_array_name[0] == '(' ? 1 : 0;
-
-      details::parse_string<is_bitflag<E>>(
-        /*index_check=*/index_check,
-        /*str = */ str,
-#if __clang_major__ > 12
-        /*least_length_when_casting=*/SZC("(") + enum_in_array_len + SZC(")0"),
-#else
-        /*least_length_when_casting=*/1,
-#endif
-        /*least_length_when_value=*/details::prefix_length_or_zero<E> +
-          (enum_in_array_len != 0 ? enum_in_array_len + SZC("::") : 0),
-        /*min = */ static_cast<T>(Min),
-        /*array_size = */ ArraySize,
-        /*null_terminated= */ NullTerminated,
-        /*enum_values= */ ret.values,
-        /*string_lengths= */ ret.string_lengths,
-        /*strings= */ ret.strings,
-        /*total_string_length*/ ret.total_string_length,
-        /*valid_count*/ ret.valid_count);
-
-      return ret;
-    }();
-
-    using Strings = std::array<char, elements_local.total_string_length>;
+    using Strings = details::array<char, elements_local.total_string_length>;
 
     struct {
       decltype(elements_local) elements;
@@ -660,12 +959,35 @@ namespace details {
     } data = {elements_local};
     __builtin_memcpy(data.strings.data(), elements_local.strings, data.strings.size());
     return data;
-  } // namespace details
+  }
+
+  template<typename E, typename MinT, MinT Min, std::size_t... Is>
+  constexpr bool is_out_of_range(std::index_sequence<Is...>) noexcept
+  {
+    constexpr auto ArraySize = sizeof...(Is);
+    const auto     str       = details::var_name<E, static_cast<E>(static_cast<MinT>(Is) + Min)..., E{}>();
+
+    constexpr auto enum_in_array_name = details::enum_in_array_name(raw_type_name<E>, is_scoped_enum<E>);
+    constexpr auto enum_in_array_len  = enum_in_array_name.size();
+    constexpr std::size_t index_check = enum_in_array_name.size() != 0 && enum_in_array_name[0] == '(' ? 1 : 0;
+    (void)enum_in_array_len; // not used until Clang 13
+    return details::is_out_of_range_parse(
+      /*index_check=*/index_check,
+      /*str = */ str,
+#if __clang_major__ > 12
+      /*least_length_when_casting=*/SZC("(") + enum_in_array_len + SZC(")0"),
+#else
+      /*least_length_when_casting=*/1,
+#endif
+      /*array_size = */ ArraySize);
+  }
 
 } // namespace details
 
+
 //template<Enum E>
 //constexpr std::size_t enum_count = details::enum_count<E>;
+
 
 } // namespace enchantum
 
@@ -676,16 +998,17 @@ namespace details {
 #endif
 #undef SZC
 #elif defined(__GNUC__) || defined(__GNUG__)
-  
-
-#include <array>
 #include <cassert>
 #include <climits>
 #include <cstdint>
 #include <type_traits>
 #include <utility>
 
-#define ENCAHNTUM_DETAILS_GCC_MAJOR __GNUC__
+#if defined(__has_include) && __has_include(<bits/char_traits.h>)
+  #include <bits/char_traits.h>
+#endif
+
+#define ENCHANTUM_DETAILS_GCC_MAJOR __GNUC__
 #if __GNUC__ <= 10
 // for out of bounds conversions for C style enums
   #pragma GCC diagnostic push
@@ -696,19 +1019,20 @@ namespace enchantum {
 namespace details {
 #define SZC(x) (sizeof(x) - 1)
 
+
   // this is needed since gcc transforms "{anonymous}" into "<unnamed>" for values
-  template<auto Enum>
+  template<typename E, E Enum>
   constexpr auto enum_in_array_name_size() noexcept
   {
     // constexpr auto f() [with auto _ = (
     //constexpr auto f() [with auto _ = (Scoped)0]
     auto s  = string_view(__PRETTY_FUNCTION__ +
-                           SZC("constexpr auto enchantum::details::enum_in_array_name_size() [with auto Enum = "),
-                         SZC(__PRETTY_FUNCTION__) -
-                           SZC("constexpr auto enchantum::details::enum_in_array_name_size() [with auto Enum = ]"));
-    using E = decltype(Enum);
+                            SZC("constexpr auto enchantum::details::enum_in_array_name_size() [with E = "),
+                          SZC(__PRETTY_FUNCTION__) -
+                            SZC("constexpr auto enchantum::details::enum_in_array_name_size() [with E = ]"));
+    s.remove_prefix(s.find(';') + SZC(" E Enum = "));
     // if scoped
-    if constexpr (!std::is_convertible_v<E, std::underlying_type_t<E>>) {
+    if (!std::is_convertible<E, std::underlying_type_t<E>>::value) {
       return s[0] == '(' ? s.size() - SZC("()0") : s.rfind(':') - 1;
     }
     else {
@@ -716,21 +1040,21 @@ namespace details {
         s.remove_prefix(SZC("("));
         s.remove_suffix(SZC(")0"));
       }
-      if (const auto pos = s.rfind(':'); pos != s.npos)
+      const auto pos = s.rfind(':');
+      if (pos != s.npos)
         return pos - 1;
       return std::size_t{0};
     }
   }
 
 #if __GNUC__ == 10
-  template<auto V>
+  template<typename E, E V>
   constexpr auto gcc10_workaround() noexcept
   {
-    using E = decltype(V);
-    using T = std::underlying_type_t<E>;
-    constexpr auto prefix = SZC("constexpr auto enchantum::details::gcc10_workaround() [with auto V = ");
+    using T               = std::underlying_type_t<E>;
+    constexpr auto prefix = SZC("constexpr auto enchantum::details::gcc10_workaround() [with E = ");
     constexpr auto begin  = __PRETTY_FUNCTION__ + prefix;
-    if constexpr (begin[0] == '(') {
+    if (begin[0] == '(') {
       std::size_t i   = SZC(__PRETTY_FUNCTION__) - prefix - SZC("(");
       const char* end = __PRETTY_FUNCTION__ + SZC(__PRETTY_FUNCTION__) - 1;
       while (*end != ')') {
@@ -740,10 +1064,11 @@ namespace details {
       --i;
       return i;
     }
-    else if constexpr (static_cast<T>(V) == (std::numeric_limits<T>::max)()) {
-      constexpr auto  s      = details::enum_in_array_name_size<E{}>();
+    else if (static_cast<T>(V) == (std::numeric_limits<T>::max)()) {
+      constexpr auto  s      = details::enum_in_array_name_size<E, E{}>();
       constexpr auto& tyname = raw_type_name<E>;
-      if (constexpr auto pos = tyname.rfind("::"); pos != tyname.npos) {
+      const auto pos = tyname.rfind("::");
+      if (pos != tyname.npos) {
         return s + tyname.substr(pos).size();
       }
       else {
@@ -751,38 +1076,64 @@ namespace details {
       }
     }
     else {
-      return details::gcc10_workaround<static_cast<E>(static_cast<T>(V) + 1)>();
+      return details::gcc10_workaround<E, static_cast<E>(static_cast<T>(V) + 1)>();
     }
   }
 #endif
 
   template<typename Enum>
+  constexpr auto length_of_enum_in_template_array_if_casting_impl(std::true_type) noexcept
+  {
+    return details::enum_in_array_name_size<Enum, Enum{}>();
+  }
+
+  template<typename Enum>
+  constexpr auto length_of_enum_in_template_array_if_casting_impl(std::false_type) noexcept
+  {
+#if __GNUC__ == 10
+    return details::gcc10_workaround<Enum, static_cast<Enum>((std::numeric_limits<std::underlying_type_t<Enum>>::min)())>();
+#else
+    constexpr auto  s      = details::enum_in_array_name_size<Enum, Enum{}>();
+    constexpr auto& tyname = raw_type_name<Enum>;
+    const auto pos = tyname.rfind("::");
+    if (pos != tyname.npos)
+      return s + tyname.substr(pos).size();
+    return s + tyname.size();
+#endif
+  }
+
+  template<typename Enum>
   constexpr auto length_of_enum_in_template_array_if_casting() noexcept
   {
-    if constexpr (is_scoped_enum<Enum>) {
-      return details::enum_in_array_name_size<Enum{}>();
-    }
-    else {
-#if __GNUC__ == 10
-      return details::gcc10_workaround<static_cast<Enum>((std::numeric_limits<std::underlying_type_t<Enum>>::min)())>();
-#else
-      constexpr auto  s      = details::enum_in_array_name_size<Enum{}>();
-      constexpr auto& tyname = raw_type_name<Enum>;
-      if (constexpr auto pos = tyname.rfind("::"); pos != tyname.npos) {
-        return s + tyname.substr(pos).size();
-      }
-      else {
-        return s + tyname.size();
-      }
-#endif
+    return details::length_of_enum_in_template_array_if_casting_impl<Enum>(std::integral_constant<bool, is_scoped_enum<Enum>>{});
+  }
+
+  constexpr const char* find_gcc_values_pack(const char* s) noexcept
+  {
+    for (std::size_t i = 0; true; ++i) {
+      if (s[i] == 'V' && s[i + 1] == 's' && s[i + 2] == ' ' && s[i + 3] == '=' && s[i + 4] == ' ' && s[i + 5] == '{')
+        return s + i + SZC("Vs = {");
     }
   }
 
-  template<auto... Vs>
+  template<typename E, E... Vs>
   constexpr auto var_name() noexcept
   {
-    return __PRETTY_FUNCTION__ + SZC("constexpr auto enchantum::details::var_name() [with auto ...Vs = {");
+    return details::find_gcc_values_pack(__PRETTY_FUNCTION__);
   }
+
+
+  constexpr bool is_out_of_range_parse(const char* str, const std::size_t least_length_when_casting, const std::size_t array_size)
+  {
+    for (std::size_t index = 0; index < array_size; ++index) {
+      if (*str == '(')
+        str = std::char_traits<char>::find(str + least_length_when_casting, UINT8_MAX, ',') + SZC(", ");
+      else
+        return true;
+    }
+    return false;
+  }
+
 
   template<bool IsBitFlag, typename IntType>
   constexpr void parse_string(
@@ -808,7 +1159,7 @@ namespace details {
         // although gcc implementation of std::char_traits::find is using a for loop internally
         // copying the code of the function makes it way slower to compile, this was surprising.
         const auto commapos = static_cast<std::size_t>(std::char_traits<char>::find(str, UINT8_MAX, ',') - str);
-        if constexpr (IsBitFlag)
+        if (IsBitFlag)
           values[valid_count] = index == 0 ? IntType{} : static_cast<IntType>(IntType{1} << (index - 1));
         else
           values[valid_count] = static_cast<IntType>(min + static_cast<IntType>(index));
@@ -821,62 +1172,101 @@ namespace details {
     }
   }
 
-  template<typename E, bool NullTerminated, auto Min, std::size_t... Is>
-  constexpr auto reflect(std::index_sequence<Is...>) noexcept
+
+  template<typename E, typename MinT, MinT Min, typename Underlying, std::size_t... Is>
+  constexpr const char* reflect_var_name(std::true_type) noexcept
   {
-
-    constexpr auto elements_local = []() {
-      constexpr auto ArraySize = sizeof...(Is) + is_bitflag<E>;
-      using Under              = std::underlying_type_t<E>;
-      using Underlying = std::make_unsigned_t<std::conditional_t<std::is_same_v<bool, Under>, unsigned char, Under>>;
-
-      constexpr auto str = [](const auto dependant) {
 #if __GNUC__ <= 10
-      // GCC 10 does not have it
   #define CAST(type, value) static_cast<type>(value)
 #else
-      // __builtin_bit_cast used to silence errors when casting out of unscoped enums range
   #define CAST(type, value) __builtin_bit_cast(type, value)
 #endif
-        // dummy 0
-        if constexpr (sizeof(dependant) && is_bitflag<E>) // sizeof... to make contest dependant
-          return details::var_name<E{}, CAST(E, static_cast<Under>(Underlying{1} << Is))..., 0>();
-        else
-          return details::var_name<CAST(E, static_cast<Under>(static_cast<decltype(Min)>(Is) + Min))..., 0>();
+    return details::var_name<E, E{}, CAST(E, static_cast<typename std::underlying_type<E>::type>(Underlying{1} << Is))..., E{}>();
 #undef CAST
-      }(0);
+  }
 
-      constexpr auto enum_in_array_len = details::enum_in_array_name_size<E{}>();
-      constexpr auto length_of_enum_in_template_array_casting = details::length_of_enum_in_template_array_if_casting<E>();
+  template<typename E, typename MinT, MinT Min, typename Underlying, std::size_t... Is>
+  constexpr const char* reflect_var_name(std::false_type) noexcept
+  {
+#if __GNUC__ <= 10
+  #define CAST(type, value) static_cast<type>(value)
+#else
+  #define CAST(type, value) __builtin_bit_cast(type, value)
+#endif
+    return details::var_name<E, CAST(E, static_cast<typename std::underlying_type<E>::type>(static_cast<MinT>(Is) + Min))..., E{}>();
+#undef CAST
+  }
 
-      ReflectStringReturnValue<std::underlying_type_t<E>, ArraySize> ret;
-      details::parse_string<is_bitflag<E>>(
-        /*str = */ str,
-        /*least_length_when_casting=*/SZC("(") + length_of_enum_in_template_array_casting + SZC(")0"),
-        /*least_length_when_value=*/details::prefix_length_or_zero<E> +
-          (enum_in_array_len != 0 ? enum_in_array_len + SZC("::") : 0),
-        /*min = */ static_cast<std::underlying_type_t<E>>(Min),
-        /*array_size = */ ArraySize,
-        /*null_terminated= */ NullTerminated,
-        /*enum_values= */ ret.values,
-        /*string_lengths= */ ret.string_lengths,
-        /*strings= */ ret.strings,
-        /*total_string_length*/ ret.total_string_length,
-        /*valid_count*/ ret.valid_count);
-      return ret;
-    }();
-    using Strings = std::array<char, elements_local.total_string_length>;
+  template<typename E, bool NullTerminated, typename MinT, MinT Min, std::size_t... Is>
+  constexpr auto reflect_elements(std::index_sequence<Is...>) noexcept
+  {
+    constexpr auto ArraySize = sizeof...(Is) + is_bitflag<E>;
+    using Under              = std::underlying_type_t<E>;
+    using Underlying = std::make_unsigned_t<std::conditional_t<std::is_same<bool, Under>::value, unsigned char, Under>>;
+
+    constexpr auto str = details::reflect_var_name<E, MinT, Min, Underlying, Is...>(std::integral_constant<bool, is_bitflag<E>>{});
+
+    constexpr auto enum_in_array_len = details::enum_in_array_name_size<E, E{}>();
+    constexpr auto length_of_enum_in_template_array_casting = details::length_of_enum_in_template_array_if_casting<E>();
+
+    ReflectStringReturnValue<std::underlying_type_t<E>, ArraySize> ret;
+    details::parse_string<is_bitflag<E>>(
+      /*str = */ str,
+      /*least_length_when_casting=*/SZC("(") + length_of_enum_in_template_array_casting + SZC(")0"),
+      /*least_length_when_value=*/details::prefix_length_or_zero<E> +
+        (enum_in_array_len != 0 ? enum_in_array_len + SZC("::") : 0),
+      /*min = */ static_cast<std::underlying_type_t<E>>(Min),
+      /*array_size = */ ArraySize,
+      /*null_terminated= */ NullTerminated,
+      /*enum_values= */ ret.values,
+      /*string_lengths= */ ret.string_lengths,
+      /*strings= */ ret.strings,
+      /*total_string_length*/ ret.total_string_length,
+      /*valid_count*/ ret.valid_count);
+    return ret;
+  }
+
+  template<typename E, bool NullTerminated, typename MinT, MinT Min, std::size_t... Is>
+  constexpr auto reflect(std::index_sequence<Is...>) noexcept
+  {
+    constexpr auto elements_local = reflect_elements<E, NullTerminated, MinT, Min>(std::index_sequence<Is...>{});
+    using Strings = details::array<char, elements_local.total_string_length>;
 
     struct {
       decltype(elements_local) elements;
       Strings                  strings{};
-    } data = {elements_local};
+    } data                  = {elements_local};
     const auto  size        = data.strings.size();
     auto* const data_string = data.strings.data();
     for (std::size_t i = 0; i < size; ++i)
       data_string[i] = elements_local.strings[i];
     return data;
   }
+
+  template<typename E, typename MinT, MinT Min, std::size_t... Is>
+  constexpr bool is_out_of_range(std::index_sequence<Is...>) noexcept
+  {
+    constexpr auto ArraySize = sizeof...(Is);
+    using Under              = std::underlying_type_t<E>;
+
+#if __GNUC__ <= 10
+    // GCC 10 does not have it
+  #define CAST(type, value) static_cast<type>(value)
+#else
+    // __builtin_bit_cast used to silence errors when casting out of unscoped enums range
+  #define CAST(type, value) __builtin_bit_cast(type, value)
+#endif
+    constexpr auto str = details::var_name<E, CAST(E, static_cast<Under>(static_cast<MinT>(Is) + Min))..., E{}>();
+#undef CAST
+
+    constexpr auto length_of_enum_in_template_array_casting = details::length_of_enum_in_template_array_if_casting<E>();
+
+    return details::is_out_of_range_parse(
+      /*str = */ str,
+      /*least_length_when_casting=*/SZC("(") + length_of_enum_in_template_array_casting + SZC(")0"),
+      /*array_size = */ ArraySize);
+  }
+
 
 } // namespace details
 
@@ -887,11 +1277,7 @@ namespace details {
 #if __GNUC__ <= 10
   #pragma GCC diagnostic pop
 #endif
-
 #elif defined(_MSC_VER)
-  
-
-#include <array>
 #include <cassert>
 #include <climits>
 #include <cstdint>
@@ -909,19 +1295,35 @@ namespace details {
 #endif
 namespace enchantum {
 
+
 #define SZC(x) (sizeof(x) - 1)
 namespace details {
 
-  template<auto Enum>
+  constexpr std::size_t find_type_value_separator(const string_view s, const std::size_t start) noexcept
+  {
+    std::size_t depth = 0;
+    for (std::size_t i = start; i < s.size(); ++i) {
+      if (s[i] == '<')
+        ++depth;
+      else if (s[i] == '>')
+        --depth;
+      else if (s[i] == ',' && depth == 0)
+        return i;
+    }
+    return s.npos;
+  }
+
+  template<typename E, E Enum>
   constexpr auto enum_in_array_name_size() noexcept
   {
     auto s = string_view{__FUNCSIG__ + SZC("auto __cdecl enchantum::details::enum_in_array_name_size<"),
                          SZC(__FUNCSIG__) - SZC("auto __cdecl enchantum::details::enum_in_array_name_size<>(void) noexcept")};
+    s.remove_prefix(details::find_type_value_separator(s, 0) + 1);
 
-    if constexpr (is_scoped_enum<decltype(Enum)>) {
+    if (is_scoped_enum<E>) {
       if (s[0] == '(') {
         s.remove_prefix(SZC("(enum "));
-        s.remove_suffix(SZC(")0x0"));
+        s.remove_suffix(SZC(")0x0") + (sizeof(Enum) == 8)); // MSVC adds a extra 0 at the end for some reason for 8 bit enums
         return s.size();
       }
       return s.substr(0, s.rfind(':') - 1).size();
@@ -929,19 +1331,81 @@ namespace details {
     else {
       if (s[0] == '(') {
         s.remove_prefix(SZC("(enum "));
-        s.remove_suffix(SZC(")0x0"));
+        s.remove_suffix(SZC(")0x0") + (sizeof(Enum) == 8)); // MSVC adds a extra 0 at the end for some reason for 8 bit enums
       }
-      if (const auto pos = s.rfind(':'); pos != s.npos)
+      const auto pos = s.rfind(':');
+      if (pos != s.npos)
         return pos - 1;
       return std::size_t(0);
     }
   }
 
-  template<auto... Vs>
+  template<typename E, E... Vs>
   constexpr auto __cdecl var_name() noexcept
   {
     //auto __cdecl f<class std::array<enum `anonymous namespace'::UnscopedAnon,32>{enum `anonymous-namespace'::UnscopedAnon
-    return __FUNCSIG__ + SZC("auto __cdecl enchantum::details::var_name<");
+    constexpr string_view sig{__FUNCSIG__, SZC(__FUNCSIG__)};
+    constexpr auto        pos = details::find_type_value_separator(sig, SZC("auto __cdecl enchantum::details::var_name<"));
+    return __FUNCSIG__ + pos + SZC(",");
+  }
+  template<typename IntType>
+  constexpr bool is_out_of_range_parse(const char*       str,
+                                       const bool        skip_work_if_neg,
+                                       const std::size_t least_length_when_casting,
+                                       const IntType     min,
+                                       const std::size_t array_size)
+  {
+    for (std::size_t index = 0; index < array_size; ++index) {
+#if _MSC_VER <= 1924
+      // if it starts with the number 0 (because of 0x0) then it is a value
+      // and you cannot start an enum name with a digit so this is safe
+      if (*str == '0') {
+#else
+      // if it starts with a '(' it is a cast!
+      if (*str == '(') {
+#endif
+        if (skip_work_if_neg != 0) {
+          const auto i = min + static_cast<IntType>(index);
+          str += least_length_when_casting + ((i < 0) * skip_work_if_neg);
+        }
+        else {
+          str += least_length_when_casting;
+        }
+        while (*str++ != ',')
+          /*intentionally empty*/;
+      }
+      else {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  template<typename IntType>
+  constexpr IntType parse_string_value(const std::size_t index, const IntType, std::true_type) noexcept
+  {
+    return index == 0 ? IntType{} : static_cast<IntType>(IntType{1} << (index - 1));
+  }
+
+  template<typename IntType>
+  constexpr IntType parse_string_value(const std::size_t index, const IntType min, std::false_type) noexcept
+  {
+    return static_cast<IntType>(min + static_cast<IntType>(index));
+  }
+
+  template<typename IntType, std::size_t SkipIfNegative>
+  constexpr const char* skip_casted_value_string(
+    const char* str, const std::size_t least_length_when_casting, const IntType min, const std::size_t index, std::integral_constant<std::size_t, SkipIfNegative>) noexcept
+  {
+    const auto i = min + static_cast<IntType>(index);
+    return str + least_length_when_casting + ((i < 0) * SkipIfNegative);
+  }
+
+  template<typename IntType>
+  constexpr const char* skip_casted_value_string(
+    const char* str, const std::size_t least_length_when_casting, const IntType, const std::size_t, std::integral_constant<std::size_t, 0>) noexcept
+  {
+    return str + least_length_when_casting;
   }
 
   template<bool IsBitFlag, typename IntType>
@@ -960,13 +1424,13 @@ namespace details {
   {
     // clang-format off
 #if ENCHANTUM_ENABLE_MSVC_SPEEDUP
-    constexpr auto skip_work_if_neg = IsBitFlag || std::is_unsigned_v<IntType> || sizeof(IntType) <= 2 ? 0 : 
+    constexpr auto skip_work_if_neg = IsBitFlag || std::is_unsigned<IntType>::value || sizeof(IntType) <= 2 ? 0 :
 // MSVC 19.31 and below don't cast int/unsigned int into `unsigned long long` (std::uint64_t)
 // While higher versions do cast them
 #if _MSC_VER <= 1931
         sizeof(IntType) == 4
 #else
-        std::is_same_v<IntType,char32_t> 
+        std::is_same<IntType,char32_t>::value
 #endif
         ? sizeof(char32_t)*2-1 : sizeof(std::uint64_t)*2-1 - (sizeof(IntType)==8); // subtract 1 more from uint64_t since I am adding it in skip_if_cast_count
 #endif
@@ -981,13 +1445,11 @@ namespace details {
       if (*str == '(') {
 #endif
 #if ENCHANTUM_ENABLE_MSVC_SPEEDUP
-        if constexpr (skip_work_if_neg != 0) {
-          const auto i = min + static_cast<IntType>(index);
-          str += least_length_when_casting + ((i < 0) * skip_work_if_neg);
-        }
-        else {
-          str += least_length_when_casting;
-        }
+        str = details::skip_casted_value_string(str,
+                                                least_length_when_casting,
+                                                min,
+                                                index,
+                                                std::integral_constant<std::size_t, skip_work_if_neg>{});
 #else
         str += least_length_when_casting;
 #endif
@@ -1000,10 +1462,8 @@ namespace details {
         // although gcc implementation of std::char_traits::find is using a for loop internally
         // copying the code of the function makes it way slower to compile, this was surprising.
 
-        if constexpr (IsBitFlag)
-          values[valid_count] = index == 0 ? IntType{} : static_cast<IntType>(IntType{1} << (index - 1));
-        else
-          values[valid_count] = static_cast<IntType>(min + static_cast<IntType>(index));
+
+        values[valid_count] = details::parse_string_value(index, min, std::integral_constant<bool, IsBitFlag>{});
 
         std::size_t i = 0;
         while (str[i] != ',')
@@ -1016,60 +1476,107 @@ namespace details {
     }
   }
 
-  template<typename E, bool NullTerminated, auto Min, std::size_t... Is>
+  template<typename E, typename MinT, MinT Min, typename Underlying, std::size_t... Is>
+  constexpr const char* reflect_var_name(std::true_type) noexcept
+  {
+    return details::var_name<E, E{}, static_cast<E>(Underlying(1) << Is)..., E{}>();
+  }
+
+  template<typename E, typename MinT, MinT Min, typename Underlying, std::size_t... Is>
+  constexpr const char* reflect_var_name(std::false_type) noexcept
+  {
+    return details::var_name<E, static_cast<E>(static_cast<MinT>(Is) + Min)..., E{}>();
+  }
+
+  template<typename E, bool NullTerminated, typename MinT, MinT Min, std::size_t... Is>
+  constexpr auto reflect_elements(std::index_sequence<Is...>) noexcept
+  {
+    constexpr auto ArraySize = sizeof...(Is) + is_bitflag<E>;
+    using Under              = std::underlying_type_t<E>;
+    using Underlying = std::make_unsigned_t<std::conditional_t<std::is_same<bool, Under>::value, unsigned char, Under>>;
+
+
+    constexpr auto str               = details::reflect_var_name<E, MinT, Min, Underlying, Is...>(std::integral_constant<bool, is_bitflag<E>>{});
+    constexpr auto type_name_len     = details::raw_type_name_func<E>().size() - 1;
+    constexpr auto enum_in_array_len = details::enum_in_array_name_size<E, E{}>();
+
+    ReflectStringReturnValue<std::underlying_type_t<E>, ArraySize> ret;
+    details::parse_string<is_bitflag<E>>(
+      /*str = */ str,
+#if _MSC_VER <= 1924
+      /*least_length_when_casting=*/SZC("0x0"),
+#else
+      /*least_length_when_casting=*/SZC("(enum ") + type_name_len + SZC(")0x0") + (sizeof(E) == 8),
+#endif
+      /*least_length_when_value=*/details::prefix_length_or_zero<E> +
+        (enum_in_array_len != 0 ? enum_in_array_len + SZC("::") : 0),
+      /*min = */ static_cast<std::underlying_type_t<E>>(Min),
+      /*array_size = */ ArraySize,
+      /*null_terminated= */ NullTerminated,
+      /*enum_values= */ ret.values,
+      /*string_lengths= */ ret.string_lengths,
+      /*strings= */ ret.strings,
+      /*total_string_length*/ ret.total_string_length,
+      /*valid_count*/ ret.valid_count);
+    return ret;
+  }
+
+  template<typename E, bool NullTerminated, typename MinT, MinT Min, std::size_t... Is>
   constexpr auto reflect(std::index_sequence<Is...>) noexcept
   {
-    constexpr auto elements_local = []() {
-      constexpr auto ArraySize = sizeof...(Is) + is_bitflag<E>;
-      using MinT               = decltype(Min);
-      using Under              = std::underlying_type_t<E>;
-      using Underlying = std::make_unsigned_t<std::conditional_t<std::is_same_v<bool, Under>, unsigned char, Under>>;
+    constexpr auto elements_local = reflect_elements<E, NullTerminated, MinT, Min>(std::index_sequence<Is...>{});
 
-      constexpr auto str = [](const auto dependant) {
-        constexpr bool always_true = sizeof(dependant) != 0;
-        // dummy 0
-        if constexpr (always_true && is_bitflag<E>) // sizeof... to make contest dependant
-          return details::var_name<static_cast<E>(!always_true), static_cast<E>(Underlying(1) << Is)..., 0>();
-        else
-          return details::var_name<static_cast<E>(static_cast<MinT>(Is) + Min)..., int(!always_true)>();
-      }(0);
-      constexpr auto type_name_len     = details::raw_type_name_func<E>().size() - 1;
-      constexpr auto enum_in_array_len = details::enum_in_array_name_size<E{}>();
-
-      ReflectStringReturnValue<std::underlying_type_t<E>, ArraySize> ret;
-      details::parse_string<is_bitflag<E>>(
-        /*str = */ str,
-#if _MSC_VER <= 1924
-        /*least_length_when_casting=*/SZC("0x0"),
-#else
-        /*least_length_when_casting=*/SZC("(enum ") + type_name_len + SZC(")0x0") + (sizeof(E) == 8),
-#endif
-        /*least_length_when_value=*/details::prefix_length_or_zero<E> +
-          (enum_in_array_len != 0 ? enum_in_array_len + SZC("::") : 0),
-        /*min = */ static_cast<std::underlying_type_t<E>>(Min),
-        /*array_size = */ ArraySize,
-        /*null_terminated= */ NullTerminated,
-        /*enum_values= */ ret.values,
-        /*string_lengths= */ ret.string_lengths,
-        /*strings= */ ret.strings,
-        /*total_string_length*/ ret.total_string_length,
-        /*valid_count*/ ret.valid_count);
-      return ret;
-    }();
-
-    using Strings = std::array<char, elements_local.total_string_length>;
+    using Strings = details::array<char, elements_local.total_string_length>;
 
     struct {
       decltype(elements_local) elements;
       Strings                  strings{};
     } data = {elements_local};
 
-    const auto  size     = data.strings.size();
+    const auto  size        = data.strings.size();
     auto* const data_string = data.strings.data();
     for (std::size_t i = 0; i < size; ++i)
       data_string[i] = elements_local.strings[i];
     return data;
   }
+
+
+  template<typename E, typename MinT, MinT Min, std::size_t... Is>
+  constexpr bool is_out_of_range(std::index_sequence<Is...>) noexcept
+  {
+    constexpr auto ArraySize = sizeof...(Is);
+    using Under              = std::underlying_type_t<E>;
+
+#if ENCHANTUM_ENABLE_MSVC_SPEEDUP
+    constexpr auto skip_work_if_neg = std::is_unsigned<Under>::value || sizeof(Under) <= 2 ? 0 :
+  // MSVC 19.31 and below don't cast int/unsigned int into `unsigned long long` (std::uint64_t)
+  // While higher versions do cast them
+  #if _MSC_VER <= 1931
+      sizeof(Under) == 4
+  #else
+      std::is_same<Under, char32_t>::value
+  #endif
+      ? sizeof(char32_t) * 2 - 1
+      : sizeof(std::uint64_t) * 2 - 1 -
+        (sizeof(Under) == 8); // subtract 1 more from uint64_t since I am adding it in skip_if_cast_count
+#else
+    constexpr auto skip_work_if_neg = false;
+#endif
+    const auto str           = details::var_name<E, static_cast<E>(static_cast<MinT>(Is) + Min)..., E{}>();
+    const auto type_name_len = details::raw_type_name_func<E>().size() - 1;
+
+    return details::is_out_of_range_parse(
+      /*str = */ str,
+      skip_work_if_neg,
+#if _MSC_VER <= 1924
+      /*least_length_when_casting=*/SZC("0x0"),
+#else
+      /*least_length_when_casting=*/SZC("(enum ") + type_name_len + SZC(")0x0") + (sizeof(E) == 8),
+#endif
+      /*min = */ static_cast<std::underlying_type_t<E>>(Min),
+      /*array_size = */ ArraySize);
+  }
+
 } // namespace details
 } // namespace enchantum
 
@@ -1078,6 +1585,7 @@ namespace details {
   #error unsupported compiler please open an issue for enchantum
 #endif
 
+#include <climits>
 #include <type_traits>
 #include <utility>
 
@@ -1098,6 +1606,7 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
   return static_cast<std::underlying_type_t<E>>(e);
 }
 #endif
+
 
 namespace details {
 
@@ -1128,30 +1637,60 @@ namespace details {
 
   template<typename E, typename StringLengthType, std::size_t Size>
   struct FinalReflectionResult {
-    std::array<E, Size> values{};
+    details::array<E, Size> values{};
     // +1 for easier iteration on on last string
-    std::array<StringLengthType, Size + 1> string_indices{};
+    details::array<StringLengthType, Size + 1> string_indices{};
   };
 
-  template<typename E, bool NullTerminated, auto Min = enum_traits<E>::min, decltype(Min) Max = enum_traits<E>::max>
-  inline constexpr auto reflection_data_impl = details::reflect<E, NullTerminated, Min>(
+  template<typename E,
+           bool NullTerminated,
+           typename T = typename std::underlying_type<E>::type,
+           T Min = static_cast<T>(enum_traits<E>::min),
+           T Max = static_cast<T>(enum_traits<E>::max)>
+  ENCHANTUM_DETAILS_INLINE_VAR constexpr auto reflection_data_impl = details::reflect<E, NullTerminated, T, Min>(
     std::make_index_sequence<details::get_index_sequence_max(is_bitflag<E>,
-                                                             has_fixed_underlying_type<E>,
-                                                             sizeof(E),
-                                                             Min,
-                                                             Max,
-                                                             std::is_signed_v<std::underlying_type_t<E>>)>{});
+                                                              has_fixed_underlying_type<E>,
+                                                              sizeof(E),
+                                                              Min,
+                                                              Max,
+                                                               std::is_signed<T>::value)>{});
+
+
+  template<typename E,
+           typename T = typename std::underlying_type<E>::type,
+           T Min = static_cast<T>(enum_traits<E>::min),
+           T Max = static_cast<T>(enum_traits<E>::max)>
+  ENCHANTUM_DETAILS_INLINE_VAR constexpr bool has_a_value_in = details::is_out_of_range<E, T, Min>(
+    std::make_index_sequence<
+      details::get_index_sequence_max(false, has_fixed_underlying_type<E>, sizeof(E), Min, Max, std::is_signed<T>::value)>{});
+
 
   // Thanks https://en.cppreference.com/w/cpp/utility/intcmp.html
   template<typename T, typename U>
+  constexpr bool cmp_less_impl(const T t, const U u, std::true_type, std::false_type) noexcept
+  {
+    return t < u;
+  }
+
+  template<typename T, typename U>
+  constexpr bool cmp_less_impl(const T t, const U u, std::false_type, std::true_type) noexcept
+  {
+    return t < 0 || std::make_unsigned_t<T>(t) < u;
+  }
+
+  template<typename T, typename U>
+  constexpr bool cmp_less_impl(const T t, const U u, std::false_type, std::false_type) noexcept
+  {
+    return u >= 0 && t < std::make_unsigned_t<U>(u);
+  }
+
+  template<typename T, typename U>
   constexpr bool cmp_less(const T t, const U u) noexcept
   {
-    if constexpr (std::is_signed_v<T> == std::is_signed_v<U>)
-      return t < u;
-    else if constexpr (std::is_signed_v<T>)
-      return t < 0 || std::make_unsigned_t<T>(t) < u;
-    else
-      return u >= 0 && t < std::make_unsigned_t<U>(u);
+    return details::cmp_less_impl(t,
+                                  u,
+                                  std::integral_constant<bool, std::is_signed<T>::value == std::is_signed<U>::value>{},
+                                  std::integral_constant<bool, std::is_signed<T>::value>{});
   }
 
   template<typename U>
@@ -1166,10 +1705,7 @@ namespace details {
     return details::cmp_less(t, int(u));
   }
 
-  constexpr bool cmp_less(const bool t, const bool u) noexcept
-  {
-    return int(t) < int(u);
-  }
+  constexpr bool cmp_less(const bool t, const bool u) noexcept { return int(t) < int(u); }
 
   template<typename T, typename U>
   constexpr T ClampToRange(U u)
@@ -1181,24 +1717,111 @@ namespace details {
       return (L::min)();
     return T(u);
   }
+
+  template<typename E, bool NullTerminated, typename T, T Min, T ScaleMin, bool MinIsNegative>
+  struct lower_out_of_bounds_checker {
+    static constexpr void check() noexcept
+    {
+      static_assert(!has_a_value_in<E, T, ScaleMin, Min - 1>,
+                    "enchantum has detected that this enum is not fully reflected. Please look at "
+                    "https://github.com/ZXShady/enchantum/blob/main/docs/"
+                    "features.md#enchantum_check_out_of_bounds_by "
+                    "for more information");
+    }
+  };
+
+  template<typename E, bool NullTerminated, typename T, T Min, T ScaleMin>
+  struct lower_out_of_bounds_checker<E, NullTerminated, T, Min, ScaleMin, false> {
+    static constexpr void check() noexcept
+    {
+      static_assert(!has_a_value_in<E, T, Min + 1, ScaleMin>,
+                    "enchantum has detected that this enum is not fully reflected. Please look at "
+                    "https://github.com/ZXShady/enchantum/blob/main/docs/"
+                    "features.md#enchantum_check_out_of_bounds_by "
+                    "for more information");
+    }
+  };
+
+  template<typename E, bool NullTerminated, typename T, T Min, bool CanCheckLower>
+  struct maybe_lower_out_of_bounds_checker {
+    static constexpr void check() noexcept {}
+  };
+
+  template<typename E, bool NullTerminated, typename T, T Min>
+  struct maybe_lower_out_of_bounds_checker<E, NullTerminated, T, Min, true> {
+    static constexpr void check() noexcept
+    {
+      constexpr auto scale = ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY;
+      lower_out_of_bounds_checker<E, NullTerminated, T, Min, Min * scale, (Min < 0)>::check();
+    }
+  };
+
+  template<typename E, bool NullTerminated, typename T, T Max, bool CanCheckUpper>
+  struct upper_out_of_bounds_checker {
+    static constexpr void check() noexcept {}
+  };
+
+  template<typename E, bool NullTerminated, typename T, T Max>
+  struct upper_out_of_bounds_checker<E, NullTerminated, T, Max, true> {
+    static constexpr void check() noexcept
+    {
+      constexpr auto scale           = ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY;
+      constexpr bool upper_has_value = has_a_value_in<E, T, Max + 1, Max * scale>;
+      static_assert(!upper_has_value,
+                    "enchantum has detected that this enum is not fully reflected. Please look at "
+                    "https://github.com/ZXShady/enchantum/blob/main/docs/"
+                    "features.md#enchantum_check_out_of_bounds_by "
+                    "for more information");
+      constexpr auto min             = static_cast<T>(enum_traits<E>::min);
+      constexpr auto tmin            = std::numeric_limits<T>::min();
+      constexpr bool can_check_lower = !upper_has_value && min > tmin && min >= tmin / scale;
+      maybe_lower_out_of_bounds_checker<E, NullTerminated, T, min, can_check_lower>::check();
+    }
+  };
+
+  template<typename E, bool NullTerminated, std::size_t ValidCount, bool ShouldCheck>
+  struct out_of_bounds_checker {
+    static constexpr void check() noexcept {}
+  };
+
+  template<typename E, bool NullTerminated, std::size_t ValidCount>
+  struct out_of_bounds_checker<E, NullTerminated, ValidCount, true> {
+    static constexpr void check() noexcept
+    {
+#if defined(__NVCOMPILER) || defined(__RESHARPER__)
+      static_assert(ValidCount == reflection_data_impl<E, NullTerminated, typename std::underlying_type<E>::type,
+        details::ClampToRange<typename std::underlying_type<E>::type>(enum_traits<E>::min * ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY),
+        details::ClampToRange<typename std::underlying_type<E>::type>(enum_traits<E>::max * ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY)
+      >.elements.valid_count,
+          "enchantum has detected that this enum is not fully reflected. Please look at "
+          "https://github.com/ZXShady/enchantum/blob/main/docs/"
+          "features.md#enchantum_check_out_of_bounds_by "
+          "for more information");
+#else
+      using T                        = std::underlying_type_t<E>;
+      constexpr auto max             = static_cast<T>(enum_traits<E>::max);
+      constexpr auto scale           = ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY;
+      constexpr auto tmax            = std::numeric_limits<T>::max();
+      constexpr bool can_check_upper = max < tmax && max <= tmax / scale;
+      upper_out_of_bounds_checker<E, NullTerminated, T, max, can_check_upper>::check();
+#endif
+    }
+  };
+
   template<typename E, bool NullTerminated>
   constexpr auto get_reflection_data() noexcept
   {
     constexpr auto elements = reflection_data_impl<E, NullTerminated>.elements;
     using StringLengthType = std::conditional_t<(elements.total_string_length < UINT8_MAX), std::uint8_t, std::uint16_t>;
-
 #if ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY >= 2
-    if constexpr (
-  #if __clang_major__ >= 20
-      has_fixed_underlying_type<E> &&
-  #endif
-      !details::has_specialized_traits<E>) {
-      static_assert(elements.valid_count == reflection_data_impl<E, NullTerminated,
-        details::ClampToRange<std::underlying_type_t<E>>(enum_traits<E>::min * ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY),
-        details::ClampToRange<std::underlying_type_t<E>>(enum_traits<E>::max * ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY)
-    >.elements.valid_count,
-          "enchantum has detected that this enum is not fully reflected. Please look at https://github.com/ZXShady/enchantum/blob/main/docs/features.md#enchantum_check_out_of_bounds_by for more information");
-    }
+    details::out_of_bounds_checker<E,
+                                   NullTerminated,
+                                   elements.valid_count,
+#if __clang_major__ >= 20
+                                   has_fixed_underlying_type<E> &&
+#endif
+                                     !details::has_specialized_traits<E> && !is_bitflag<E> &&
+                                     !std::is_same<std::underlying_type_t<E>, bool>::value>::check();
 #endif
     FinalReflectionResult<E, StringLengthType, elements.valid_count> ret;
     std::size_t                                                      i            = 0;
@@ -1208,14 +1831,14 @@ namespace details {
       // "aabc"
 
       ret.string_indices[i] = string_index;
-#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
-  // false positives from T += T
-  // it does not make sense.
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
+      // false positives from T += T
+      // it does not make sense.
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wconversion"
 #endif
       string_index += static_cast<StringLengthType>(elements.string_lengths[i] + NullTerminated);
-#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif
     }
@@ -1223,58 +1846,98 @@ namespace details {
     return ret;
   }
 
-  template<typename E, bool NullTerminated>
-  inline constexpr auto reflection_data_string_storage = details::reflection_data_impl<E, NullTerminated>.strings;
 
   template<typename E, bool NullTerminated>
-  inline constexpr auto reflection_data = details::get_reflection_data<E, NullTerminated>();
+  ENCHANTUM_DETAILS_INLINE_VAR constexpr auto reflection_data_string_storage = details::reflection_data_impl<E, NullTerminated>.strings;
 
   template<typename E, bool NullTerminated>
-  inline constexpr auto reflection_string_indices = reflection_data<E, NullTerminated>.string_indices;
+  ENCHANTUM_DETAILS_INLINE_VAR constexpr auto reflection_data = details::get_reflection_data<E, NullTerminated>();
+
+  template<typename E, bool NullTerminated>
+  ENCHANTUM_DETAILS_INLINE_VAR constexpr auto reflection_string_indices = reflection_data<E, NullTerminated>.string_indices;
+
+  template<typename Pair, typename = void>
+  struct has_first_second : std::false_type {
+  };
+
+  template<typename Pair>
+  struct has_first_second<Pair, void_t<decltype(std::declval<Pair&>().first), decltype(std::declval<Pair&>().second)>>
+    : std::true_type {
+  };
+
+  template<typename Pair, typename E>
+  constexpr void assign_entry_impl(Pair& entry, E value, const char* string, std::size_t size, std::true_type)
+  {
+    using StringView = typename std::remove_cv<typename std::remove_reference<decltype(entry.second)>::type>::type;
+    entry.first      = value;
+    entry.second     = StringView(string, size);
+  }
+
+  template<typename Pair, typename E>
+  constexpr void assign_entry_impl(Pair& entry, E value, const char* string, std::size_t size, std::false_type)
+  {
+    entry = Pair{value, string_view(string, size)};
+  }
+
+  template<typename Pair, typename E>
+  constexpr void assign_entry(Pair& entry, E value, const char* string, std::size_t size)
+  {
+    assign_entry_impl(entry, value, string, size, has_first_second<Pair>{});
+  }
+
+  template<typename E, typename Pair, bool NullTerminated, typename Reflected = int>
+  constexpr auto get_entries()
+  {
+#if defined(__NVCOMPILER)
+    // nvc++ had issues with that and did not allow it. it just did not work after testing in godbolt and I don't know why
+    const auto reflected = details::reflection_data<E, NullTerminated>;
+    const auto strings   = details::reflection_data_string_storage<E, NullTerminated>.data();
+#else
+    constexpr auto reflected = details::reflection_data<std::remove_cv_t<E>, NullTerminated>;
+    constexpr auto strings   = details::reflection_data_string_storage<std::remove_cv_t<E>, NullTerminated>.data();
+#endif
+    constexpr auto size = reflected.values.size();
+    static_assert(size != 0,
+                  "enchantum failed to reflect this enum.\n"
+                  "Please read https://github.com/ZXShady/enchantum/blob/main/docs/limitations.md before opening an "
+                  "issue\n"
+                  "with your enum type with all its namespace/classes it is defined inside to help the creator debug "
+                  "the "
+                  "issues.");
+
+    const auto& indices = reflected.string_indices;
+#if defined(__RESHARPER__)
+    auto ret = details::rscpp_make_defaulted_array_of<size>(Pair{reflected.values[0],
+                                                                 string_view(strings + indices[0],
+                                                                             indices[1] - indices[0] - NullTerminated)},
+                                                            std::make_index_sequence<size>{});
+#else
+    details::array<Pair, size> ret{};
+#endif
+    auto* const ret_data = ret.data();
+    for (std::size_t i = 0; i < size; ++i) {
+      assign_entry(ret_data[i], reflected.values[i], strings + indices[i], indices[i + 1] - indices[i] - NullTerminated);
+    }
+    return ret;
+  }
 } // namespace details
 
 #ifdef __cpp_concepts
-template<Enum E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true>
+template<Enum E, typename Pair = std::pair<E, enchantum::string_view>, bool NullTerminated = true>
 #else
-template<typename E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true, std::enable_if_t<std::is_enum_v<E>, int> = 0>
+template<typename E,
+         typename Pair                            = std::pair<E, enchantum::string_view>,
+         bool NullTerminated                      = true,
+          std::enable_if_t<std::is_enum<E>::value, int> = 0>
 #endif
-inline constexpr auto entries = []() {
-
-#if defined(__NVCOMPILER)
-  // nvc++ had issues with that and did not allow it. it just did not work after testing in godbolt and I don't know why
-  const auto reflected = details::reflection_data<E, NullTerminated>;
-  const auto strings   = details::reflection_data_string_storage<E, NullTerminated>.data();
-#else
-  const auto reflected = details::reflection_data<std::remove_cv_t<E>, NullTerminated>;
-  const auto strings   = details::reflection_data_string_storage<std::remove_cv_t<E>, NullTerminated>.data();
-#endif
-  using Pairs = std::array<Pair, sizeof(reflected.values) / sizeof(reflected.values[0])>;
-  Pairs          ret{};
-  constexpr auto size = ret.size();
-  static_assert(size != 0,
-                "enchantum failed to reflect this enum.\n"
-                "Please read https://github.com/ZXShady/enchantum/blob/main/docs/limitations.md before opening an "
-                "issue\n"
-                "with your enum type with all its namespace/classes it is defined inside to help the creator debug the "
-                "issues.");
-  auto* const ret_data = ret.data();
-
-  for (std::size_t i = 0; i < size; ++i) {
-    auto& [e, s]     = ret_data[i];
-    e                = reflected.values[i];
-    using StringView = std::remove_cv_t<std::remove_reference_t<decltype(s)>>;
-    s                = StringView(strings + reflected.string_indices[i],
-                   reflected.string_indices[i + 1] - reflected.string_indices[i] - NullTerminated);
-  }
-  return ret;
-}();
+ENCHANTUM_DETAILS_INLINE_VAR constexpr auto entries = enchantum::details::get_entries<E, Pair, NullTerminated>();
 
 namespace details {
   template<typename E>
   constexpr auto get_values() noexcept
   {
     constexpr auto              enums = entries<E>;
-    std::array<E, enums.size()> ret{};
+    details::array<E, enums.size()> ret{};
     const auto* const           enums_data = enums.data();
     for (std::size_t i = 0; i < ret.size(); ++i)
       ret[i] = enums_data[i].first;
@@ -1285,7 +1948,7 @@ namespace details {
   constexpr auto get_names() noexcept
   {
     constexpr auto                   enums = entries<E, std::pair<E, String>, NullTerminated>;
-    std::array<String, enums.size()> ret{};
+    details::array<String, enums.size()> ret{};
     const auto* const                enums_data = enums.data();
     for (std::size_t i = 0; i < ret.size(); ++i)
       ret[i] = enums_data[i].second;
@@ -1295,54 +1958,90 @@ namespace details {
 } // namespace details
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-inline constexpr auto values = details::get_values<E>();
+ENCHANTUM_DETAILS_INLINE_VAR constexpr auto values = details::get_values<E>();
 
 #ifdef __cpp_concepts
 template<Enum E, typename String = string_view, bool NullTerminated = true>
 #else
-template<typename E, typename String = string_view, bool NullTerminated = true, std::enable_if_t<std::is_enum_v<E>, int> = 0>
+template<typename E, typename String = string_view, bool NullTerminated = true, std::enable_if_t<std::is_enum<E>::value, int> = 0>
 #endif
-inline constexpr auto names = details::get_names<E, String, NullTerminated>();
+ENCHANTUM_DETAILS_INLINE_VAR constexpr auto names = details::get_names<E, String, NullTerminated>();
+
+
+#define ENCHANTUM_DECLARE_EMPTY(ENUM)                                                                                         \
+  template<>                                                                                                                  \
+  ENCHANTUM_DETAILS_INLINE_VAR constexpr auto enchantum::entries<ENUM> = ::enchantum::details::array<std::pair<ENUM, ::enchantum::string_view>, 0> \
+  {                                                                                                                           \
+  }
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-inline constexpr auto min = entries<E>.front().first;
+ENCHANTUM_DETAILS_INLINE_VAR constexpr auto min = entries<E>.front().first;
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-inline constexpr auto max = entries<E>.back().first;
+ENCHANTUM_DETAILS_INLINE_VAR constexpr auto max = entries<E>.back().first;
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-inline constexpr std::size_t count = entries<E>.size();
+ENCHANTUM_DETAILS_INLINE_VAR constexpr std::size_t count = entries<E>.size();
+
+namespace details {
+  template<typename E, bool IsBitflag>
+  struct has_zero_flag_impl {
+    static constexpr bool value() noexcept { return false; }
+  };
+
+  template<typename E>
+  struct has_zero_flag_impl<E, true> {
+    static constexpr bool value() noexcept
+    {
+      for (const auto v : values<E>)
+        if (static_cast<typename std::underlying_type<E>::type>(v) == 0)
+          return true;
+      return false;
+    }
+  };
+
+  template<typename E, bool IsBitflag>
+  struct is_contiguous_bitflag_impl {
+    static constexpr bool value() noexcept { return false; }
+  };
+
+  template<typename E>
+  struct is_contiguous_bitflag_impl<E, true> {
+    static constexpr bool value() noexcept
+    {
+      constexpr auto& enums = entries<E>;
+      using T               = typename std::underlying_type<E>::type;
+      std::size_t i = static_cast<std::size_t>(has_zero_flag_impl<E, true>::value());
+      for (; i < enums.size() - 1; ++i)
+        if (T(enums[i].first) << 1 != T(enums[i + 1].first))
+          return false;
+      return true;
+    }
+  };
+
+  template<typename E, bool Empty>
+  struct is_contiguous_impl {
+    static constexpr bool value() noexcept
+    {
+      return static_cast<std::size_t>(enchantum::to_underlying(max<E>) - enchantum::to_underlying(min<E>)) + 1 == count<E>;
+    }
+  };
+
+  template<typename E>
+  struct is_contiguous_impl<E, true> {
+    static constexpr bool value() noexcept { return false; }
+  };
+} // namespace details
 
 template<typename E>
-inline constexpr bool has_zero_flag = [](const auto is_bitflag) {
-  if constexpr (is_bitflag.value) {
-    for (const auto v : values<E>)
-      if (static_cast<std::underlying_type_t<E>>(v) == 0)
-        return true;
-  }
-  return false;
-}(std::bool_constant<is_bitflag<E>>{});
+ENCHANTUM_DETAILS_INLINE_VAR constexpr bool has_zero_flag = details::has_zero_flag_impl<E, is_bitflag<E>>::value();
 
 template<typename E>
-inline constexpr bool is_contiguous = static_cast<std::size_t>(
-                                        enchantum::to_underlying(max<E>) - enchantum::to_underlying(min<E>)) +
-    1 ==
-  count<E>;
+ENCHANTUM_DETAILS_INLINE_VAR constexpr bool is_contiguous = details::is_contiguous_impl<E, count<E> == 0>::value();
+
 
 template<typename E>
-inline constexpr bool is_contiguous_bitflag = [](const auto is_bitflag) {
-  if constexpr (is_bitflag.value) {
-    constexpr auto& enums = entries<E>;
-    using T               = std::underlying_type_t<E>;
-    for (auto i = std::size_t{has_zero_flag<E>}; i < enums.size() - 1; ++i)
-      if (T(enums[i].first) << 1 != T(enums[i + 1].first))
-        return false;
-    return true;
-  }
-  else {
-    return false;
-  }
-}(std::bool_constant<is_bitflag<E>>{});
+ENCHANTUM_DETAILS_INLINE_VAR constexpr bool is_contiguous_bitflag = details::is_contiguous_bitflag_impl<E, is_bitflag<E>>::value();
 
 #ifdef __cpp_concepts
 template<typename E>
@@ -1352,10 +2051,6 @@ concept ContiguousBitFlagEnum = BitFlagEnum<E> && is_contiguous_bitflag<E>;
 #endif
 
 } // namespace enchantum
-
-#ifdef __cpp_impl_three_way_comparison
-  #include <compare>
-#endif
 
 #if (__cplusplus >= 202002L || (defined(_MSVC_LANG) && _MSVC_LANG >= 202002L)) && __has_include(<bit>)
 #include <bit>
@@ -1384,10 +2079,14 @@ namespace enchantum{
   }
 }
 #endif
+#ifdef __cpp_impl_three_way_comparison
+  #include <compare>
+#endif
 #include <cstddef>
 #include <cstdint>
 #include <utility>
-#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
+
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
   // false positives from T += T
   // it does not make sense.
   #pragma GCC diagnostic push
@@ -1398,6 +2097,7 @@ namespace enchantum {
 namespace details {
 
   struct senitiel {};
+
 
   template<typename CRTP, std::ptrdiff_t Size>
   struct sized_iterator {
@@ -1486,10 +2186,12 @@ namespace details {
       return Size == it.index;
     }
 
+
     [[nodiscard]] friend constexpr bool operator!=(senitiel, const sized_iterator it) noexcept
     {
       return Size != it.index;
     }
+
 
     [[nodiscard]] constexpr bool operator<(const sized_iterator that) const noexcept { return index < that.index; };
     [[nodiscard]] constexpr bool operator>(const sized_iterator that) const noexcept { return index > that.index; };
@@ -1552,25 +2254,31 @@ namespace details {
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
       using value_type = E;
+      [[nodiscard]] constexpr E dereference(std::true_type, std::false_type) const noexcept
+      {
+        using T = typename std::underlying_type<E>::type;
+        return static_cast<E>(static_cast<T>(min<E>) + static_cast<T>(this->index));
+      }
+
+      [[nodiscard]] constexpr E dereference(std::false_type, std::true_type) const noexcept
+      {
+        using T                        = typename std::underlying_type<E>::type;
+        using UT                       = typename std::make_unsigned<T>::type;
+        constexpr auto real_min_offset = details::countr_zero(static_cast<UT>(values<E>[has_zero_flag<E>]));
+        if (has_zero_flag<E> ? this->index == 0 : false)
+          return E{};
+        return static_cast<E>(UT{1} << (real_min_offset + static_cast<UT>(this->index - has_zero_flag<E>)));
+      }
+
+      [[nodiscard]] constexpr E dereference(std::false_type, std::false_type) const noexcept
+      {
+        return values<E>[static_cast<std::size_t>(this->index)];
+      }
+
       [[nodiscard]] constexpr E operator*() const noexcept
       {
-        using T = std::underlying_type_t<E>;
-
-        if constexpr (is_contiguous<E>) {
-          return static_cast<E>(static_cast<T>(min<E>) + static_cast<T>(this->index));
-        }
-        else if constexpr (is_contiguous_bitflag<E>) {
-          using UT                       = std::make_unsigned_t<T>;
-          constexpr auto real_min_offset = details::countr_zero(static_cast<UT>(values<E>[has_zero_flag<E>]));
-
-          if constexpr (has_zero_flag<E>)
-            if (this->index == 0)
-              return E{};
-          return static_cast<E>(UT{1} << (real_min_offset + static_cast<UT>(this->index - has_zero_flag<E>)));
-        }
-        else {
-          return values<E>[static_cast<std::size_t>(this->index)];
-        }
+        return dereference(std::integral_constant<bool, is_contiguous<E>>{},
+                           std::integral_constant<bool, is_contiguous_bitflag<E>>{});
       }
       [[nodiscard]] constexpr E operator[](const std::ptrdiff_t i) const noexcept { return *(*this + i); }
     };
@@ -1612,62 +2320,77 @@ namespace details {
 } // namespace details
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-inline constexpr details::values_generator_t<E> values_generator{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::values_generator_t<E> values_generator{};
 
 #ifdef __cpp_concepts
 template<Enum E, typename StringView = string_view, bool NullTerminated = true>
-inline constexpr details::names_generator_t<E, StringView, NullTerminated> names_generator{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::names_generator_t<E, StringView, NullTerminated> names_generator{};
 
 template<Enum E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true>
-inline constexpr details::entries_generator_t<E, Pair, NullTerminated> entries_generator{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::entries_generator_t<E, Pair, NullTerminated> entries_generator{};
 
 #else
-template<typename E, typename StringView = string_view, bool NullTerminated = true, std::enable_if_t<std::is_enum_v<E>, int> = 0>
-inline constexpr details::names_generator_t<E, StringView, NullTerminated> names_generator{};
+template<typename E, typename StringView = string_view, bool NullTerminated = true, std::enable_if_t<std::is_enum<E>::value, int> = 0>
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::names_generator_t<E, StringView, NullTerminated> names_generator{};
 
-template<typename E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true, std::enable_if_t<std::is_enum_v<E>, int> = 0>
-inline constexpr details::entries_generator_t<E, Pair, NullTerminated> entries_generator{};
+template<typename E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true, std::enable_if_t<std::is_enum<E>::value, int> = 0>
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::entries_generator_t<E, Pair, NullTerminated> entries_generator{};
 
 #endif
 
 } // namespace enchantum
 
-#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif
+
+// IWYU pragma: begin_exports
+// IWYU pragma: end_exports
 
 #include <type_traits>
 #include <utility>
 
-#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wconversion"
   #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
 
+
 namespace enchantum {
 
 namespace details {
   template<typename BinaryPredicate>
+  constexpr bool call_predicate_impl(const BinaryPredicate binary_pred, const string_view a, const string_view b, std::true_type)
+  {
+    const auto a_size = a.size();
+    if (a_size != b.size())
+      return false;
+    const auto a_data = a.data();
+    const auto b_data = b.data();
+
+    for (std::size_t i = 0; i < a_size; ++i)
+      if (!binary_pred(a_data[i], b_data[i]))
+        return false;
+    return true;
+  }
+
+  template<typename BinaryPredicate>
+  constexpr bool call_predicate_impl(const BinaryPredicate binary_pred, const string_view a, const string_view b, std::false_type)
+  {
+    static_assert(enchantum::details::is_invocable<const BinaryPredicate&, const string_view&, const string_view&>::value,
+                  "BinaryPredicate must be callable with either two chars or two string_views");
+    return binary_pred(a, b);
+  }
+
+  template<typename BinaryPredicate>
   constexpr bool call_predicate(const BinaryPredicate binary_pred, const string_view a, const string_view b)
   {
-    if constexpr (std::is_invocable_v<const BinaryPredicate&, const char&, const char&>) {
-      const auto a_size = a.size();
-      if (a_size != b.size())
-        return false;
-      const auto a_data = a.data();
-      const auto b_data = b.data();
-
-      for (std::size_t i = 0; i < a_size; ++i)
-        if (!binary_pred(a_data[i],b_data[i]))
-          return false;
-      return true;
-    }
-    else {
-      static_assert(std::is_invocable_v<const BinaryPredicate&, const string_view&, const string_view&>,
-                    "BinaryPredicate must be callable with atleast 2 char or 2 string_views");
-      return binary_pred(a, b);
-    }
+    return call_predicate_impl(binary_pred,
+                               a,
+                               b,
+                               enchantum::details::bool_constant<
+                                 enchantum::details::is_invocable<const BinaryPredicate&, const char&, const char&>::value>{});
   }
 
   constexpr std::pair<std::size_t, std::size_t> minmax_string_size(const string_view* begin, const string_view* const end)
@@ -1685,32 +2408,100 @@ namespace details {
 
 } // namespace details
 
-template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-[[nodiscard]] constexpr bool contains(const std::underlying_type_t<E> value) noexcept
-{
-  using T = std::underlying_type_t<E>;
 
-  if (value < T(min<E>) || value > T(max<E>))
-    return false;
+namespace details {
+  template<typename E, bool Empty>
+  struct contains_bounds {
+    static constexpr bool outside(typename std::underlying_type<E>::type value) noexcept
+    {
+      using T = typename std::underlying_type<E>::type;
+      return value < T(min<E>) || value > T(max<E>);
+    }
+  };
 
-  if constexpr (is_contiguous_bitflag<E>) {
-    if constexpr (has_zero_flag<E>)
-      if (value == 0)
-        return true;
-    const auto u = static_cast<std::make_unsigned_t<T>>(value);
+  template<typename E>
+  struct contains_bounds<E, true> {
+    static constexpr bool outside(typename std::underlying_type<E>::type) noexcept { return false; }
+  };
 
-    // std::has_single_bit
+  template<typename E>
+  constexpr bool contains_impl(typename std::underlying_type<E>::type value, std::true_type, std::false_type) noexcept
+  {
+    using T = typename std::underlying_type<E>::type;
+    if (has_zero_flag<E> ? value == 0 : false)
+      return true;
+    const auto u = static_cast<typename std::make_unsigned<T>::type>(value);
     return u != 0 && (u & (u - 1)) == 0;
   }
-  else if constexpr (is_contiguous<E>) {
+
+  template<typename E>
+  constexpr bool contains_impl(typename std::underlying_type<E>::type, std::false_type, std::true_type) noexcept
+  {
     return true;
   }
-  else {
+
+  template<typename E>
+  constexpr bool contains_impl(typename std::underlying_type<E>::type value, std::false_type, std::false_type) noexcept
+  {
+    using T = typename std::underlying_type<E>::type;
     for (const auto v : values_generator<E>)
       if (static_cast<T>(v) == value)
         return true;
     return false;
   }
+
+  template<typename E>
+  constexpr bool contains_value(typename std::underlying_type<E>::type value) noexcept
+  {
+    if (details::contains_bounds<E, count<E> == 0>::outside(value))
+      return false;
+
+    return details::contains_impl<E>(value,
+                                     std::integral_constant<bool, is_contiguous_bitflag<E>>{},
+                                     std::integral_constant<bool, is_contiguous<E>>{});
+  }
+
+  template<typename E>
+  constexpr optional<std::size_t> enum_to_index_impl(const E e, std::true_type, std::false_type) noexcept
+  {
+    using T = typename std::underlying_type<E>::type;
+    if (details::contains_value<E>(static_cast<T>(e)))
+      return optional<std::size_t>(std::size_t(T(e) - T(min<E>)));
+    return optional<std::size_t>();
+  }
+
+  template<typename E>
+  constexpr optional<std::size_t> enum_to_index_impl(const E e, std::false_type, std::true_type) noexcept
+  {
+    using T = typename std::underlying_type<E>::type;
+    if (!details::contains_value<E>(static_cast<T>(e)))
+      return optional<std::size_t>();
+
+    const bool has_zero = has_zero_flag<E>;
+    if (has_zero ? static_cast<T>(e) == 0 : false)
+      return optional<std::size_t>(0); // assumes 0 is the index of value `0`
+
+    using U = typename std::make_unsigned<T>::type;
+    return optional<std::size_t>(std::size_t(has_zero) + details::countr_zero(static_cast<U>(e)) -
+                                details::countr_zero(static_cast<U>(values_generator<E>[static_cast<std::size_t>(has_zero)])));
+  }
+
+  template<typename E>
+  constexpr optional<std::size_t> enum_to_index_impl(const E e, std::false_type, std::false_type) noexcept
+  {
+    for (std::size_t i = 0; i < count<E>; ++i) {
+      if (values_generator<E>[i] == e)
+        return optional<std::size_t>(i);
+    }
+    return optional<std::size_t>();
+  }
+} // namespace details
+
+
+template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+[[nodiscard]] constexpr bool contains(const std::underlying_type_t<E> value) noexcept
+{
+  return details::contains_value<E>(value);
 }
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
@@ -1723,7 +2514,8 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 [[nodiscard]] constexpr bool contains(const string_view name) noexcept
 {
   constexpr auto minmax = details::minmax_string_size(names<E>.data(), names<E>.data() + names<E>.size());
-  if (const auto size = name.size(); size < minmax.first || size > minmax.second)
+  const auto size = name.size();
+  if (size < minmax.first || size > minmax.second)
     return false;
 
   for (const auto s : names_generator<E>)
@@ -1731,6 +2523,7 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
       return true;
   return false;
 }
+
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E), typename BinaryPred>
 [[nodiscard]] constexpr bool contains(const string_view name, const BinaryPred binary_pred) noexcept
@@ -1740,6 +2533,7 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E), typename BinaryPred>
       return true;
   return false;
 }
+
 
 namespace details {
   template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
@@ -1756,34 +2550,12 @@ namespace details {
     template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
     [[nodiscard]] constexpr optional<std::size_t> operator()(const E e) const noexcept
     {
-      using T = std::underlying_type_t<E>;
-
-      if constexpr (is_contiguous<E>) {
-        if (enchantum::contains(e)) {
-          return optional<std::size_t>(std::size_t(T(e) - T(min<E>)));
-        }
-      }
-      else if constexpr (is_contiguous_bitflag<E>) {
-        if (enchantum::contains(e)) {
-          constexpr bool has_zero = has_zero_flag<E>;
-          if constexpr (has_zero)
-            if (static_cast<T>(e) == 0)
-              return optional<std::size_t>(0); // assumes 0 is the index of value `0`
-
-          using U = std::make_unsigned_t<T>;
-          return has_zero + details::countr_zero(static_cast<U>(e)) -
-            details::countr_zero(static_cast<U>(values_generator<E>[has_zero]));
-        }
-      }
-      else {
-        for (std::size_t i = 0; i < count<E>; ++i) {
-          if (values_generator<E>[i] == e)
-            return optional<std::size_t>(i);
-        }
-      }
-      return optional<std::size_t>();
+      return details::enum_to_index_impl<E>(e,
+                                            std::integral_constant<bool, is_contiguous<E> && count<E> != 0>{},
+                                            std::integral_constant<bool, is_contiguous_bitflag<E>>{});
     }
   };
+
 
   template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
   struct cast_functor {
@@ -1797,7 +2569,8 @@ namespace details {
     [[nodiscard]] constexpr optional<E> operator()(const string_view name) const noexcept
     {
       constexpr auto minmax = details::minmax_string_size(names<E>.data(), names<E>.data() + names<E>.size());
-      if (const auto size = name.size(); size < minmax.first || size > minmax.second)
+      const auto size = name.size();
+      if (size < minmax.first || size > minmax.second)
         return optional<E>(); // nullopt
 
       for (std::size_t i = 0; i < count<E>; ++i) {
@@ -1824,12 +2597,13 @@ namespace details {
 } // namespace details
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-inline constexpr details::index_to_enum_functor<E> index_to_enum{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::index_to_enum_functor<E> index_to_enum{};
 
-inline constexpr details::enum_to_index_functor enum_to_index{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::enum_to_index_functor enum_to_index{};
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-inline constexpr details::cast_functor<E> cast{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::cast_functor<E> cast{};
+
 
 namespace details {
   struct to_string_functor {
@@ -1843,36 +2617,52 @@ namespace details {
   };
 
 } // namespace details
-inline constexpr details::to_string_functor to_string{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::to_string_functor to_string{};
+
 
 } // namespace enchantum
 
-#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
+
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif
 
-#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
+#include <cstddef>
+
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wconversion"
   #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
 
+
 namespace enchantum {
 
+namespace details {
+  struct equal_to_string_view {
+    constexpr bool operator()(const string_view a, const string_view b) const noexcept { return a == b; }
+  };
+
+  template<typename E>
+  constexpr E value_ors_impl()
+  {
+    static_assert(is_bitflag<E>, "");
+    using T = std::underlying_type_t<E>;
+    T ret{};
+    for (const auto val : values_generator<E>)
+      ret |= static_cast<T>(val);
+    return static_cast<E>(ret);
+  }
+} // namespace details
+
 template<typename E>
-inline constexpr E value_ors = [] {
-  static_assert(is_bitflag<E>, "");
-  using T = std::underlying_type_t<E>;
-  T ret{};
-  for (const auto val : values_generator<E>)
-    ret |= static_cast<T>(val);
-  return static_cast<E>(ret);
-}();
+ENCHANTUM_DETAILS_INLINE_VAR constexpr E value_ors = details::value_ors_impl<E>();
+
 
 template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 [[nodiscard]] constexpr bool contains_bitflag(const std::underlying_type_t<E> value) noexcept
 {
-  if constexpr (!has_zero_flag<E>)
+  if (!has_zero_flag<E>)
     if (value == 0)
       return false;
 
@@ -1897,6 +2687,7 @@ template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E), typename BinaryPred>
   return enchantum::contains<E>(s.substr(pos), binary_pred);
 }
 
+
 template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 [[nodiscard]] constexpr bool contains_bitflag(const string_view s, const char sep = '|') noexcept
 {
@@ -1909,23 +2700,24 @@ template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
   return enchantum::contains<E>(s.substr(pos));
 }
 
+
 template<typename String = string, ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 [[nodiscard]] constexpr String to_string_bitflag(const E value, const char sep = '|')
 {
   using T = std::underlying_type_t<E>;
-  if constexpr (has_zero_flag<E>)
+  if (has_zero_flag<E>)
     if (static_cast<T>(value) == 0)
-      return String(names_generator<E>[0]);
+      return String(names_generator<E>[0].data(), names_generator<E>[0].size());
 
   String name;
   T      check_value = 0;
-  for (auto i = std::size_t{has_zero_flag<E>}; i < count<E>; ++i) {
+  for (auto i = static_cast<std::size_t>(has_zero_flag<E>); i < count<E>; ++i) {
     const auto v = static_cast<T>(values_generator<E>[i]);
     if (v == (static_cast<T>(value) & v)) {
       const auto s = names_generator<E>[i];
       if (!name.empty())
         name.append(1, sep);           // append separator if not the first value
-      name.append(s.data(), s.size()); // not using operator += since this may not be std::string_view always
+      name.append(s.data(), s.size());
       check_value |= v;
     }
   }
@@ -1956,7 +2748,7 @@ template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E), typename BinaryPred>
 template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 [[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep = '|') noexcept
 {
-  return enchantum::cast_bitflag<E>(s, sep, [](const auto& a, const auto& b) { return a == b; });
+  return enchantum::cast_bitflag<E>(s, sep, details::equal_to_string_view{});
 }
 
 template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
@@ -1967,7 +2759,7 @@ template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 
 } // namespace enchantum
 
-#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif
 
@@ -1975,29 +2767,46 @@ template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 
 namespace enchantum {
 namespace details {
+  template<typename String>
+  std::string string_to_std_string(const String& name, std::true_type)
+  {
+    return name;
+  }
+
+  template<typename String>
+  std::string string_to_std_string(const String& name, std::false_type)
+  {
+    return std::string(name.data(), name.size());
+  }
+
+  template<typename E>
+  std::string format_impl(E e, std::true_type) noexcept
+  {
+    const auto name = enchantum::to_string_bitflag(e);
+    if (!name.empty())
+      return details::string_to_std_string(name, std::integral_constant<bool, std::is_same<std::string, string>::value>{});
+    return std::to_string(+enchantum::to_underlying(e)); // promote using + to select int overload if to underlying returns char
+  }
+
+  template<typename E>
+  std::string format_impl(E e, std::false_type) noexcept
+  {
+    const auto name = enchantum::to_string(e);
+    if (!name.empty())
+      return std::string(name.data(), name.size());
+    return std::to_string(+enchantum::to_underlying(e)); // promote using + to select int overload if to underlying returns char
+  }
+
   template<typename E>
   std::string format(E e) noexcept
   {
-    if constexpr (is_bitflag<E>) {
-      if (const auto name = enchantum::to_string_bitflag(e); !name.empty()) {
-        if constexpr (std::is_same_v<std::string, string>) {
-          return name;
-        }
-        else {
-          return std::string(name.data(), name.size());
-        }
-      }
-    }
-    else {
-      if (const auto name = enchantum::to_string(e); !name.empty())
-        return std::string(name.data(), name.size());
-    }
-    return std::to_string(+enchantum::to_underlying(e)); // promote using + to select int overload if to underlying returns char
+    return format_impl(e, std::integral_constant<bool, is_bitflag<E>>{});
   }
 } // namespace details
 } // namespace enchantum
 
 #include <utility>
+#include <cstddef>
 
 namespace enchantum {
 
@@ -2039,7 +2848,7 @@ namespace details {
 #if 0
 template<Enum E, std::invocable<E> Func>
 constexpr auto visit(Func func, E e) 
-noexcept(std::is_nothrow_invocable_v<Func, E>)
+noexcept(noexcept(std::declval<Func>()(std::declval<E>())))
 {
   using Ret = decltype(func(e));
   
@@ -2050,7 +2859,7 @@ noexcept(std::is_nothrow_invocable_v<Func, E>)
   }(std::make_index_sequence<count<E>>());
 }
 template<Enum... Enums, std::invocable<Enums...> Func>
-constexpr auto visit(Func func, Enums... enums) noexcept(std::is_nothrow_invocable_v<Func, Enums...>)
+constexpr auto visit(Func func, Enums... enums) noexcept(noexcept(std::declval<Func>()(std::declval<Enums>()...)))
 {
   using Ret = decltype(func(enums...));
   return [&]<std::size_t... Idx>(std::index_sequence<Idx...>) {
@@ -2076,15 +2885,15 @@ constexpr void for_each(Func f) // intentional not const
   details::for_each<E>(f, std::make_index_sequence<count<E>>{});
 }
 } // namespace enchantum
-
 #include <array>
 #include <stdexcept>
+#include <type_traits>
 
 namespace enchantum {
 
 template<typename E, typename V, typename Container = std::array<V, count<E>>>
 class array : public Container {
-  static_assert(std::is_enum_v<E>);
+  static_assert(std::is_enum<E>::value);
 public:
   using container_type = Container;
   using index_type     = E;
@@ -2120,11 +2929,9 @@ public:
 };
 
 } // namespace enchantum
-
 #ifndef ENCHANTUM_ALIAS_BITSET
   #include <bitset>
 #endif
-
 #include <stdexcept>
 
 namespace enchantum {
@@ -2139,7 +2946,7 @@ namespace details {
 
 template<typename E, typename Container = details::bitset<count<E>>>
 class bitset : public Container {
-  static_assert(std::is_enum_v<E>);
+  static_assert(std::is_enum<E>::value);
 public:
 
   using container_type = Container;
@@ -2162,7 +2969,7 @@ public:
         const auto s = enchantum::names_generator<E>[i];
         if (!name.empty())
           name += sep;
-        name.append(s.data(), s.size()); // not using operator += since this may not be std::string_view always
+        name.append(s.data(), s.size());
       }
     }
     return name;
@@ -2190,9 +2997,8 @@ public:
     return operator[](*enchantum::enum_to_index(index));
   }
 
-  constexpr bool test(const E pos)
+  constexpr bool test(const E pos) const
   {
-
     if (const auto i = enchantum::enum_to_index(pos))
       return test(*i);
     ENCHANTUM_THROW(std::out_of_range("enchantum::bitset::test(E pos,bool value) out of range exception"), pos);
@@ -2205,6 +3011,7 @@ public:
       return static_cast<bitset&>(set(*i, value));
     ENCHANTUM_THROW(std::out_of_range("enchantum::bitset::set(E pos,bool value) out of range exception"), pos);
   }
+
 
   constexpr bitset& reset(const E pos)
   {
@@ -2222,6 +3029,7 @@ public:
 };
 
 } // namespace enchantum
+
 
 template<typename E>
 struct std::hash<enchantum::bitset<E>> : std::hash<enchantum::details::bitset<enchantum::count<E>>> {
@@ -2321,11 +3129,197 @@ namespace bitwise_operators {
     return static_cast<Enum>(~static_cast<std::underlying_type_t<Enum>>(a));              \
   }
 
+
+
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wconversion"
+  #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
+namespace enchantum {
+namespace scoped {
+  namespace details {
+
+
+    constexpr string_view remove_scope_or_empty(string_view string, const string_view type_name) noexcept
+    {
+      if (string.substr(0, type_name.size()) != type_name)
+        return string_view();
+      string.remove_prefix(type_name.size());
+      if (string.substr(0, 2) != string_view("::", 2))
+        return string_view();
+      string.remove_prefix(2);
+      return string;
+    }
+  } // namespace details
+
+  template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+  [[nodiscard]] constexpr bool contains(const string_view name) noexcept
+  {
+    const auto n = details::remove_scope_or_empty(name, type_name<E>);
+    return !n.empty() && enchantum::contains<E>(n);
+  }
+
+  template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E), typename BinaryPredicate>
+  [[nodiscard]] constexpr bool contains(const string_view name, const BinaryPredicate binary_predicate) noexcept
+  {
+    const auto n = details::remove_scope_or_empty(name, type_name<E>);
+    return !n.empty() && enchantum::contains<E>(n, binary_predicate);
+  }
+
+  namespace details {
+    template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+    struct scoped_cast_functor {
+      [[nodiscard]] constexpr optional<E> operator()(const string_view name) const noexcept
+      {
+        const auto n = details::remove_scope_or_empty(name, type_name<E>);
+        return n.empty() ? optional<E>() : enchantum::cast<E>(n);
+      }
+
+      template<typename BinaryPred>
+      [[nodiscard]] constexpr optional<E> operator()(const string_view name, const BinaryPred binary_predicate) const noexcept
+      {
+        const auto n = details::remove_scope_or_empty(name, type_name<E>);
+        return n.empty() ? optional<E>() : enchantum::cast<E>(n, binary_predicate);
+      }
+    };
+
+    struct to_scoped_string_functor {
+      // hacky workaround about string not being a literal type.
+      template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E), typename String = string>
+      [[nodiscard]] constexpr String operator()(const E value) const noexcept
+      {
+        String s;
+        if (const auto i = enchantum::enum_to_index(value)) {
+          const auto scope_name = type_name<E>;
+          s.append(scope_name.data(), scope_name.size());
+          s.append("::", 2);
+          const auto name = names_generator<E>[*i];
+          s.append(name.data(), name.size());
+          return s;
+        }
+        return s;
+      }
+    };
+  } // namespace details
+
+
+  ENCHANTUM_DETAILS_INLINE_VAR constexpr details::to_scoped_string_functor to_string;
+
+  template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
+  ENCHANTUM_DETAILS_INLINE_VAR constexpr details::scoped_cast_functor<E> cast;
+
+  template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E), typename BinaryPred>
+  [[nodiscard]] constexpr bool contains_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
+  {
+    std::size_t pos = 0;
+    for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
+      if (!enchantum::scoped::contains<E>(s.substr(pos, i - pos), binary_pred))
+        return false;
+      pos = i + 1;
+    }
+    return enchantum::scoped::contains<E>(s.substr(pos), binary_pred);
+  }
+
+  template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
+  [[nodiscard]] constexpr bool contains_bitflag(const string_view s, const char sep = '|') noexcept
+  {
+    std::size_t pos = 0;
+    for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
+      if (!enchantum::scoped::contains<E>(s.substr(pos, i - pos)))
+        return false;
+      pos = i + 1;
+    }
+    return enchantum::scoped::contains<E>(s.substr(pos));
+  }
+
+
+  template<typename String = string, ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
+  [[nodiscard]] constexpr String to_string_bitflag(const E value, const char sep = '|')
+  {
+    using T = std::underlying_type_t<E>;
+    if (has_zero_flag<E>)
+      if (static_cast<T>(value) == 0)
+        return enchantum::scoped::to_string(value);
+
+    String         name;
+    T              check_value = 0;
+    constexpr auto scope_name  = type_name<E>;
+    for (auto i = static_cast<std::size_t>(has_zero_flag<E>); i < count<E>; ++i) {
+      const auto v = static_cast<T>(values_generator<E>[i]);
+      if (v == (static_cast<T>(value) & v)) {
+        if (!name.empty())
+          name.append(1, sep); // append separator if not the first value
+        name.append(scope_name.data(), scope_name.size());
+        name.append("::", 2);
+        const auto s = names_generator<E>[i];
+        name.append(s.data(), s.size());
+        check_value |= v;
+      }
+    }
+    if (check_value == static_cast<T>(value))
+      return name;
+    return string();
+  }
+
+
+  template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E), typename BinaryPred>
+  [[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
+  {
+    using T = std::underlying_type_t<E>;
+    T           check_value{};
+    std::size_t pos = 0;
+    for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
+      if (const auto v = enchantum::scoped::cast<E>(s.substr(pos, i - pos), binary_pred))
+        check_value |= static_cast<T>(*v);
+      else
+        return optional<E>();
+      pos = i + 1;
+    }
+
+    if (const auto v = enchantum::scoped::cast<E>(s.substr(pos), binary_pred))
+      return optional<E>(static_cast<E>(check_value | static_cast<T>(*v)));
+    return optional<E>();
+  }
+
+  template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
+[[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep = '|') noexcept
+{
+  return enchantum::scoped::cast_bitflag<E>(s, sep, enchantum::details::equal_to_string_view{});
+}
+} // namespace scoped
+} // namespace enchantum
+
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
+  #pragma GCC diagnostic pop
+#endif
+
 #include <iostream>
 #include <string>
 
 namespace enchantum {
 namespace iostream_operators {
+  template<typename E>
+  bool extract_enum_from_string(const std::string& s, E& value, std::true_type)
+  {
+    if (const auto v = enchantum::cast_bitflag<E>(s)) {
+      value = *v;
+      return true;
+    }
+    return false;
+  }
+
+  template<typename E>
+  bool extract_enum_from_string(const std::string& s, E& value, std::false_type)
+  {
+    if (const auto v = enchantum::cast<E>(s)) {
+      value = *v;
+      return true;
+    }
+    return false;
+  }
+
   template<typename Traits, ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
   std::basic_ostream<char, Traits>& operator<<(std::basic_ostream<char, Traits>& os, const E e)
   {
@@ -2341,18 +3335,8 @@ namespace iostream_operators {
     if (!is)
       return is;
 
-    if constexpr (is_bitflag<E>) {
-      if (const auto v = enchantum::cast_bitflag<E>(s))
-        value = *v;
-      else
-        is.setstate(std::ios_base::failbit);
-    }
-    else {
-      if (const auto v = enchantum::cast<E>(s))
-        value = *v;
-      else
-        is.setstate(std::ios_base::failbit);
-    }
+    if (!extract_enum_from_string(s, value, std::integral_constant<bool, is_bitflag<E>>{}))
+      is.setstate(std::ios_base::failbit);
     return is;
   }
 } // namespace iostream_operators
@@ -2360,7 +3344,7 @@ namespace iostream_operators {
 
 #include <cstddef>
 
-#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
@@ -2395,19 +3379,19 @@ namespace details {
   };
 } // namespace details
 
-inline constexpr details::next_value_functor<1>           next_value{};
-inline constexpr details::next_value_functor<-1>          prev_value{};
-inline constexpr details::next_value_circular_functor<1>  next_value_circular{};
-inline constexpr details::next_value_circular_functor<-1> prev_value_circular{};
+
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::next_value_functor<1>           next_value{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::next_value_functor<-1>          prev_value{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::next_value_circular_functor<1>  next_value_circular{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::next_value_circular_functor<-1> prev_value_circular{};
 
 } // namespace enchantum
 
-#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
+
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif
-
 #if __has_include(<fmt/format.h>)
-  
 
 #include <fmt/format.h>
 
@@ -2416,7 +3400,7 @@ template<enchantum::Enum E>
 struct fmt::formatter<E>
 #else
 template<typename E>
-struct fmt::formatter<E, char, std::enable_if_t<std::is_enum_v<E>>>
+struct fmt::formatter<E, char, std::enable_if_t<std::is_enum<E>::value>>
 #endif
 : fmt::formatter<string_view> {
   template<typename FmtContext>
@@ -2426,7 +3410,6 @@ struct fmt::formatter<E, char, std::enable_if_t<std::is_enum_v<E>>>
   }
 };
 #elif (__cplusplus >= 202002 || (defined(_MSVC_LANG) && _MSVC_LANG >= 202002)) && __has_include(<format>)
-  
 
 #include <format>
 #include <string_view>

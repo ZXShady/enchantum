@@ -11,10 +11,10 @@ namespace details {
 
 
   template<typename E, typename = void>
-  inline constexpr std::size_t prefix_length_or_zero = 0;
+  ENCHANTUM_DETAILS_INLINE_VAR constexpr std::size_t prefix_length_or_zero = 0;
 
   template<typename E>
-  inline constexpr auto prefix_length_or_zero<E, decltype((void)enum_traits<E>::prefix_length)> = std::size_t{
+  ENCHANTUM_DETAILS_INLINE_VAR constexpr auto prefix_length_or_zero<E, decltype((void)enum_traits<E>::prefix_length)> = std::size_t{
     enum_traits<E>::prefix_length};
 
   template<typename Underlying, std::size_t ArraySize>

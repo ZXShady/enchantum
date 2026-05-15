@@ -8,7 +8,7 @@ namespace enchantum {
 
 template<typename E, typename V, typename Container = std::array<V, count<E>>>
 class array : public Container {
-  static_assert(std::is_enum_v<E>);
+  static_assert(std::is_enum<E>::value);
 public:
   using container_type = Container;
   using index_type     = E;

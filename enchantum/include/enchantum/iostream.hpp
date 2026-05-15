@@ -8,6 +8,26 @@
 
 namespace enchantum {
 namespace iostream_operators {
+  template<typename E>
+  bool extract_enum_from_string(const std::string& s, E& value, std::true_type)
+  {
+    if (const auto v = enchantum::cast_bitflag<E>(s)) {
+      value = *v;
+      return true;
+    }
+    return false;
+  }
+
+  template<typename E>
+  bool extract_enum_from_string(const std::string& s, E& value, std::false_type)
+  {
+    if (const auto v = enchantum::cast<E>(s)) {
+      value = *v;
+      return true;
+    }
+    return false;
+  }
+
   template<typename Traits, ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
   std::basic_ostream<char, Traits>& operator<<(std::basic_ostream<char, Traits>& os, const E e)
   {
@@ -23,18 +43,8 @@ namespace iostream_operators {
     if (!is)
       return is;
 
-    if constexpr (is_bitflag<E>) {
-      if (const auto v = enchantum::cast_bitflag<E>(s))
-        value = *v;
-      else
-        is.setstate(std::ios_base::failbit);
-    }
-    else {
-      if (const auto v = enchantum::cast<E>(s))
-        value = *v;
-      else
-        is.setstate(std::ios_base::failbit);
-    }
+    if (!extract_enum_from_string(s, value, std::integral_constant<bool, is_bitflag<E>>{}))
+      is.setstate(std::ios_base::failbit);
     return is;
   }
 } // namespace iostream_operators

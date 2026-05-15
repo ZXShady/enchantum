@@ -42,10 +42,10 @@ namespace details {
 } // namespace details
 
 
-inline constexpr details::next_value_functor<1>           next_value{};
-inline constexpr details::next_value_functor<-1>          prev_value{};
-inline constexpr details::next_value_circular_functor<1>  next_value_circular{};
-inline constexpr details::next_value_circular_functor<-1> prev_value_circular{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::next_value_functor<1>           next_value{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::next_value_functor<-1>          prev_value{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::next_value_circular_functor<1>  next_value_circular{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::next_value_circular_functor<-1> prev_value_circular{};
 
 } // namespace enchantum
 

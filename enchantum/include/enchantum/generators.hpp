@@ -176,25 +176,31 @@ namespace details {
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
       using value_type = E;
+      [[nodiscard]] constexpr E dereference(std::true_type, std::false_type) const noexcept
+      {
+        using T = typename std::underlying_type<E>::type;
+        return static_cast<E>(static_cast<T>(min<E>) + static_cast<T>(this->index));
+      }
+
+      [[nodiscard]] constexpr E dereference(std::false_type, std::true_type) const noexcept
+      {
+        using T                        = typename std::underlying_type<E>::type;
+        using UT                       = typename std::make_unsigned<T>::type;
+        constexpr auto real_min_offset = details::countr_zero(static_cast<UT>(values<E>[has_zero_flag<E>]));
+        if (has_zero_flag<E> ? this->index == 0 : false)
+          return E{};
+        return static_cast<E>(UT{1} << (real_min_offset + static_cast<UT>(this->index - has_zero_flag<E>)));
+      }
+
+      [[nodiscard]] constexpr E dereference(std::false_type, std::false_type) const noexcept
+      {
+        return values<E>[static_cast<std::size_t>(this->index)];
+      }
+
       [[nodiscard]] constexpr E operator*() const noexcept
       {
-        using T = std::underlying_type_t<E>;
-
-        if constexpr (is_contiguous<E>) {
-          return static_cast<E>(static_cast<T>(min<E>) + static_cast<T>(this->index));
-        }
-        else if constexpr (is_contiguous_bitflag<E>) {
-          using UT                       = std::make_unsigned_t<T>;
-          constexpr auto real_min_offset = details::countr_zero(static_cast<UT>(values<E>[has_zero_flag<E>]));
-
-          if constexpr (has_zero_flag<E>)
-            if (this->index == 0)
-              return E{};
-          return static_cast<E>(UT{1} << (real_min_offset + static_cast<UT>(this->index - has_zero_flag<E>)));
-        }
-        else {
-          return values<E>[static_cast<std::size_t>(this->index)];
-        }
+        return dereference(std::integral_constant<bool, is_contiguous<E>>{},
+                           std::integral_constant<bool, is_contiguous_bitflag<E>>{});
       }
       [[nodiscard]] constexpr E operator[](const std::ptrdiff_t i) const noexcept { return *(*this + i); }
     };
@@ -236,21 +242,21 @@ namespace details {
 } // namespace details
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-inline constexpr details::values_generator_t<E> values_generator{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::values_generator_t<E> values_generator{};
 
 #ifdef __cpp_concepts
 template<Enum E, typename StringView = string_view, bool NullTerminated = true>
-inline constexpr details::names_generator_t<E, StringView, NullTerminated> names_generator{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::names_generator_t<E, StringView, NullTerminated> names_generator{};
 
 template<Enum E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true>
-inline constexpr details::entries_generator_t<E, Pair, NullTerminated> entries_generator{};
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::entries_generator_t<E, Pair, NullTerminated> entries_generator{};
 
 #else
-template<typename E, typename StringView = string_view, bool NullTerminated = true, std::enable_if_t<std::is_enum_v<E>, int> = 0>
-inline constexpr details::names_generator_t<E, StringView, NullTerminated> names_generator{};
+template<typename E, typename StringView = string_view, bool NullTerminated = true, std::enable_if_t<std::is_enum<E>::value, int> = 0>
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::names_generator_t<E, StringView, NullTerminated> names_generator{};
 
-template<typename E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true, std::enable_if_t<std::is_enum_v<E>, int> = 0>
-inline constexpr details::entries_generator_t<E, Pair, NullTerminated> entries_generator{};
+template<typename E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true, std::enable_if_t<std::is_enum<E>::value, int> = 0>
+ENCHANTUM_DETAILS_INLINE_VAR constexpr details::entries_generator_t<E, Pair, NullTerminated> entries_generator{};
 
 #endif
 

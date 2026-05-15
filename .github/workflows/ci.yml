@@ -91,6 +91,10 @@ jobs:
         run: |
           chmod +x .github/scripts/build_and_test.sh
 
+      - name: Build (C++14)
+        run: |
+          .github/scripts/build_and_test.sh 14 "${{ matrix.platform.flags }}"
+
       - name: Build (C++17)
         run: |
           .github/scripts/build_and_test.sh 17 "${{ matrix.platform.flags }}"
