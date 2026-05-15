@@ -34,7 +34,10 @@ namespace details {
                             SZC("constexpr auto enchantum::details::enum_in_array_name_size() [with E = "),
                           SZC(__PRETTY_FUNCTION__) -
                             SZC("constexpr auto enchantum::details::enum_in_array_name_size() [with E = ]"));
-    s.remove_prefix(s.find(';') + SZC("; E Enum = "));
+    std::size_t enum_pos = 0;
+    while (s[enum_pos] != ';')
+      ++enum_pos;
+    s.remove_prefix(enum_pos + SZC("; E Enum = "));
     // if scoped
     if (!std::is_convertible<E, std::underlying_type_t<E>>::value) {
       return s[0] == '(' ? s.size() - SZC("()0") : s.rfind(':') - 1;
