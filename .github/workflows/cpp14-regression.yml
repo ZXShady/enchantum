@@ -2,7 +2,7 @@ name: C++14 Regression Checks
 
 on:
   push:
-    branches: [main, ci/cpp14-regression-checks]
+    branches: [main, feature/portable-cpp14-support]
     paths:
       - '.github/scripts/build_and_test.sh'
       - '.github/workflows/cpp14-regression.yml'
