@@ -25,6 +25,32 @@ namespace details {
 
 
   // this is needed since gcc transforms "{anonymous}" into "<unnamed>" for values
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+  template<auto Enum>
+  constexpr auto enum_in_array_name_size() noexcept
+  {
+    // constexpr auto f() [with auto _ = (
+    //constexpr auto f() [with auto _ = (Scoped)0]
+    auto s  = string_view(__PRETTY_FUNCTION__ +
+                           SZC("constexpr auto enchantum::details::enum_in_array_name_size() [with auto Enum = "),
+                         SZC(__PRETTY_FUNCTION__) -
+                           SZC("constexpr auto enchantum::details::enum_in_array_name_size() [with auto Enum = ]"));
+    using E = decltype(Enum);
+    // if scoped
+    if constexpr (!std::is_convertible<E, std::underlying_type_t<E>>::value) {
+      return s[0] == '(' ? s.size() - SZC("()0") : s.rfind(':') - 1;
+    }
+    else {
+      if (s[0] == '(') {
+        s.remove_prefix(SZC("("));
+        s.remove_suffix(SZC(")0"));
+      }
+      if (const auto pos = s.rfind(':'); pos != s.npos)
+        return pos - 1;
+      return std::size_t{0};
+    }
+  }
+#else
   template<typename E, E Enum>
   constexpr auto enum_in_array_name_size() noexcept
   {
@@ -53,8 +79,42 @@ namespace details {
       return std::size_t{0};
     }
   }
+#endif
 
 #if __GNUC__ == 10
+  #if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+  template<auto V>
+  constexpr auto gcc10_workaround() noexcept
+  {
+    using E               = decltype(V);
+    using T               = std::underlying_type_t<E>;
+    constexpr auto prefix = SZC("constexpr auto enchantum::details::gcc10_workaround() [with auto V = ");
+    constexpr auto begin  = __PRETTY_FUNCTION__ + prefix;
+    if constexpr (begin[0] == '(') {
+      std::size_t i   = SZC(__PRETTY_FUNCTION__) - prefix - SZC("(");
+      const char* end = __PRETTY_FUNCTION__ + SZC(__PRETTY_FUNCTION__) - 1;
+      while (*end != ')') {
+        --end;
+        --i;
+      }
+      --i;
+      return i;
+    }
+    else if constexpr (static_cast<T>(V) == (std::numeric_limits<T>::max)()) {
+      constexpr auto  s      = details::enum_in_array_name_size<E{}>();
+      constexpr auto& tyname = raw_type_name<E>;
+      if (constexpr auto pos = tyname.rfind("::"); pos != tyname.npos) {
+        return s + tyname.substr(pos).size();
+      }
+      else {
+        return s + tyname.size();
+      }
+    }
+    else {
+      return details::gcc10_workaround<static_cast<E>(static_cast<T>(V) + 1)>();
+    }
+  }
+  #else
   template<typename E, E V>
   constexpr auto gcc10_workaround() noexcept
   {
@@ -86,8 +146,32 @@ namespace details {
       return details::gcc10_workaround<E, static_cast<E>(static_cast<T>(V) + 1)>();
     }
   }
+  #endif
 #endif
 
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+  template<typename Enum>
+  constexpr auto length_of_enum_in_template_array_if_casting() noexcept
+  {
+    if constexpr (is_scoped_enum<Enum>) {
+      return details::enum_in_array_name_size<Enum{}>();
+    }
+    else {
+#if __GNUC__ == 10
+      return details::gcc10_workaround<static_cast<Enum>((std::numeric_limits<std::underlying_type_t<Enum>>::min)())>();
+#else
+      constexpr auto  s      = details::enum_in_array_name_size<Enum{}>();
+      constexpr auto& tyname = raw_type_name<Enum>;
+      if (constexpr auto pos = tyname.rfind("::"); pos != tyname.npos) {
+        return s + tyname.substr(pos).size();
+      }
+      else {
+        return s + tyname.size();
+      }
+#endif
+    }
+  }
+#else
   template<typename Enum>
   constexpr auto length_of_enum_in_template_array_if_casting_impl(std::true_type) noexcept
   {
@@ -114,7 +198,9 @@ namespace details {
   {
     return details::length_of_enum_in_template_array_if_casting_impl<Enum>(std::integral_constant<bool, is_scoped_enum<Enum>>{});
   }
+#endif
 
+#if ENCHANTUM_DETAILS_CXX_STD < 201703L
   constexpr const char* find_gcc_values_pack(const char* s) noexcept
   {
     for (std::size_t i = 0; true; ++i) {
@@ -137,16 +223,30 @@ namespace details {
   {
     return details::find_gcc_values_pack(__PRETTY_FUNCTION__);
   }
+#else
+  template<auto... Vs>
+  constexpr auto var_name() noexcept
+  {
+    return __PRETTY_FUNCTION__ + SZC("constexpr auto enchantum::details::var_name() [with auto ...Vs = {");
+  }
+#endif
 
 
   constexpr bool is_out_of_range_parse(const char* str, const std::size_t least_length_when_casting, const std::size_t array_size)
   {
     for (std::size_t index = 0; index < array_size; ++index) {
       if (*str == '(') {
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+        const auto comma = std::char_traits<char>::find(str + least_length_when_casting, UINT8_MAX, ',');
+        if (comma == nullptr || *comma == '\0')
+          return false;
+        str = comma + SZC(", ");
+#else
         const auto comma = details::find_char(str + least_length_when_casting, UINT8_MAX, ',');
         if (comma == nullptr || *comma == '\0')
           return false;
         str = comma + SZC(", ");
+#endif
       }
       else
         return true;
@@ -172,17 +272,31 @@ namespace details {
     (void)min; // not always used
     for (std::size_t index = 0; index < array_size; ++index) {
       if (*str == '(') {
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+        const auto comma = std::char_traits<char>::find(str + least_length_when_casting, UINT8_MAX, ',');
+        if (comma == nullptr || *comma == '\0')
+          return;
+        str = comma + SZC(", ");
+#else
         const auto comma = details::find_char(str + least_length_when_casting, UINT8_MAX, ',');
         if (comma == nullptr || *comma == '\0')
           return;
         str = comma + SZC(", ");
+#endif
       }
       else {
         str += least_length_when_value;
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+        const auto comma = std::char_traits<char>::find(str, UINT8_MAX, ',');
+        if (comma == nullptr)
+          return;
+        const auto commapos = static_cast<std::size_t>(comma - str);
+#else
         const auto comma = details::find_char(str, UINT8_MAX, ',');
         if (comma == nullptr)
           return;
         const auto commapos = static_cast<std::size_t>(comma - str);
+#endif
         if (IsBitFlag)
           values[valid_count] = index == 0 ? IntType{} : static_cast<IntType>(IntType{1} << (index - 1));
         else
@@ -191,9 +305,13 @@ namespace details {
         for (std::size_t i = 0; i < commapos; ++i)
           strings[total_string_length++] = str[i];
         total_string_length += null_terminated;
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+        str += commapos + SZC(", ");
+#else
         if (*comma == '\0')
           return;
         str = comma + SZC(", ");
+#endif
       }
     }
   }
@@ -207,7 +325,11 @@ namespace details {
 #else
   #define CAST(type, value) __builtin_bit_cast(type, value)
 #endif
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+    return details::var_name<E{}, CAST(E, static_cast<typename std::underlying_type<E>::type>(Underlying{1} << Is))..., 0>();
+#else
     return details::var_name<E, E{}, CAST(E, static_cast<typename std::underlying_type<E>::type>(Underlying{1} << Is))..., E{}>();
+#endif
 #undef CAST
   }
 
@@ -219,7 +341,11 @@ namespace details {
 #else
   #define CAST(type, value) __builtin_bit_cast(type, value)
 #endif
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+    return details::var_name<CAST(E, static_cast<typename std::underlying_type<E>::type>(static_cast<MinT>(Is) + Min))..., 0>();
+#else
     return details::var_name<E, CAST(E, static_cast<typename std::underlying_type<E>::type>(static_cast<MinT>(Is) + Min))..., E{}>();
+#endif
 #undef CAST
   }
 
@@ -232,7 +358,11 @@ namespace details {
 
     constexpr auto str = details::reflect_var_name<E, MinT, Min, Underlying, Is...>(std::integral_constant<bool, is_bitflag<E>>{});
 
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+    constexpr auto enum_in_array_len = details::enum_in_array_name_size<E{}>();
+#else
     constexpr auto enum_in_array_len = details::enum_in_array_name_size<E, E{}>();
+#endif
     constexpr auto length_of_enum_in_template_array_casting = details::length_of_enum_in_template_array_if_casting<E>();
 
     ReflectStringReturnValue<std::underlying_type_t<E>, ArraySize> ret;
@@ -282,7 +412,11 @@ namespace details {
     // __builtin_bit_cast used to silence errors when casting out of unscoped enums range
   #define CAST(type, value) __builtin_bit_cast(type, value)
 #endif
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+    constexpr auto str = details::var_name<CAST(E, static_cast<Under>(static_cast<MinT>(Is) + Min))..., 0>();
+#else
     constexpr auto str = details::var_name<E, CAST(E, static_cast<Under>(static_cast<MinT>(Is) + Min))..., E{}>();
+#endif
 #undef CAST
 
     constexpr auto length_of_enum_in_template_array_casting = details::length_of_enum_in_template_array_if_casting<E>();

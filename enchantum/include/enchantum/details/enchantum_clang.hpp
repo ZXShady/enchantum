@@ -36,6 +36,7 @@ namespace details {
 
 #define SZC(x) (sizeof(x) - 1)
 
+#if ENCHANTUM_DETAILS_CXX_STD < 201703L
   constexpr const char* find_clang_values_pack(const char* s) noexcept
   {
     for (std::size_t i = 0; true; ++i) {
@@ -50,6 +51,14 @@ namespace details {
     // "auto enchantum::details::var_name() [Vs = <(A)0, a, b, c, e, d, (A)6>]"
     return details::find_clang_values_pack(__PRETTY_FUNCTION__);
   }
+#else
+  template<auto... Vs>
+  constexpr auto var_name() noexcept
+  {
+    // "auto enchantum::details::var_name() [Vs = <(A)0, a, b, c, e, d, (A)6>]"
+    return __PRETTY_FUNCTION__ + SZC("auto enchantum::details::var_name() [Vs = <");
+  }
+#endif
 
 
   constexpr bool is_out_of_range_parse(
@@ -123,13 +132,21 @@ namespace details {
   template<typename E, typename MinT, MinT Min, typename Underlying, std::size_t... Is>
   constexpr const char* reflect_var_name(std::true_type) noexcept
   {
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+    return details::var_name<static_cast<E>(false), static_cast<E>(Underlying(1) << Is)..., 0>();
+#else
     return details::var_name<E, E{}, static_cast<E>(Underlying(1) << Is)..., E{}>();
+#endif
   }
 
   template<typename E, typename MinT, MinT Min, typename Underlying, std::size_t... Is>
   constexpr const char* reflect_var_name(std::false_type) noexcept
   {
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+    return details::var_name<static_cast<E>(static_cast<MinT>(Is) + Min)..., 0>();
+#else
     return details::var_name<E, static_cast<E>(static_cast<MinT>(Is) + Min)..., E{}>();
+#endif
   }
 
   template<typename E, bool NullTerminated, typename MinT, MinT Min, std::size_t... Is>
@@ -193,7 +210,11 @@ namespace details {
   constexpr bool is_out_of_range(std::index_sequence<Is...>) noexcept
   {
     constexpr auto ArraySize = sizeof...(Is);
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+    const auto     str       = details::var_name<static_cast<E>(static_cast<MinT>(Is) + Min)..., 0>();
+#else
     const auto     str       = details::var_name<E, static_cast<E>(static_cast<MinT>(Is) + Min)..., E{}>();
+#endif
 
     constexpr auto enum_in_array_name = details::enum_in_array_name(raw_type_name<E>, is_scoped_enum<E>);
     constexpr auto enum_in_array_len  = enum_in_array_name.size();

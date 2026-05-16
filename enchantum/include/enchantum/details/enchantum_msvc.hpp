@@ -38,6 +38,33 @@ namespace details {
     return s.npos;
   }
 
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+  template<auto Enum>
+  constexpr auto enum_in_array_name_size() noexcept
+  {
+    auto s = string_view{__FUNCSIG__ + SZC("auto __cdecl enchantum::details::enum_in_array_name_size<"),
+                         SZC(__FUNCSIG__) - SZC("auto __cdecl enchantum::details::enum_in_array_name_size<>(void) noexcept")};
+    using E = decltype(Enum);
+
+    if constexpr (is_scoped_enum<E>) {
+      if (s[0] == '(') {
+        s.remove_prefix(SZC("(enum "));
+        s.remove_suffix(SZC(")0x0") + (sizeof(Enum) == 8)); // MSVC adds a extra 0 at the end for some reason for 8 bit enums
+        return s.size();
+      }
+      return s.substr(0, s.rfind(':') - 1).size();
+    }
+    else {
+      if (s[0] == '(') {
+        s.remove_prefix(SZC("(enum "));
+        s.remove_suffix(SZC(")0x0") + (sizeof(Enum) == 8)); // MSVC adds a extra 0 at the end for some reason for 8 bit enums
+      }
+      if (const auto pos = s.rfind(':'); pos != s.npos)
+        return pos - 1;
+      return std::size_t(0);
+    }
+  }
+#else
   template<typename E, E Enum>
   constexpr auto enum_in_array_name_size() noexcept
   {
@@ -64,7 +91,16 @@ namespace details {
       return std::size_t(0);
     }
   }
+#endif
 
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+  template<auto... Vs>
+  constexpr auto __cdecl var_name() noexcept
+  {
+    //auto __cdecl f<class std::array<enum `anonymous namespace'::UnscopedAnon,32>{enum `anonymous-namespace'::UnscopedAnon
+    return __FUNCSIG__ + SZC("auto __cdecl enchantum::details::var_name<");
+  }
+#else
   template<typename E, E... Vs>
   constexpr auto __cdecl var_name() noexcept
   {
@@ -73,6 +109,7 @@ namespace details {
     constexpr auto        pos = details::find_type_value_separator(sig, SZC("auto __cdecl enchantum::details::var_name<"));
     return __FUNCSIG__ + pos + SZC(",");
   }
+#endif
   template<typename IntType>
   constexpr bool is_out_of_range_parse(const char*       str,
                                        const bool        skip_work_if_neg,
@@ -204,13 +241,21 @@ namespace details {
   template<typename E, typename MinT, MinT Min, typename Underlying, std::size_t... Is>
   constexpr const char* reflect_var_name(std::true_type) noexcept
   {
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+    return details::var_name<E{}, static_cast<E>(Underlying(1) << Is)..., 0>();
+#else
     return details::var_name<E, E{}, static_cast<E>(Underlying(1) << Is)..., E{}>();
+#endif
   }
 
   template<typename E, typename MinT, MinT Min, typename Underlying, std::size_t... Is>
   constexpr const char* reflect_var_name(std::false_type) noexcept
   {
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+    return details::var_name<static_cast<E>(static_cast<MinT>(Is) + Min)..., 0>();
+#else
     return details::var_name<E, static_cast<E>(static_cast<MinT>(Is) + Min)..., E{}>();
+#endif
   }
 
   template<typename E, bool NullTerminated, typename MinT, MinT Min, std::size_t... Is>
@@ -223,7 +268,11 @@ namespace details {
 
     constexpr auto str               = details::reflect_var_name<E, MinT, Min, Underlying, Is...>(std::integral_constant<bool, is_bitflag<E>>{});
     constexpr auto type_name_len     = details::raw_type_name_func<E>().size() - 1;
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+    constexpr auto enum_in_array_len = details::enum_in_array_name_size<E{}>();
+#else
     constexpr auto enum_in_array_len = details::enum_in_array_name_size<E, E{}>();
+#endif
 
     ReflectStringReturnValue<std::underlying_type_t<E>, ArraySize> ret;
     details::parse_string<is_bitflag<E>>(
@@ -287,7 +336,11 @@ namespace details {
 #else
     constexpr auto skip_work_if_neg = false;
 #endif
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+    const auto str           = details::var_name<static_cast<E>(static_cast<MinT>(Is) + Min)..., 0>();
+#else
     const auto str           = details::var_name<E, static_cast<E>(static_cast<MinT>(Is) + Min)..., E{}>();
+#endif
     const auto type_name_len = details::raw_type_name_func<E>().size() - 1;
 
     return details::is_out_of_range_parse(
