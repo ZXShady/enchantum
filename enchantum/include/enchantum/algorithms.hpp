@@ -69,8 +69,12 @@ namespace details {
   template<typename E, typename Func, std::size_t... I>
   constexpr void for_each(Func& f, std::index_sequence<I...>)
   {
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+    ((void)f(std::integral_constant<E, values<E>[I]>{}), ...);
+#else
     using expander = int[];
     (void)expander{0, ((void)f(std::integral_constant<E, values<E>[I]> {}), 0)...};
+#endif
   }
 
 } // namespace details

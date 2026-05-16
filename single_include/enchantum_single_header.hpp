@@ -49,6 +49,7 @@ struct type_identity {
   using type = T;
 };
 
+#if ENCHANTUM_DETAILS_CXX_STD < 201703L
 template<typename T, std::size_t N>
 struct cxx14_array {
   T elems[N == 0 ? 1 : N]{};
@@ -74,6 +75,7 @@ struct cxx14_array {
   constexpr std::size_t size() const noexcept { return N; }
   constexpr bool        empty() const noexcept { return N == 0; }
 };
+#endif
 
 #if ENCHANTUM_DETAILS_CXX_STD >= 201703L
 template<typename T, std::size_t N>
@@ -2060,6 +2062,40 @@ namespace details {
   };
 } // namespace details
 
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+template<typename E>
+ENCHANTUM_DETAILS_INLINE_VAR constexpr bool has_zero_flag = [](const auto is_bitflag) {
+  if constexpr (is_bitflag.value) {
+    for (const auto v : values<E>)
+      if (static_cast<std::underlying_type_t<E>>(v) == 0)
+        return true;
+  }
+  return false;
+}(std::integral_constant<bool, is_bitflag<E>>{});
+
+template<typename E>
+ENCHANTUM_DETAILS_INLINE_VAR constexpr bool is_contiguous = []() {
+  if constexpr (count<E> == 0)
+    return false;
+  else
+    return static_cast<std::size_t>(enchantum::to_underlying(max<E>) - enchantum::to_underlying(min<E>)) + 1 == count<E>;
+}();
+
+template<typename E>
+ENCHANTUM_DETAILS_INLINE_VAR constexpr bool is_contiguous_bitflag = [](const auto is_bitflag) {
+  if constexpr (is_bitflag.value) {
+    constexpr auto& enums = entries<E>;
+    using T               = std::underlying_type_t<E>;
+    for (auto i = std::size_t{has_zero_flag<E>}; i < enums.size() - 1; ++i)
+      if (T(enums[i].first) << 1 != T(enums[i + 1].first))
+        return false;
+    return true;
+  }
+  else {
+    return false;
+  }
+}(std::integral_constant<bool, is_bitflag<E>>{});
+#else
 template<typename E>
 ENCHANTUM_DETAILS_INLINE_VAR constexpr bool has_zero_flag = details::has_zero_flag_impl<E, is_bitflag<E>>::value();
 
@@ -2069,6 +2105,7 @@ ENCHANTUM_DETAILS_INLINE_VAR constexpr bool is_contiguous = details::is_contiguo
 
 template<typename E>
 ENCHANTUM_DETAILS_INLINE_VAR constexpr bool is_contiguous_bitflag = details::is_contiguous_bitflag_impl<E, is_bitflag<E>>::value();
+#endif
 
 #ifdef __cpp_concepts
 template<typename E>
@@ -2292,6 +2329,7 @@ namespace details {
       using base       = sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())>;
       using value_type = E;
       using base::operator+=;
+#if ENCHANTUM_DETAILS_CXX_STD < 201703L
       ENCHANTUM_DETAILS_NODISCARD constexpr E dereference(std::true_type, std::false_type) const noexcept
       {
         using T = typename std::underlying_type<E>::type;
@@ -2312,11 +2350,30 @@ namespace details {
       {
         return values<E>[static_cast<std::size_t>(this->index)];
       }
+#endif
 
       ENCHANTUM_DETAILS_NODISCARD constexpr E operator*() const noexcept
       {
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+        if constexpr (is_contiguous<E>) {
+          using T = typename std::underlying_type<E>::type;
+          return static_cast<E>(static_cast<T>(min<E>) + static_cast<T>(this->index));
+        }
+        else if constexpr (is_contiguous_bitflag<E>) {
+          using T                        = typename std::underlying_type<E>::type;
+          using UT                       = typename std::make_unsigned<T>::type;
+          constexpr auto real_min_offset = details::countr_zero(static_cast<UT>(values<E>[has_zero_flag<E>]));
+          if (has_zero_flag<E> ? this->index == 0 : false)
+            return E{};
+          return static_cast<E>(UT{1} << (real_min_offset + static_cast<UT>(this->index - has_zero_flag<E>)));
+        }
+        else {
+          return values<E>[static_cast<std::size_t>(this->index)];
+        }
+#else
         return dereference(std::integral_constant<bool, is_contiguous<E>>{},
                            std::integral_constant<bool, is_contiguous_bitflag<E>>{});
+#endif
       }
       ENCHANTUM_DETAILS_NODISCARD constexpr E operator[](const std::ptrdiff_t i) const noexcept
       {
@@ -2933,8 +2990,12 @@ namespace details {
   template<typename E, typename Func, std::size_t... I>
   constexpr void for_each(Func& f, std::index_sequence<I...>)
   {
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+    ((void)f(std::integral_constant<E, values<E>[I]>{}), ...);
+#else
     using expander = int[];
     (void)expander{0, ((void)f(std::integral_constant<E, values<E>[I]> {}), 0)...};
+#endif
   }
 
 } // namespace details

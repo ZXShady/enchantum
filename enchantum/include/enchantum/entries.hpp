@@ -466,6 +466,40 @@ namespace details {
   };
 } // namespace details
 
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+template<typename E>
+ENCHANTUM_DETAILS_INLINE_VAR constexpr bool has_zero_flag = [](const auto is_bitflag) {
+  if constexpr (is_bitflag.value) {
+    for (const auto v : values<E>)
+      if (static_cast<std::underlying_type_t<E>>(v) == 0)
+        return true;
+  }
+  return false;
+}(std::integral_constant<bool, is_bitflag<E>>{});
+
+template<typename E>
+ENCHANTUM_DETAILS_INLINE_VAR constexpr bool is_contiguous = []() {
+  if constexpr (count<E> == 0)
+    return false;
+  else
+    return static_cast<std::size_t>(enchantum::to_underlying(max<E>) - enchantum::to_underlying(min<E>)) + 1 == count<E>;
+}();
+
+template<typename E>
+ENCHANTUM_DETAILS_INLINE_VAR constexpr bool is_contiguous_bitflag = [](const auto is_bitflag) {
+  if constexpr (is_bitflag.value) {
+    constexpr auto& enums = entries<E>;
+    using T               = std::underlying_type_t<E>;
+    for (auto i = std::size_t{has_zero_flag<E>}; i < enums.size() - 1; ++i)
+      if (T(enums[i].first) << 1 != T(enums[i + 1].first))
+        return false;
+    return true;
+  }
+  else {
+    return false;
+  }
+}(std::integral_constant<bool, is_bitflag<E>>{});
+#else
 template<typename E>
 ENCHANTUM_DETAILS_INLINE_VAR constexpr bool has_zero_flag = details::has_zero_flag_impl<E, is_bitflag<E>>::value();
 
@@ -475,6 +509,7 @@ ENCHANTUM_DETAILS_INLINE_VAR constexpr bool is_contiguous = details::is_contiguo
 
 template<typename E>
 ENCHANTUM_DETAILS_INLINE_VAR constexpr bool is_contiguous_bitflag = details::is_contiguous_bitflag_impl<E, is_bitflag<E>>::value();
+#endif
 
 #ifdef __cpp_concepts
 template<typename E>

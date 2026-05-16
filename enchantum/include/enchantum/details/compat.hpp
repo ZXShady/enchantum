@@ -49,6 +49,7 @@ struct type_identity {
   using type = T;
 };
 
+#if ENCHANTUM_DETAILS_CXX_STD < 201703L
 template<typename T, std::size_t N>
 struct cxx14_array {
   T elems[N == 0 ? 1 : N]{};
@@ -74,6 +75,7 @@ struct cxx14_array {
   constexpr std::size_t size() const noexcept { return N; }
   constexpr bool        empty() const noexcept { return N == 0; }
 };
+#endif
 
 #if ENCHANTUM_DETAILS_CXX_STD >= 201703L
 template<typename T, std::size_t N>

@@ -187,6 +187,7 @@ namespace details {
       using base       = sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())>;
       using value_type = E;
       using base::operator+=;
+#if ENCHANTUM_DETAILS_CXX_STD < 201703L
       ENCHANTUM_DETAILS_NODISCARD constexpr E dereference(std::true_type, std::false_type) const noexcept
       {
         using T = typename std::underlying_type<E>::type;
@@ -207,11 +208,30 @@ namespace details {
       {
         return values<E>[static_cast<std::size_t>(this->index)];
       }
+#endif
 
       ENCHANTUM_DETAILS_NODISCARD constexpr E operator*() const noexcept
       {
+#if ENCHANTUM_DETAILS_CXX_STD >= 201703L
+        if constexpr (is_contiguous<E>) {
+          using T = typename std::underlying_type<E>::type;
+          return static_cast<E>(static_cast<T>(min<E>) + static_cast<T>(this->index));
+        }
+        else if constexpr (is_contiguous_bitflag<E>) {
+          using T                        = typename std::underlying_type<E>::type;
+          using UT                       = typename std::make_unsigned<T>::type;
+          constexpr auto real_min_offset = details::countr_zero(static_cast<UT>(values<E>[has_zero_flag<E>]));
+          if (has_zero_flag<E> ? this->index == 0 : false)
+            return E{};
+          return static_cast<E>(UT{1} << (real_min_offset + static_cast<UT>(this->index - has_zero_flag<E>)));
+        }
+        else {
+          return values<E>[static_cast<std::size_t>(this->index)];
+        }
+#else
         return dereference(std::integral_constant<bool, is_contiguous<E>>{},
                            std::integral_constant<bool, is_contiguous_bitflag<E>>{});
+#endif
       }
       ENCHANTUM_DETAILS_NODISCARD constexpr E operator[](const std::ptrdiff_t i) const noexcept
       {
