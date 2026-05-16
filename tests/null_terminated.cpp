@@ -15,7 +15,7 @@ TEMPLATE_LIST_TEST_CASE("entries<E> strings null-terminated character arrays", "
 
   SECTION("Not Null Terminated")
   {
-    constexpr auto names  = enchantum::names<TestType, std::string_view, false>;
+    constexpr auto names  = enchantum::names<TestType, enchantum::string_view, false>;
     const auto* names_ptr = names[0].data(); // implementation detail but all strings are allocated next to each other
     for (std::ptrdiff_t i = 0; i < static_cast<std::ptrdiff_t>(names.size()) - 1; ++i) {
       const auto& name = names[static_cast<std::size_t>(i)];

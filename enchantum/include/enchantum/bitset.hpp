@@ -34,6 +34,8 @@ public:
   using Container::Container;
   using Container::operator=;
 
+  constexpr bitset() = default;
+
   [[nodiscard]] string to_string(const char sep = '|') const
   {
     string name;

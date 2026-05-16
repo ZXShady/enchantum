@@ -40,16 +40,15 @@ TEST_CASE("enum array", "[containers][array]")
   CHECK_THROWS_AS(array.at(static_cast<Country>(0xdead / 2)), std::out_of_range);
 
 
-  const enchantum::array<Country, std::string> array2 = {{
-    "Wait who's brandon?",
-    "Capital, not a country",
-    "Le French",
-    "Not in the UN yet",
-    "Anime",
-    "The great country of Europe",
-    "Online-only country",
-    "Underwater with Posidon",
-  }};
+  enchantum::array<Country, std::string> array2;
+  array2[Country::Brandon]    = "Wait who's brandon?";
+  array2[Country::London]     = "Capital, not a country";
+  array2[Country::French]     = "Le French";
+  array2[Country::Earth]      = "Not in the UN yet";
+  array2[Country::Asia]       = "Anime";
+  array2[Country::Europe]     = "The great country of Europe";
+  array2[Country::LeInternet] = "Online-only country";
+  array2[Country::Atlantis]   = "Underwater with Posidon";
   CHECK(array == array2);
   CHECK_FALSE(array != array2);
 }

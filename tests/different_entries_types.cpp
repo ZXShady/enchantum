@@ -3,11 +3,12 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_tostring.hpp>
 #include <enchantum/enchantum.hpp>
+#include <enchantum/details/string_view.hpp>
 
 template<typename E>
 struct ValueAndString {
   E                value;
-  std::string_view string;
+  enchantum::string_view string;
 };
 
 TEMPLATE_LIST_TEST_CASE("KV as entries key-value pair", "[entries][override_key_value_pair]", AllEnumsTestTypes)

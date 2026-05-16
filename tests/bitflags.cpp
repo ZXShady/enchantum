@@ -10,7 +10,6 @@
 #include <enchantum/iostream.hpp>
 #include <iostream>
 #include <sstream>
-#include <string_view>
 
 
 namespace {
@@ -241,14 +240,16 @@ TEMPLATE_LIST_TEST_CASE("bitflags", "[bitflags]", AllFlagsTestTypes)
   SECTION("cast_bitflag(to_string_bitflag(enum)) == enum")
   {
     for (const auto comb : combinations) {
-      CHECK(comb == enchantum::cast_bitflag<TestType>(enchantum::to_string_bitflag(comb)));
+      const auto string = enchantum::to_string_bitflag(comb);
+      CHECK(comb == enchantum::cast_bitflag<TestType>(enchantum::string_view(string.data(), string.size())));
     }
   }
 
   SECTION("contains_bitflag(to_string_bitflag(enum))")
   {
     for (const auto comb : combinations) {
-      CHECK(enchantum::contains_bitflag<TestType>(enchantum::to_string_bitflag(comb)));
+      const auto string = enchantum::to_string_bitflag(comb);
+      CHECK(enchantum::contains_bitflag<TestType>(enchantum::string_view(string.data(), string.size())));
     }
   }
 
@@ -270,9 +271,11 @@ TEMPLATE_LIST_TEST_CASE("bitflags", "[bitflags]", AllFlagsTestTypes)
   {
     const auto string = []() {
       std::string ret;
-      for (const auto& [e, s] : enchantum::entries<TestType>) {
+      for (const auto& entry : enchantum::entries<TestType>) {
+        const auto e = entry.first;
+        const auto s = entry.second;
         if (T(e) != 0) {
-          ret += s;
+          ret.append(s.data(), s.size());
           if (e != enchantum::max<TestType>)
             ret += '|';
         }
@@ -298,7 +301,7 @@ TEMPLATE_LIST_TEST_CASE("contains_bitflag returns false for invalid combinations
     }
   }
 
-  if constexpr (enchantum::has_zero_flag<TestType>)
+  if (enchantum::has_zero_flag<TestType>)
     CHECK(enchantum::contains_bitflag(TestType{}));
 
   for (const auto comb : invalid_combinations)

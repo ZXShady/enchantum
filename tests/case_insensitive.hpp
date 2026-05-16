@@ -1,20 +1,20 @@
 #pragma once
 #include <cstddef>
-#include <string_view>
+#include <enchantum/details/string_view.hpp>
 
 struct CaseInsenitive {
+  static constexpr char tolower(const char c) { return (c >= 'A' && c <= 'Z') ? static_cast<char>(c + ('a' - 'A')) : c; }
 
   constexpr bool operator()(const char a, const char b) const
   {
-    constexpr auto tolower = [](const char c) { return (c >= 'A' && c <= 'Z') ? c + ('a' - 'A') : c; };
     return tolower(a) == tolower(b);
   }
 };
 
-inline constexpr CaseInsenitive case_insensitive;
+constexpr CaseInsenitive case_insensitive{};
 
 struct CaseInsenitiveByStrings {
-  constexpr bool operator()(const std::string_view a, const std::string_view b) const
+  constexpr bool operator()(const enchantum::string_view a, const enchantum::string_view b) const
   {
     if (a.size() != b.size())
       return false;
@@ -26,7 +26,7 @@ struct CaseInsenitiveByStrings {
   }
 };
 
-inline constexpr CaseInsenitiveByStrings case_insensitive_by_strings;
+constexpr CaseInsenitiveByStrings case_insensitive_by_strings{};
 
 
 struct CaseInsenitiveBoth {
@@ -39,4 +39,4 @@ struct CaseInsenitiveBoth {
   }
 };
 
-inline constexpr CaseInsenitiveBoth case_insensitive_both;
+constexpr CaseInsenitiveBoth case_insensitive_both{};

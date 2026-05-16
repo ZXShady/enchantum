@@ -1,22 +1,67 @@
 #pragma once
 
 #include <cstddef>
+#include <string>
+
+#if defined(_MSVC_LANG)
+  #define TESTS_CPP14_CXX_STD _MSVC_LANG
+#else
+  #define TESTS_CPP14_CXX_STD __cplusplus
+#endif
 
 namespace tests_cpp14 {
 
 template<typename T>
 struct optional {
   constexpr optional() = default;
-  constexpr optional(T v) : value(v), has_value_(true) {}
+  constexpr optional(T v) : value_(v), has_value_(true) {}
 
   constexpr explicit operator bool() const noexcept { return has_value_; }
   constexpr bool has_value() const noexcept { return has_value_; }
-  constexpr const T& operator*() const noexcept { return value; }
-  constexpr T& operator*() noexcept { return value; }
+  constexpr const T& value() const noexcept { return value_; }
+  constexpr T& value() noexcept { return value_; }
+  constexpr const T& operator*() const noexcept { return value_; }
+  constexpr T& operator*() noexcept { return value_; }
 
-  T    value{};
+  T    value_{};
   bool has_value_ = false;
 };
+
+template<typename T>
+constexpr bool operator==(const optional<T>& a, const T& b) noexcept
+{
+  return a.has_value() && *a == b;
+}
+
+template<typename T>
+constexpr bool operator==(const T& a, const optional<T>& b) noexcept
+{
+  return b == a;
+}
+
+template<typename T>
+constexpr bool operator!=(const optional<T>& a, const T& b) noexcept
+{
+  return !(a == b);
+}
+
+template<typename T>
+constexpr bool operator!=(const T& a, const optional<T>& b) noexcept
+{
+  return !(a == b);
+}
+
+template<typename T>
+constexpr bool operator==(const optional<T>& a, const optional<T>& b) noexcept
+{
+  return a.has_value() == b.has_value() && (!a.has_value() || *a == *b);
+}
+
+template<typename T>
+constexpr bool operator!=(const optional<T>& a, const optional<T>& b) noexcept
+{
+  return !(a == b);
+}
 
 struct string_view {
   static constexpr std::size_t npos = static_cast<std::size_t>(-1);
@@ -24,6 +69,8 @@ struct string_view {
   constexpr string_view() = default;
   constexpr string_view(const char* s) : begin_(s), end_(s + length(s)) {}
   constexpr string_view(const char* s, std::size_t size) : begin_(s), end_(s + size) {}
+  constexpr string_view(const string_view&) = default;
+  string_view(const std::string& s) : begin_(s.data()), end_(s.data() + s.size()) {}
 
   static constexpr std::size_t length(const char* s) noexcept
   {
@@ -41,6 +88,8 @@ struct string_view {
   constexpr const char* end() const noexcept { return end_; }
 
   constexpr char operator[](std::size_t i) const noexcept { return begin_[i]; }
+
+  operator std::string() const { return std::string(data(), size()); }
 
   constexpr void remove_prefix(std::size_t amount) noexcept { begin_ += amount; }
   constexpr void remove_suffix(std::size_t amount) noexcept { end_ -= amount; }

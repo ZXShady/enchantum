@@ -32,6 +32,14 @@ file(GLOB SRCS "*.cpp" "*.hpp")
 list(REMOVE_ITEM SRCS "${CMAKE_CURRENT_SOURCE_DIR}/cpp14_smoke.cpp")
 list(REMOVE_ITEM SRCS "${CMAKE_CURRENT_SOURCE_DIR}/cpp14_single_header.cpp")
 
+set(CPP14_SRCS ${SRCS})
+list(REMOVE_ITEM CPP14_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/concepts.cpp")
+list(REMOVE_ITEM CPP14_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/double_include.cpp")
+list(REMOVE_ITEM CPP14_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/fmt_format.cpp")
+list(REMOVE_ITEM CPP14_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/iostream.cpp")
+list(REMOVE_ITEM CPP14_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/std_format.cpp")
+list(REMOVE_ITEM CPP14_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/single_header.cpp")
+
 
 get_target_property(STD tests CXX_STANDARD)
 
@@ -83,6 +91,27 @@ target_include_directories(tests_cpp14 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(tests_cpp14 PRIVATE enchantum::enchantum)
 add_test(NAME tests_cpp14 COMMAND tests_cpp14)
 
+add_executable(tests_cpp14_full)
+target_include_directories(tests_cpp14_full PRIVATE "third_party" ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_features(tests_cpp14_full PRIVATE cxx_std_14)
+set_target_properties(tests_cpp14_full PROPERTIES
+  CXX_STANDARD 14
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+target_compile_definitions(tests_cpp14_full PRIVATE ENCHANTUM_CONFIG_FILE="cpp14_config.hpp")
+if(ENCHANTUM_RUNTIME_TESTS)
+  target_compile_definitions(tests_cpp14_full PRIVATE CATCH_CONFIG_RUNTIME_STATIC_REQUIRE)
+endif()
+target_link_libraries(tests_cpp14_full PRIVATE enchantum::enchantum Catch2::Catch2WithMain)
+if(MSVC)
+  target_compile_options(tests_cpp14_full PRIVATE /Za /permissive-)
+  target_compile_options(tests_cpp14_full PRIVATE /WX /W4)
+else()
+  target_compile_options(tests_cpp14_full PRIVATE -Werror -Wall -Wextra -Wshadow -Wconversion -Wpedantic)
+endif()
+target_sources(tests_cpp14_full PRIVATE ${CPP14_SRCS})
+
 add_executable(tests_cpp14_single_header cpp14_single_header.cpp cpp14_config.hpp)
 target_compile_features(tests_cpp14_single_header PRIVATE cxx_std_14)
 set_target_properties(tests_cpp14_single_header PROPERTIES
@@ -96,6 +125,7 @@ add_test(NAME tests_cpp14_single_header COMMAND tests_cpp14_single_header)
 include(CTest)
 include(Catch)
 catch_discover_tests(tests)
+catch_discover_tests(tests_cpp14_full TEST_PREFIX "cpp14_full::")
 catch_discover_tests(tests_config)
 
 

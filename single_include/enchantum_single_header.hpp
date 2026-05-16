@@ -70,6 +70,7 @@ struct cxx14_array {
   constexpr const T* end() const noexcept { return elems + N; }
 
   constexpr std::size_t size() const noexcept { return N; }
+  constexpr bool        empty() const noexcept { return N == 0; }
 };
 
 #if ENCHANTUM_DETAILS_CXX_STD >= 201703L
@@ -3017,6 +3018,8 @@ public:
 
   using Container::Container;
   using Container::operator=;
+
+  constexpr bitset() = default;
 
   [[nodiscard]] string to_string(const char sep = '|') const
   {

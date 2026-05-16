@@ -12,7 +12,8 @@ template<typename... Commas>
 struct TypeWithCommas;
 
 // Tests whether string parsing will break if commas occur in typename
-namespace LongNamespaced::Namespace2 {
+namespace LongNamespaced {
+namespace Namespace2 {
   inline namespace InlineNamespace {
 template<typename... IAmHereForCommasInTypeName>
 struct Really_Unreadable_Class_Name {
@@ -70,7 +71,8 @@ using UnscopedColor = UglyType::UnscopedColor;
 
 ENCHANTUM_DEFINE_BITWISE_FOR(Flags)
   }
-} // namespace LongNamespaced::Namespace2::inline InlineNamespace
+} // namespace Namespace2
+} // namespace LongNamespaced
 
 enum class StrongFlagsNoOverloadedOperators : std::uint8_t {
   Flag0 = 1 << 0,
@@ -83,7 +85,7 @@ enum class StrongFlagsNoOverloadedOperators : std::uint8_t {
 };
 
 template<>
-inline constexpr bool enchantum::is_bitflag<StrongFlagsNoOverloadedOperators> = true;
+ENCHANTUM_DETAILS_INLINE_VAR constexpr bool enchantum::is_bitflag<StrongFlagsNoOverloadedOperators> = true;
 
 // taken from ImGui.
 // https://github.com/ocornut/imgui/blob/46235e91f602b663f9b0f1f1a300177b61b193f5/misc/freetype/imgui_freetype.h#L26
@@ -108,7 +110,7 @@ struct enchantum::enum_traits<ImGuiFreeTypeBuilderFlags> {
   static constexpr auto        max           = int(ImGuiFreeTypeBuilderFlags_Bitmap);
 };
 template<>
-inline constexpr bool enchantum::is_bitflag<ImGuiFreeTypeBuilderFlags> = true;
+ENCHANTUM_DETAILS_INLINE_VAR constexpr bool enchantum::is_bitflag<ImGuiFreeTypeBuilderFlags> = true;
 
 namespace {
 
@@ -560,8 +562,9 @@ using AllEnumsTestTypes = concat<
     Outer::Inner::CStyleAnon>>;
 
 
+namespace Catch {
 template<typename E>
-struct Catch::StringMaker<E,std::enable_if_t<std::is_enum_v<E>>> {
+struct StringMaker<E, std::enable_if_t<std::is_enum<E>::value>> {
   static std::string convert(E e)
   {
     return '"' + std::to_string(static_cast<std::underlying_type_t<E>>(e)) + '"';
@@ -573,3 +576,4 @@ struct Catch::StringMaker<E,std::enable_if_t<std::is_enum_v<E>>> {
     //    std::to_string(static_cast<std::underlying_type_t<E>>(e)) + ")";
   }
 };
+} // namespace Catch
