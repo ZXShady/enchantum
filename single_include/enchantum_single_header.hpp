@@ -105,7 +105,7 @@ namespace enchantum {
 #ifdef ENCHANTUM_ALIAS_STRING_VIEW
 ENCHANTUM_ALIAS_STRING_VIEW;
 #else
-using ::std ::string_view;
+using ::std::string_view;
 #endif
 
 } // namespace enchantum
@@ -646,10 +646,10 @@ namespace enchantum {
 namespace details {
 #define SZC(x) (sizeof(x) - 1)
 
-  constexpr std::size_t find_semicolon(const char* s)
+  constexpr std::size_t find_comma(const char* s)
   {
     for (std::size_t i = 0; true; ++i)
-      if (s[i] == ';')
+      if (s[i] == ',')
         return i;
   }
 
@@ -702,7 +702,7 @@ namespace details {
       }
       else {
         str += least_length_when_value;
-        const auto commapos = static_cast<std::size_t>(__builtin_char_memchr(str, ',', UINT8_MAX) - str);
+        const auto commapos = details::find_comma(str);
         if (IsBitFlag)
           values[valid_count] = index == 0 ? IntType{} : static_cast<IntType>(IntType{1} << (index - 1));
         else
@@ -814,6 +814,13 @@ namespace details {
 
 #define SZC(x) (sizeof(x) - 1)
 
+  constexpr const char* find_comma(const char* s) noexcept
+  {
+    for (std::size_t i = 0; true; ++i)
+      if (s[i] == ',')
+        return s + i;
+  }
+
 #if ENCHANTUM_DETAILS_CXX_STD < 201703L
   constexpr const char* find_clang_values_pack(const char* s) noexcept
   {
@@ -855,7 +862,7 @@ namespace details {
       if (str[0] == '-' || (str[0] >= '0' && str[0] <= '9'))
 #endif
       {
-        str = __builtin_char_memchr(str + least_length_when_casting, ',', UINT8_MAX) + SZC(", ");
+        str = details::find_comma(str + least_length_when_casting) + SZC(", ");
       }
       else {
         return true;
@@ -890,11 +897,11 @@ namespace details {
       if (str[0] == '-' || (str[0] >= '0' && str[0] <= '9'))
 #endif
       {
-        str = __builtin_char_memchr(str + least_length_when_casting, ',', UINT8_MAX) + SZC(", ");
+        str = details::find_comma(str + least_length_when_casting) + SZC(", ");
       }
       else {
         str += least_length_when_value;
-        const auto commapos = static_cast<std::size_t>(__builtin_char_memchr(str, ',', UINT8_MAX) - str);
+        const auto commapos = static_cast<std::size_t>(details::find_comma(str) - str);
         if (IsBitFlag)
           values[valid_count] = index == 0 ? IntType{} : static_cast<IntType>(IntType{1} << (index - 1));
         else
@@ -2971,7 +2978,7 @@ namespace details {
   template<typename E>
   constexpr E value_ors_impl()
   {
-    static_assert(is_bitflag<E>, "");
+    static_assert(is_bitflag<E>, "enchantum::value_ors requires a bitflag enum (is_bitflag<E> must be true)");
     using T = std::underlying_type_t<E>;
     T ret{};
     for (std::size_t i = 0; i < count<E>; ++i)

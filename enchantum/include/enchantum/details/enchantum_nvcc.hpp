@@ -11,10 +11,10 @@ namespace enchantum {
 namespace details {
 #define SZC(x) (sizeof(x) - 1)
 
-  constexpr std::size_t find_semicolon(const char* s)
+  constexpr std::size_t find_comma(const char* s)
   {
     for (std::size_t i = 0; true; ++i)
-      if (s[i] == ';')
+      if (s[i] == ',')
         return i;
   }
 
@@ -67,7 +67,7 @@ namespace details {
       }
       else {
         str += least_length_when_value;
-        const auto commapos = static_cast<std::size_t>(__builtin_char_memchr(str, ',', UINT8_MAX) - str);
+        const auto commapos = details::find_comma(str);
         if (IsBitFlag)
           values[valid_count] = index == 0 ? IntType{} : static_cast<IntType>(IntType{1} << (index - 1));
         else

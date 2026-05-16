@@ -2,7 +2,24 @@ name: C++14 Regression Checks
 
 on:
   push:
-    branches: [ci/cpp14-regression-checks]
+    branches: [main, ci/cpp14-regression-checks]
+    paths:
+      - '.github/scripts/build_and_test.sh'
+      - '.github/workflows/cpp14-regression.yml'
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - 'enchantum/**'
+      - 'single_include/**'
+      - 'tests/**'
+  pull_request:
+    paths:
+      - '.github/scripts/build_and_test.sh'
+      - '.github/workflows/cpp14-regression.yml'
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - 'enchantum/**'
+      - 'single_include/**'
+      - 'tests/**'
   workflow_dispatch:
 
 defaults:

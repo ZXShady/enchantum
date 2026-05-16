@@ -336,3 +336,5 @@ The cmake file provides the target `enchantum::enchantum` since this library is 
 add_subdirectory("third_party/enchantum")
 target_link_libraries(your_executable enchantum::enchantum)
 ```
+
+`enchantum::enchantum` preserves the default C++17 compile feature for existing CMake consumers. C++14 users can opt in with `enchantum::enchantum-cxx14` after configuring `ENCHANTUM_ALIAS_OPTIONAL` and `ENCHANTUM_ALIAS_STRING_VIEW`.

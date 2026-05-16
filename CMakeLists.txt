@@ -14,18 +14,27 @@ file(GLOB_RECURSE INCS "${INCDIR}/*.hpp")
 
 add_library(enchantum INTERFACE ${INCS})
 add_library(enchantum::enchantum ALIAS enchantum)
-target_compile_features(enchantum INTERFACE cxx_std_14)
- 
-target_include_directories(enchantum INTERFACE
+target_compile_features(enchantum INTERFACE cxx_std_17)
+
+add_library(enchantum_cxx14 INTERFACE ${INCS})
+add_library(enchantum::enchantum-cxx14 ALIAS enchantum_cxx14)
+set_target_properties(enchantum_cxx14 PROPERTIES EXPORT_NAME enchantum-cxx14)
+target_compile_features(enchantum_cxx14 INTERFACE cxx_std_14)
+
+foreach(enchantum_target enchantum enchantum_cxx14)
+target_include_directories(${enchantum_target} INTERFACE
     $<BUILD_INTERFACE:${INCDIR}>
     $<INSTALL_INTERFACE:include>
 )
+endforeach()
 
 option(ENCHANTUM_BUILD_TESTS "Enable tests for this `enchantum` library" OFF)
 option(ENCHANTUM_ENABLE_MSVC_SPEEDUP "Enable faster but not 100% accurate MSVC enum reflection." ON)
 option(ENCHANTUM_BUILD_BENCHMARKS "Enable compile time benchmarks `enchantum` library" OFF)
 
-target_compile_definitions(enchantum INTERFACE ENCHANTUM_ENABLE_MSVC_SPEEDUP=$<BOOL:${ENCHANTUM_ENABLE_MSVC_SPEEDUP}>)
+foreach(enchantum_target enchantum enchantum_cxx14)
+target_compile_definitions(${enchantum_target} INTERFACE ENCHANTUM_ENABLE_MSVC_SPEEDUP=$<BOOL:${ENCHANTUM_ENABLE_MSVC_SPEEDUP}>)
+endforeach()
 
 if(ENCHANTUM_BUILD_TESTS)
   enable_testing()
@@ -37,7 +46,7 @@ if(ENCHANTUM_BUILD_BENCHMARKS)
 endif()
 
 
-install(TARGETS enchantum
+install(TARGETS enchantum enchantum_cxx14
     EXPORT enchantumTargets
     COMPONENT enchantum
 )
@@ -78,7 +87,7 @@ install(FILES
 )
 
 export(
-    TARGETS enchantum
+    TARGETS enchantum enchantum_cxx14
     NAMESPACE enchantum::
     FILE "${CMAKE_CURRENT_BINARY_DIR}/enchantumTargets.cmake"
 )

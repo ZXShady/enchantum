@@ -25,7 +25,7 @@ namespace details {
   template<typename E>
   constexpr E value_ors_impl()
   {
-    static_assert(is_bitflag<E>, "");
+    static_assert(is_bitflag<E>, "enchantum::value_ors requires a bitflag enum (is_bitflag<E> must be true)");
     using T = std::underlying_type_t<E>;
     T ret{};
     for (std::size_t i = 0; i < count<E>; ++i)

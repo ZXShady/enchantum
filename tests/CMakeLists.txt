@@ -88,7 +88,7 @@ set_target_properties(tests_cpp14 PROPERTIES
 )
 target_compile_definitions(tests_cpp14 PRIVATE ENCHANTUM_CONFIG_FILE="cpp14_config.hpp")
 target_include_directories(tests_cpp14 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(tests_cpp14 PRIVATE enchantum::enchantum)
+target_link_libraries(tests_cpp14 PRIVATE enchantum::enchantum-cxx14)
 add_test(NAME tests_cpp14 COMMAND tests_cpp14)
 
 add_executable(tests_cpp14_full)
@@ -103,7 +103,7 @@ target_compile_definitions(tests_cpp14_full PRIVATE ENCHANTUM_CONFIG_FILE="cpp14
 if(ENCHANTUM_RUNTIME_TESTS)
   target_compile_definitions(tests_cpp14_full PRIVATE CATCH_CONFIG_RUNTIME_STATIC_REQUIRE)
 endif()
-target_link_libraries(tests_cpp14_full PRIVATE enchantum::enchantum Catch2::Catch2WithMain)
+target_link_libraries(tests_cpp14_full PRIVATE enchantum::enchantum-cxx14 Catch2::Catch2WithMain)
 if(MSVC)
   target_compile_options(tests_cpp14_full PRIVATE /Za /permissive-)
   target_compile_options(tests_cpp14_full PRIVATE /WX /W4)
