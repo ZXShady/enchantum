@@ -74,6 +74,8 @@ ENCHANTUM_DEFINE_BITWISE_FOR(Flags)
 } // namespace Namespace2
 } // namespace LongNamespaced
 
+namespace {
+
 enum class StrongFlagsNoOverloadedOperators : std::uint8_t {
   Flag0 = 1 << 0,
   Flag1 = 1 << 1,
@@ -83,12 +85,6 @@ enum class StrongFlagsNoOverloadedOperators : std::uint8_t {
   Flag5 = 1 << 5,
   Flag6 = 1 << 6,
 };
-
-template<>
-ENCHANTUM_DETAILS_INLINE_VAR constexpr bool enchantum::is_bitflag<StrongFlagsNoOverloadedOperators> = true;
-
-// taken from ImGui.
-// https://github.com/ocornut/imgui/blob/46235e91f602b663f9b0f1f1a300177b61b193f5/misc/freetype/imgui_freetype.h#L26
 
 enum ImGuiFreeTypeBuilderFlags {
   ImGuiFreeTypeBuilderFlags_NoHinting     = 1 << 0,
@@ -102,6 +98,14 @@ enum ImGuiFreeTypeBuilderFlags {
   ImGuiFreeTypeBuilderFlags_LoadColor     = 1 << 8,
   ImGuiFreeTypeBuilderFlags_Bitmap        = 1 << 9
 };
+
+} // namespace
+
+template<>
+ENCHANTUM_DETAILS_INLINE_VAR constexpr bool enchantum::is_bitflag<StrongFlagsNoOverloadedOperators> = true;
+
+// taken from ImGui.
+// https://github.com/ocornut/imgui/blob/46235e91f602b663f9b0f1f1a300177b61b193f5/misc/freetype/imgui_freetype.h#L26
 
 template<>
 struct enchantum::enum_traits<ImGuiFreeTypeBuilderFlags> {
