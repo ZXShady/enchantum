@@ -70,6 +70,7 @@ struct string_view {
   constexpr string_view(const char* s) : begin_(s), end_(s + length(s)) {}
   constexpr string_view(const char* s, std::size_t size) : begin_(s), end_(s + size) {}
   constexpr string_view(const string_view&) = default;
+  constexpr string_view& operator=(const string_view&) = default;
   string_view(const std::string& s) : begin_(s.data()), end_(s.data() + s.size()) {}
 
   static constexpr std::size_t length(const char* s) noexcept

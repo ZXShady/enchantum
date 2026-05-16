@@ -7,10 +7,10 @@
 
 
 template<typename T>
-auto names_of = []() { static_assert(0 == sizeof(T)); };
+auto names_of = []() { static_assert(0 == sizeof(T), "missing names_of specialization"); };
 
 template<typename T>
-auto values_of = []() { static_assert(0 == sizeof(T)); };
+auto values_of = []() { static_assert(0 == sizeof(T), "missing values_of specialization"); };
 
 template<typename T, typename... Ts>
 constexpr std::array<T, 1 + sizeof...(Ts)> make_array(T first, Ts... rest)
