@@ -32,7 +32,7 @@ namespace enchantum {
 using ::std::to_underlying;
 #else
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-[[nodiscard]] constexpr auto to_underlying(const E e) noexcept
+ENCHANTUM_DETAILS_NODISCARD constexpr auto to_underlying(const E e) noexcept
 {
   return static_cast<std::underlying_type_t<E>>(e);
 }

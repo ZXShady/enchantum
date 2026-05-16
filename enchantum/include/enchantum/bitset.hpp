@@ -36,7 +36,7 @@ public:
 
   constexpr bitset() = default;
 
-  [[nodiscard]] string to_string(const char sep = '|') const
+  ENCHANTUM_DETAILS_NODISCARD string to_string(const char sep = '|') const
   {
     string name;
     for (std::size_t i = 0; i < enchantum::count<E>; ++i) {
@@ -50,7 +50,7 @@ public:
     return name;
   }
 
-  [[nodiscard]] constexpr auto to_string(const char zero, const char one) const
+  ENCHANTUM_DETAILS_NODISCARD constexpr auto to_string(const char zero, const char one) const
   {
     return Container::to_string(zero, one);
   }
@@ -62,12 +62,12 @@ public:
     }
   }
 
-  [[nodiscard]] constexpr reference operator[](const E index) noexcept
+  ENCHANTUM_DETAILS_NODISCARD constexpr reference operator[](const E index) noexcept
   {
     return operator[](*enchantum::enum_to_index(index));
   }
 
-  [[nodiscard]] constexpr bool operator[](const E index) const noexcept
+  ENCHANTUM_DETAILS_NODISCARD constexpr bool operator[](const E index) const noexcept
   {
     return operator[](*enchantum::enum_to_index(index));
   }

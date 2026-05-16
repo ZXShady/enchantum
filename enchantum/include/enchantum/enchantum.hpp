@@ -163,19 +163,19 @@ namespace details {
 
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-[[nodiscard]] constexpr bool contains(const std::underlying_type_t<E> value) noexcept
+ENCHANTUM_DETAILS_NODISCARD constexpr bool contains(const std::underlying_type_t<E> value) noexcept
 {
   return details::contains_value<E>(value);
 }
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-[[nodiscard]] constexpr bool contains(const E value) noexcept
+ENCHANTUM_DETAILS_NODISCARD constexpr bool contains(const E value) noexcept
 {
   return enchantum::contains<E>(static_cast<std::underlying_type_t<E>>(value));
 }
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-[[nodiscard]] constexpr bool contains(const string_view name) noexcept
+ENCHANTUM_DETAILS_NODISCARD constexpr bool contains(const string_view name) noexcept
 {
   constexpr auto minmax = details::minmax_string_size(names<E>.data(), names<E>.data() + names<E>.size());
   const auto size = name.size();
@@ -192,7 +192,7 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E), typename BinaryPred>
-[[nodiscard]] constexpr bool contains(const string_view name, const BinaryPred binary_pred) noexcept
+ENCHANTUM_DETAILS_NODISCARD constexpr bool contains(const string_view name, const BinaryPred binary_pred) noexcept
 {
   for (std::size_t i = 0; i < count<E>; ++i) {
     const auto s = names_generator<E>[i];
@@ -206,7 +206,7 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E), typename BinaryPred>
 namespace details {
   template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
   struct index_to_enum_functor {
-    [[nodiscard]] constexpr optional<E> operator()(const std::size_t index) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr optional<E> operator()(const std::size_t index) const noexcept
     {
       if (index < count<E>)
         return optional<E>(values_generator<E>[index]);
@@ -216,7 +216,7 @@ namespace details {
 
   struct enum_to_index_functor {
     template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-    [[nodiscard]] constexpr optional<std::size_t> operator()(const E e) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr optional<std::size_t> operator()(const E e) const noexcept
     {
       return details::enum_to_index_impl<E>(e,
                                             std::integral_constant<bool, is_contiguous<E> && count<E> != 0>{},
@@ -227,14 +227,14 @@ namespace details {
 
   template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
   struct cast_functor {
-    [[nodiscard]] constexpr optional<E> operator()(const std::underlying_type_t<E> value) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr optional<E> operator()(const std::underlying_type_t<E> value) const noexcept
     {
       if (!enchantum::contains<E>(value))
         return optional<E>();
       return optional<E>(static_cast<E>(value));
     }
 
-    [[nodiscard]] constexpr optional<E> operator()(const string_view name) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr optional<E> operator()(const string_view name) const noexcept
     {
       constexpr auto minmax = details::minmax_string_size(names<E>.data(), names<E>.data() + names<E>.size());
       const auto size = name.size();
@@ -250,7 +250,7 @@ namespace details {
     }
 
     template<typename BinaryPred>
-    [[nodiscard]] constexpr optional<E> operator()(const string_view name, const BinaryPred binary_pred) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr optional<E> operator()(const string_view name, const BinaryPred binary_pred) const noexcept
     {
 
       for (std::size_t i = 0; i < count<E>; ++i) {
@@ -276,7 +276,7 @@ ENCHANTUM_DETAILS_INLINE_VAR constexpr details::cast_functor<E> cast{};
 namespace details {
   struct to_string_functor {
     template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-    [[nodiscard]] constexpr string_view operator()(const E value) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr string_view operator()(const E value) const noexcept
     {
       if (const auto i = enchantum::enum_to_index(value))
         return names_generator<E>[*i];

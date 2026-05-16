@@ -16,8 +16,10 @@
 
 #if ENCHANTUM_DETAILS_CXX_STD >= 201703L
   #define ENCHANTUM_DETAILS_INLINE_VAR inline
+  #define ENCHANTUM_DETAILS_NODISCARD [[nodiscard]]
 #else
   #define ENCHANTUM_DETAILS_INLINE_VAR
+  #define ENCHANTUM_DETAILS_NODISCARD
 #endif
 
 namespace enchantum {

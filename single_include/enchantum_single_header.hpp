@@ -16,8 +16,10 @@
 
 #if ENCHANTUM_DETAILS_CXX_STD >= 201703L
   #define ENCHANTUM_DETAILS_INLINE_VAR inline
+  #define ENCHANTUM_DETAILS_NODISCARD [[nodiscard]]
 #else
   #define ENCHANTUM_DETAILS_INLINE_VAR
+  #define ENCHANTUM_DETAILS_NODISCARD
 #endif
 
 namespace enchantum {
@@ -1625,7 +1627,7 @@ namespace enchantum {
 using ::std::to_underlying;
 #else
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-[[nodiscard]] constexpr auto to_underlying(const E e) noexcept
+ENCHANTUM_DETAILS_NODISCARD constexpr auto to_underlying(const E e) noexcept
 {
   return static_cast<std::underlying_type_t<E>>(e);
 }
@@ -2153,94 +2155,94 @@ namespace details {
       return static_cast<CRTP&>(*this);
     }
 
-    [[nodiscard]] constexpr CRTP operator++(int) & noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr CRTP operator++(int) & noexcept
     {
       auto copy = static_cast<CRTP&>(*this);
       ++*this;
       return copy;
     }
-    [[nodiscard]] constexpr CRTP operator--(int) & noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr CRTP operator--(int) & noexcept
     {
       auto copy = static_cast<CRTP&>(*this);
       --*this;
       return copy;
     }
 
-    [[nodiscard]] constexpr friend CRTP operator+(CRTP it, const std::ptrdiff_t offset) noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr friend CRTP operator+(CRTP it, const std::ptrdiff_t offset) noexcept
     {
       it += offset;
       return it;
     }
 
-    [[nodiscard]] constexpr friend CRTP operator+(const std::ptrdiff_t offset, CRTP it) noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr friend CRTP operator+(const std::ptrdiff_t offset, CRTP it) noexcept
     {
       it += offset;
       return it;
     }
 
-    [[nodiscard]] constexpr friend CRTP operator-(CRTP it, const std::ptrdiff_t offset) noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr friend CRTP operator-(CRTP it, const std::ptrdiff_t offset) noexcept
     {
       it -= offset;
       return it;
     }
 
-    [[nodiscard]] constexpr std::ptrdiff_t operator-(const sized_iterator that) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr std::ptrdiff_t operator-(const sized_iterator that) const noexcept
     {
       return index - that.index;
     }
 
-    [[nodiscard]] constexpr std::ptrdiff_t        operator-(senitiel) const noexcept { return index - Size; }
-    [[nodiscard]] friend constexpr std::ptrdiff_t operator-(senitiel, sized_iterator it) noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr std::ptrdiff_t        operator-(senitiel) const noexcept { return index - Size; }
+    ENCHANTUM_DETAILS_NODISCARD friend constexpr std::ptrdiff_t operator-(senitiel, sized_iterator it) noexcept
     {
       return Size - it.index;
     }
 
-    [[nodiscard]] constexpr bool operator==(const sized_iterator that) const noexcept { return that.index == index; };
-    [[nodiscard]] constexpr bool operator==(senitiel) const noexcept { return Size == index; }
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator==(const sized_iterator that) const noexcept { return that.index == index; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator==(senitiel) const noexcept { return Size == index; }
 
 #ifdef __cpp_impl_three_way_comparison
-    [[nodiscard]] constexpr auto operator<=>(const sized_iterator that) const noexcept { return index <=> that.index; };
-    [[nodiscard]] constexpr auto operator<=>(senitiel) const noexcept { return index <=> Size; }
+    ENCHANTUM_DETAILS_NODISCARD constexpr auto operator<=>(const sized_iterator that) const noexcept { return index <=> that.index; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr auto operator<=>(senitiel) const noexcept { return index <=> Size; }
 #else
 
-    [[nodiscard]] constexpr bool operator!=(const sized_iterator that) const noexcept { return that.index != index; };
-    [[nodiscard]] constexpr bool operator!=(senitiel) const noexcept { return Size != index; }
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator!=(const sized_iterator that) const noexcept { return that.index != index; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator!=(senitiel) const noexcept { return Size != index; }
 
-    [[nodiscard]] friend constexpr bool operator==(senitiel, const sized_iterator it) noexcept
+    ENCHANTUM_DETAILS_NODISCARD friend constexpr bool operator==(senitiel, const sized_iterator it) noexcept
     {
       return Size == it.index;
     }
 
 
-    [[nodiscard]] friend constexpr bool operator!=(senitiel, const sized_iterator it) noexcept
+    ENCHANTUM_DETAILS_NODISCARD friend constexpr bool operator!=(senitiel, const sized_iterator it) noexcept
     {
       return Size != it.index;
     }
 
 
-    [[nodiscard]] constexpr bool operator<(const sized_iterator that) const noexcept { return index < that.index; };
-    [[nodiscard]] constexpr bool operator>(const sized_iterator that) const noexcept { return index > that.index; };
-    [[nodiscard]] constexpr bool operator<=(const sized_iterator that) const noexcept { return index <= that.index; };
-    [[nodiscard]] constexpr bool operator>=(const sized_iterator that) const noexcept { return index >= that.index; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator<(const sized_iterator that) const noexcept { return index < that.index; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator>(const sized_iterator that) const noexcept { return index > that.index; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator<=(const sized_iterator that) const noexcept { return index <= that.index; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator>=(const sized_iterator that) const noexcept { return index >= that.index; };
 
-    [[nodiscard]] constexpr bool operator<(senitiel) const noexcept { return index < Size; };
-    [[nodiscard]] constexpr bool operator>(senitiel) const noexcept { return index > Size; };
-    [[nodiscard]] constexpr bool operator<=(senitiel) const noexcept { return index <= Size; };
-    [[nodiscard]] constexpr bool operator>=(senitiel) const noexcept { return index >= Size; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator<(senitiel) const noexcept { return index < Size; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator>(senitiel) const noexcept { return index > Size; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator<=(senitiel) const noexcept { return index <= Size; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator>=(senitiel) const noexcept { return index >= Size; };
 
-    [[nodiscard]] friend constexpr bool operator<(senitiel, const sized_iterator it) noexcept
+    ENCHANTUM_DETAILS_NODISCARD friend constexpr bool operator<(senitiel, const sized_iterator it) noexcept
     {
       return Size < it.index;
     };
-    [[nodiscard]] friend constexpr bool operator>(senitiel, const sized_iterator it) noexcept
+    ENCHANTUM_DETAILS_NODISCARD friend constexpr bool operator>(senitiel, const sized_iterator it) noexcept
     {
       return Size > it.index;
     };
-    [[nodiscard]] friend constexpr bool operator<=(senitiel, const sized_iterator it) noexcept
+    ENCHANTUM_DETAILS_NODISCARD friend constexpr bool operator<=(senitiel, const sized_iterator it) noexcept
     {
       return Size <= it.index;
     };
-    [[nodiscard]] friend constexpr bool operator>=(senitiel, const sized_iterator it) noexcept
+    ENCHANTUM_DETAILS_NODISCARD friend constexpr bool operator>=(senitiel, const sized_iterator it) noexcept
     {
       return Size >= it.index;
     };
@@ -2250,20 +2252,20 @@ namespace details {
 
   template<typename E, typename String = string_view, bool NullTerminated = true>
   struct names_generator_t {
-    [[nodiscard]] static constexpr std::size_t size() noexcept { return count<E>; }
+    ENCHANTUM_DETAILS_NODISCARD static constexpr std::size_t size() noexcept { return count<E>; }
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
       using base       = sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())>;
       using value_type = String;
       using base::operator+=;
-      [[nodiscard]] constexpr String operator*() const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr String operator*() const noexcept
       {
         const auto* const p       = details::reflection_string_indices<E, NullTerminated>.data();
         const auto* const strings = details::reflection_data_string_storage<E, NullTerminated>.data();
         return String(strings + p[this->index], p[this->index + 1] - p[this->index] - NullTerminated);
       }
 
-      [[nodiscard]] constexpr String operator[](const std::ptrdiff_t i) const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr String operator[](const std::ptrdiff_t i) const noexcept
       {
         auto it = *this;
         it += i;
@@ -2271,10 +2273,10 @@ namespace details {
       }
     };
 
-    [[nodiscard]] static constexpr auto begin() { return iterator{}; }
-    [[nodiscard]] static constexpr auto end() { return senitiel{}; }
+    ENCHANTUM_DETAILS_NODISCARD static constexpr auto begin() { return iterator{}; }
+    ENCHANTUM_DETAILS_NODISCARD static constexpr auto end() { return senitiel{}; }
 
-    [[nodiscard]] constexpr auto operator[](const std::size_t i) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr auto operator[](const std::size_t i) const noexcept
     {
       auto it = begin();
       it += static_cast<std::ptrdiff_t>(i);
@@ -2284,19 +2286,19 @@ namespace details {
 
   template<typename E>
   struct values_generator_t {
-    [[nodiscard]] static constexpr std::size_t size() noexcept { return count<E>; }
+    ENCHANTUM_DETAILS_NODISCARD static constexpr std::size_t size() noexcept { return count<E>; }
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
       using base       = sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())>;
       using value_type = E;
       using base::operator+=;
-      [[nodiscard]] constexpr E dereference(std::true_type, std::false_type) const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr E dereference(std::true_type, std::false_type) const noexcept
       {
         using T = typename std::underlying_type<E>::type;
         return static_cast<E>(static_cast<T>(min<E>) + static_cast<T>(this->index));
       }
 
-      [[nodiscard]] constexpr E dereference(std::false_type, std::true_type) const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr E dereference(std::false_type, std::true_type) const noexcept
       {
         using T                        = typename std::underlying_type<E>::type;
         using UT                       = typename std::make_unsigned<T>::type;
@@ -2306,17 +2308,17 @@ namespace details {
         return static_cast<E>(UT{1} << (real_min_offset + static_cast<UT>(this->index - has_zero_flag<E>)));
       }
 
-      [[nodiscard]] constexpr E dereference(std::false_type, std::false_type) const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr E dereference(std::false_type, std::false_type) const noexcept
       {
         return values<E>[static_cast<std::size_t>(this->index)];
       }
 
-      [[nodiscard]] constexpr E operator*() const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr E operator*() const noexcept
       {
         return dereference(std::integral_constant<bool, is_contiguous<E>>{},
                            std::integral_constant<bool, is_contiguous_bitflag<E>>{});
       }
-      [[nodiscard]] constexpr E operator[](const std::ptrdiff_t i) const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr E operator[](const std::ptrdiff_t i) const noexcept
       {
         auto it = *this;
         it += i;
@@ -2324,10 +2326,10 @@ namespace details {
       }
     };
 
-    [[nodiscard]] static constexpr auto begin() { return iterator{}; }
-    [[nodiscard]] static constexpr auto end() { return senitiel{}; }
+    ENCHANTUM_DETAILS_NODISCARD static constexpr auto begin() { return iterator{}; }
+    ENCHANTUM_DETAILS_NODISCARD static constexpr auto end() { return senitiel{}; }
 
-    [[nodiscard]] constexpr auto operator[](const std::size_t i) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr auto operator[](const std::size_t i) const noexcept
     {
       auto it = begin();
       it += static_cast<std::ptrdiff_t>(i);
@@ -2337,20 +2339,20 @@ namespace details {
 
   template<typename E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true>
   struct entries_generator_t {
-    [[nodiscard]] static constexpr std::size_t size() noexcept { return count<E>; }
+    ENCHANTUM_DETAILS_NODISCARD static constexpr std::size_t size() noexcept { return count<E>; }
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
       using base       = sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())>;
       using value_type = Pair;
       using base::operator+=;
-      [[nodiscard]] constexpr Pair operator*() const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr Pair operator*() const noexcept
       {
         return Pair{
           values_generator_t<E>{}[static_cast<std::size_t>(this->index)],
           names_generator_t<E, string_view, NullTerminated>{}[static_cast<std::size_t>(this->index)],
         };
       }
-      [[nodiscard]] constexpr Pair operator[](const std::ptrdiff_t i) const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr Pair operator[](const std::ptrdiff_t i) const noexcept
       {
         auto it = *this;
         it += i;
@@ -2358,10 +2360,10 @@ namespace details {
       }
     };
 
-    [[nodiscard]] static constexpr auto begin() { return iterator{}; }
-    [[nodiscard]] static constexpr auto end() { return senitiel{}; }
+    ENCHANTUM_DETAILS_NODISCARD static constexpr auto begin() { return iterator{}; }
+    ENCHANTUM_DETAILS_NODISCARD static constexpr auto end() { return senitiel{}; }
 
-    [[nodiscard]] constexpr auto operator[](const std::size_t i) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr auto operator[](const std::size_t i) const noexcept
     {
       auto it = begin();
       it += static_cast<std::ptrdiff_t>(i);
@@ -2553,19 +2555,19 @@ namespace details {
 
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-[[nodiscard]] constexpr bool contains(const std::underlying_type_t<E> value) noexcept
+ENCHANTUM_DETAILS_NODISCARD constexpr bool contains(const std::underlying_type_t<E> value) noexcept
 {
   return details::contains_value<E>(value);
 }
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-[[nodiscard]] constexpr bool contains(const E value) noexcept
+ENCHANTUM_DETAILS_NODISCARD constexpr bool contains(const E value) noexcept
 {
   return enchantum::contains<E>(static_cast<std::underlying_type_t<E>>(value));
 }
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-[[nodiscard]] constexpr bool contains(const string_view name) noexcept
+ENCHANTUM_DETAILS_NODISCARD constexpr bool contains(const string_view name) noexcept
 {
   constexpr auto minmax = details::minmax_string_size(names<E>.data(), names<E>.data() + names<E>.size());
   const auto size = name.size();
@@ -2582,7 +2584,7 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 
 
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E), typename BinaryPred>
-[[nodiscard]] constexpr bool contains(const string_view name, const BinaryPred binary_pred) noexcept
+ENCHANTUM_DETAILS_NODISCARD constexpr bool contains(const string_view name, const BinaryPred binary_pred) noexcept
 {
   for (std::size_t i = 0; i < count<E>; ++i) {
     const auto s = names_generator<E>[i];
@@ -2596,7 +2598,7 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E), typename BinaryPred>
 namespace details {
   template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
   struct index_to_enum_functor {
-    [[nodiscard]] constexpr optional<E> operator()(const std::size_t index) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr optional<E> operator()(const std::size_t index) const noexcept
     {
       if (index < count<E>)
         return optional<E>(values_generator<E>[index]);
@@ -2606,7 +2608,7 @@ namespace details {
 
   struct enum_to_index_functor {
     template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-    [[nodiscard]] constexpr optional<std::size_t> operator()(const E e) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr optional<std::size_t> operator()(const E e) const noexcept
     {
       return details::enum_to_index_impl<E>(e,
                                             std::integral_constant<bool, is_contiguous<E> && count<E> != 0>{},
@@ -2617,14 +2619,14 @@ namespace details {
 
   template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
   struct cast_functor {
-    [[nodiscard]] constexpr optional<E> operator()(const std::underlying_type_t<E> value) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr optional<E> operator()(const std::underlying_type_t<E> value) const noexcept
     {
       if (!enchantum::contains<E>(value))
         return optional<E>();
       return optional<E>(static_cast<E>(value));
     }
 
-    [[nodiscard]] constexpr optional<E> operator()(const string_view name) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr optional<E> operator()(const string_view name) const noexcept
     {
       constexpr auto minmax = details::minmax_string_size(names<E>.data(), names<E>.data() + names<E>.size());
       const auto size = name.size();
@@ -2640,7 +2642,7 @@ namespace details {
     }
 
     template<typename BinaryPred>
-    [[nodiscard]] constexpr optional<E> operator()(const string_view name, const BinaryPred binary_pred) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr optional<E> operator()(const string_view name, const BinaryPred binary_pred) const noexcept
     {
 
       for (std::size_t i = 0; i < count<E>; ++i) {
@@ -2666,7 +2668,7 @@ ENCHANTUM_DETAILS_INLINE_VAR constexpr details::cast_functor<E> cast{};
 namespace details {
   struct to_string_functor {
     template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-    [[nodiscard]] constexpr string_view operator()(const E value) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr string_view operator()(const E value) const noexcept
     {
       if (const auto i = enchantum::enum_to_index(value))
         return names_generator<E>[*i];
@@ -2718,7 +2720,7 @@ ENCHANTUM_DETAILS_INLINE_VAR constexpr E value_ors = details::value_ors_impl<E>(
 
 
 template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
-[[nodiscard]] constexpr bool contains_bitflag(const std::underlying_type_t<E> value) noexcept
+ENCHANTUM_DETAILS_NODISCARD constexpr bool contains_bitflag(const std::underlying_type_t<E> value) noexcept
 {
   if (!has_zero_flag<E>)
     if (value == 0)
@@ -2728,13 +2730,13 @@ template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 }
 
 template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
-[[nodiscard]] constexpr bool contains_bitflag(const E value) noexcept
+ENCHANTUM_DETAILS_NODISCARD constexpr bool contains_bitflag(const E value) noexcept
 {
   return enchantum::contains_bitflag<E>(static_cast<std::underlying_type_t<E>>(value));
 }
 
 template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E), typename BinaryPred>
-[[nodiscard]] constexpr bool contains_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
+ENCHANTUM_DETAILS_NODISCARD constexpr bool contains_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
 {
   std::size_t pos = 0;
   for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
@@ -2747,7 +2749,7 @@ template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E), typename BinaryPred>
 
 
 template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
-[[nodiscard]] constexpr bool contains_bitflag(const string_view s, const char sep = '|') noexcept
+ENCHANTUM_DETAILS_NODISCARD constexpr bool contains_bitflag(const string_view s, const char sep = '|') noexcept
 {
   std::size_t pos = 0;
   for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
@@ -2760,7 +2762,7 @@ template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 
 
 template<typename String = string, ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
-[[nodiscard]] constexpr String to_string_bitflag(const E value, const char sep = '|')
+ENCHANTUM_DETAILS_NODISCARD constexpr String to_string_bitflag(const E value, const char sep = '|')
 {
   using T = std::underlying_type_t<E>;
   if (has_zero_flag<E>)
@@ -2785,7 +2787,7 @@ template<typename String = string, ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 }
 
 template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E), typename BinaryPred>
-[[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
+ENCHANTUM_DETAILS_NODISCARD constexpr optional<E> cast_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
 {
   using T = std::underlying_type_t<E>;
   T           check_value{};
@@ -2804,13 +2806,13 @@ template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E), typename BinaryPred>
 }
 
 template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
-[[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep = '|') noexcept
+ENCHANTUM_DETAILS_NODISCARD constexpr optional<E> cast_bitflag(const string_view s, const char sep = '|') noexcept
 {
   return enchantum::cast_bitflag<E>(s, sep, details::equal_to_string_view{});
 }
 
 template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
-[[nodiscard]] constexpr optional<E> cast_bitflag(const std::underlying_type_t<E> value) noexcept
+ENCHANTUM_DETAILS_NODISCARD constexpr optional<E> cast_bitflag(const std::underlying_type_t<E> value) noexcept
 {
   return enchantum::contains_bitflag<E>(value) ? optional<E>(static_cast<E>(value)) : optional<E>();
 }
@@ -2961,26 +2963,26 @@ public:
   using Container::at;
   using Container::operator[];
 
-  [[nodiscard]] constexpr reference at(const E index)
+  ENCHANTUM_DETAILS_NODISCARD constexpr reference at(const E index)
   {
     if (const auto i = enchantum::enum_to_index(index))
       return operator[](*i);
     ENCHANTUM_THROW(std::out_of_range("enchantum::array::at index out of range"), index);
   }
 
-  [[nodiscard]] constexpr const_reference at(const E index) const
+  ENCHANTUM_DETAILS_NODISCARD constexpr const_reference at(const E index) const
   {
     if (const auto i = enchantum::enum_to_index(index))
       return operator[](*i);
     ENCHANTUM_THROW(std::out_of_range("enchantum::array::at: index out of range"), index);
   }
 
-  [[nodiscard]] constexpr reference operator[](const E index) noexcept
+  ENCHANTUM_DETAILS_NODISCARD constexpr reference operator[](const E index) noexcept
   {
     return operator[](*enchantum::enum_to_index(index));
   }
 
-  [[nodiscard]] constexpr const_reference operator[](const E index) const noexcept
+  ENCHANTUM_DETAILS_NODISCARD constexpr const_reference operator[](const E index) const noexcept
   {
     return operator[](*enchantum::enum_to_index(index));
   }
@@ -3021,7 +3023,7 @@ public:
 
   constexpr bitset() = default;
 
-  [[nodiscard]] string to_string(const char sep = '|') const
+  ENCHANTUM_DETAILS_NODISCARD string to_string(const char sep = '|') const
   {
     string name;
     for (std::size_t i = 0; i < enchantum::count<E>; ++i) {
@@ -3035,7 +3037,7 @@ public:
     return name;
   }
 
-  [[nodiscard]] constexpr auto to_string(const char zero, const char one) const
+  ENCHANTUM_DETAILS_NODISCARD constexpr auto to_string(const char zero, const char one) const
   {
     return Container::to_string(zero, one);
   }
@@ -3047,12 +3049,12 @@ public:
     }
   }
 
-  [[nodiscard]] constexpr reference operator[](const E index) noexcept
+  ENCHANTUM_DETAILS_NODISCARD constexpr reference operator[](const E index) noexcept
   {
     return operator[](*enchantum::enum_to_index(index));
   }
 
-  [[nodiscard]] constexpr bool operator[](const E index) const noexcept
+  ENCHANTUM_DETAILS_NODISCARD constexpr bool operator[](const E index) const noexcept
   {
     return operator[](*enchantum::enum_to_index(index));
   }
@@ -3115,27 +3117,27 @@ namespace enchantum {
 namespace bitwise_operators {
 
   template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-  [[nodiscard]] constexpr E operator~(E e) noexcept
+  ENCHANTUM_DETAILS_NODISCARD constexpr E operator~(E e) noexcept
   {
     return static_cast<E>(~static_cast<std::underlying_type_t<E>>(e));
   }
 
   template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-  [[nodiscard]] constexpr E operator|(E a, E b) noexcept
+  ENCHANTUM_DETAILS_NODISCARD constexpr E operator|(E a, E b) noexcept
   {
     using T = std::underlying_type_t<E>;
     return static_cast<E>(static_cast<T>(a) | static_cast<T>(b));
   }
 
   template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-  [[nodiscard]] constexpr E operator&(E a, E b) noexcept
+  ENCHANTUM_DETAILS_NODISCARD constexpr E operator&(E a, E b) noexcept
   {
     using T = std::underlying_type_t<E>;
     return static_cast<E>(static_cast<T>(a) & static_cast<T>(b));
   }
 
   template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-  [[nodiscard]] constexpr E operator^(E a, E b) noexcept
+  ENCHANTUM_DETAILS_NODISCARD constexpr E operator^(E a, E b) noexcept
   {
     using T = std::underlying_type_t<E>;
     return static_cast<E>(static_cast<T>(a) ^ static_cast<T>(b));
@@ -3166,17 +3168,17 @@ namespace bitwise_operators {
 } // namespace enchantum
 
 #define ENCHANTUM_DEFINE_BITWISE_FOR(Enum)                                                \
-  [[nodiscard]] constexpr Enum operator&(Enum a, Enum b) noexcept                         \
+  ENCHANTUM_DETAILS_NODISCARD constexpr Enum operator&(Enum a, Enum b) noexcept                         \
   {                                                                                       \
     using T = std::underlying_type_t<Enum>;                                               \
     return static_cast<Enum>(static_cast<T>(a) & static_cast<T>(b));                      \
   }                                                                                       \
-  [[nodiscard]] constexpr Enum operator|(Enum a, Enum b) noexcept                         \
+  ENCHANTUM_DETAILS_NODISCARD constexpr Enum operator|(Enum a, Enum b) noexcept                         \
   {                                                                                       \
     using T = std::underlying_type_t<Enum>;                                               \
     return static_cast<Enum>(static_cast<T>(a) | static_cast<T>(b));                      \
   }                                                                                       \
-  [[nodiscard]] constexpr Enum operator^(Enum a, Enum b) noexcept                         \
+  ENCHANTUM_DETAILS_NODISCARD constexpr Enum operator^(Enum a, Enum b) noexcept                         \
   {                                                                                       \
     using T = std::underlying_type_t<Enum>;                                               \
     return static_cast<Enum>(static_cast<T>(a) ^ static_cast<T>(b));                      \
@@ -3184,7 +3186,7 @@ namespace bitwise_operators {
   constexpr Enum&              operator&=(Enum& a, Enum b) noexcept { return a = a & b; } \
   constexpr Enum&              operator|=(Enum& a, Enum b) noexcept { return a = a | b; } \
   constexpr Enum&              operator^=(Enum& a, Enum b) noexcept { return a = a ^ b; } \
-  [[nodiscard]] constexpr Enum operator~(Enum a) noexcept                                 \
+  ENCHANTUM_DETAILS_NODISCARD constexpr Enum operator~(Enum a) noexcept                                 \
   {                                                                                       \
     return static_cast<Enum>(~static_cast<std::underlying_type_t<Enum>>(a));              \
   }
@@ -3215,14 +3217,14 @@ namespace scoped {
   } // namespace details
 
   template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-  [[nodiscard]] constexpr bool contains(const string_view name) noexcept
+  ENCHANTUM_DETAILS_NODISCARD constexpr bool contains(const string_view name) noexcept
   {
     const auto n = details::remove_scope_or_empty(name, type_name<E>);
     return !n.empty() && enchantum::contains<E>(n);
   }
 
   template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E), typename BinaryPredicate>
-  [[nodiscard]] constexpr bool contains(const string_view name, const BinaryPredicate binary_predicate) noexcept
+  ENCHANTUM_DETAILS_NODISCARD constexpr bool contains(const string_view name, const BinaryPredicate binary_predicate) noexcept
   {
     const auto n = details::remove_scope_or_empty(name, type_name<E>);
     return !n.empty() && enchantum::contains<E>(n, binary_predicate);
@@ -3231,14 +3233,14 @@ namespace scoped {
   namespace details {
     template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
     struct scoped_cast_functor {
-      [[nodiscard]] constexpr optional<E> operator()(const string_view name) const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr optional<E> operator()(const string_view name) const noexcept
       {
         const auto n = details::remove_scope_or_empty(name, type_name<E>);
         return n.empty() ? optional<E>() : enchantum::cast<E>(n);
       }
 
       template<typename BinaryPred>
-      [[nodiscard]] constexpr optional<E> operator()(const string_view name, const BinaryPred binary_predicate) const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr optional<E> operator()(const string_view name, const BinaryPred binary_predicate) const noexcept
       {
         const auto n = details::remove_scope_or_empty(name, type_name<E>);
         return n.empty() ? optional<E>() : enchantum::cast<E>(n, binary_predicate);
@@ -3248,7 +3250,7 @@ namespace scoped {
     struct to_scoped_string_functor {
       // hacky workaround about string not being a literal type.
       template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E), typename String = string>
-      [[nodiscard]] constexpr String operator()(const E value) const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr String operator()(const E value) const noexcept
       {
         String s;
         if (const auto i = enchantum::enum_to_index(value)) {
@@ -3271,7 +3273,7 @@ namespace scoped {
   ENCHANTUM_DETAILS_INLINE_VAR constexpr details::scoped_cast_functor<E> cast;
 
   template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E), typename BinaryPred>
-  [[nodiscard]] constexpr bool contains_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
+  ENCHANTUM_DETAILS_NODISCARD constexpr bool contains_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
   {
     std::size_t pos = 0;
     for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
@@ -3283,7 +3285,7 @@ namespace scoped {
   }
 
   template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
-  [[nodiscard]] constexpr bool contains_bitflag(const string_view s, const char sep = '|') noexcept
+  ENCHANTUM_DETAILS_NODISCARD constexpr bool contains_bitflag(const string_view s, const char sep = '|') noexcept
   {
     std::size_t pos = 0;
     for (std::size_t i = s.find(sep); i != s.npos; i = s.find(sep, pos)) {
@@ -3296,7 +3298,7 @@ namespace scoped {
 
 
   template<typename String = string, ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
-  [[nodiscard]] constexpr String to_string_bitflag(const E value, const char sep = '|')
+  ENCHANTUM_DETAILS_NODISCARD constexpr String to_string_bitflag(const E value, const char sep = '|')
   {
     using T = std::underlying_type_t<E>;
     if (has_zero_flag<E>)
@@ -3325,7 +3327,7 @@ namespace scoped {
 
 
   template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E), typename BinaryPred>
-  [[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
+  ENCHANTUM_DETAILS_NODISCARD constexpr optional<E> cast_bitflag(const string_view s, const char sep, const BinaryPred binary_pred) noexcept
   {
     using T = std::underlying_type_t<E>;
     T           check_value{};
@@ -3344,7 +3346,7 @@ namespace scoped {
   }
 
   template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
-[[nodiscard]] constexpr optional<E> cast_bitflag(const string_view s, const char sep = '|') noexcept
+ENCHANTUM_DETAILS_NODISCARD constexpr optional<E> cast_bitflag(const string_view s, const char sep = '|') noexcept
 {
   return enchantum::scoped::cast_bitflag<E>(s, sep, enchantum::details::equal_to_string_view{});
 }
@@ -3414,7 +3416,7 @@ namespace details {
   template<std::ptrdiff_t N>
   struct next_value_functor {
     template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-    [[nodiscard]] constexpr optional<E> operator()(const E value, const std::ptrdiff_t n = 1) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr optional<E> operator()(const E value, const std::ptrdiff_t n = 1) const noexcept
     {
       if (!enchantum::contains(value))
         return optional<E>();
@@ -3429,7 +3431,7 @@ namespace details {
   template<std::ptrdiff_t N>
   struct next_value_circular_functor {
     template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
-    [[nodiscard]] constexpr E operator()(const E value, const std::ptrdiff_t n = 1) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr E operator()(const E value, const std::ptrdiff_t n = 1) const noexcept
     {
       ENCHANTUM_ASSERT(enchantum::contains(value), "next/prev_value_circular requires 'value' to be a valid enum member", value);
       const auto     i     = static_cast<std::ptrdiff_t>(*enchantum::enum_to_index(value));

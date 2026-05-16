@@ -50,94 +50,94 @@ namespace details {
       return static_cast<CRTP&>(*this);
     }
 
-    [[nodiscard]] constexpr CRTP operator++(int) & noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr CRTP operator++(int) & noexcept
     {
       auto copy = static_cast<CRTP&>(*this);
       ++*this;
       return copy;
     }
-    [[nodiscard]] constexpr CRTP operator--(int) & noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr CRTP operator--(int) & noexcept
     {
       auto copy = static_cast<CRTP&>(*this);
       --*this;
       return copy;
     }
 
-    [[nodiscard]] constexpr friend CRTP operator+(CRTP it, const std::ptrdiff_t offset) noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr friend CRTP operator+(CRTP it, const std::ptrdiff_t offset) noexcept
     {
       it += offset;
       return it;
     }
 
-    [[nodiscard]] constexpr friend CRTP operator+(const std::ptrdiff_t offset, CRTP it) noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr friend CRTP operator+(const std::ptrdiff_t offset, CRTP it) noexcept
     {
       it += offset;
       return it;
     }
 
-    [[nodiscard]] constexpr friend CRTP operator-(CRTP it, const std::ptrdiff_t offset) noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr friend CRTP operator-(CRTP it, const std::ptrdiff_t offset) noexcept
     {
       it -= offset;
       return it;
     }
 
-    [[nodiscard]] constexpr std::ptrdiff_t operator-(const sized_iterator that) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr std::ptrdiff_t operator-(const sized_iterator that) const noexcept
     {
       return index - that.index;
     }
 
-    [[nodiscard]] constexpr std::ptrdiff_t        operator-(senitiel) const noexcept { return index - Size; }
-    [[nodiscard]] friend constexpr std::ptrdiff_t operator-(senitiel, sized_iterator it) noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr std::ptrdiff_t        operator-(senitiel) const noexcept { return index - Size; }
+    ENCHANTUM_DETAILS_NODISCARD friend constexpr std::ptrdiff_t operator-(senitiel, sized_iterator it) noexcept
     {
       return Size - it.index;
     }
 
-    [[nodiscard]] constexpr bool operator==(const sized_iterator that) const noexcept { return that.index == index; };
-    [[nodiscard]] constexpr bool operator==(senitiel) const noexcept { return Size == index; }
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator==(const sized_iterator that) const noexcept { return that.index == index; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator==(senitiel) const noexcept { return Size == index; }
 
 #ifdef __cpp_impl_three_way_comparison
-    [[nodiscard]] constexpr auto operator<=>(const sized_iterator that) const noexcept { return index <=> that.index; };
-    [[nodiscard]] constexpr auto operator<=>(senitiel) const noexcept { return index <=> Size; }
+    ENCHANTUM_DETAILS_NODISCARD constexpr auto operator<=>(const sized_iterator that) const noexcept { return index <=> that.index; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr auto operator<=>(senitiel) const noexcept { return index <=> Size; }
 #else
 
-    [[nodiscard]] constexpr bool operator!=(const sized_iterator that) const noexcept { return that.index != index; };
-    [[nodiscard]] constexpr bool operator!=(senitiel) const noexcept { return Size != index; }
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator!=(const sized_iterator that) const noexcept { return that.index != index; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator!=(senitiel) const noexcept { return Size != index; }
 
-    [[nodiscard]] friend constexpr bool operator==(senitiel, const sized_iterator it) noexcept
+    ENCHANTUM_DETAILS_NODISCARD friend constexpr bool operator==(senitiel, const sized_iterator it) noexcept
     {
       return Size == it.index;
     }
 
 
-    [[nodiscard]] friend constexpr bool operator!=(senitiel, const sized_iterator it) noexcept
+    ENCHANTUM_DETAILS_NODISCARD friend constexpr bool operator!=(senitiel, const sized_iterator it) noexcept
     {
       return Size != it.index;
     }
 
 
-    [[nodiscard]] constexpr bool operator<(const sized_iterator that) const noexcept { return index < that.index; };
-    [[nodiscard]] constexpr bool operator>(const sized_iterator that) const noexcept { return index > that.index; };
-    [[nodiscard]] constexpr bool operator<=(const sized_iterator that) const noexcept { return index <= that.index; };
-    [[nodiscard]] constexpr bool operator>=(const sized_iterator that) const noexcept { return index >= that.index; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator<(const sized_iterator that) const noexcept { return index < that.index; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator>(const sized_iterator that) const noexcept { return index > that.index; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator<=(const sized_iterator that) const noexcept { return index <= that.index; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator>=(const sized_iterator that) const noexcept { return index >= that.index; };
 
-    [[nodiscard]] constexpr bool operator<(senitiel) const noexcept { return index < Size; };
-    [[nodiscard]] constexpr bool operator>(senitiel) const noexcept { return index > Size; };
-    [[nodiscard]] constexpr bool operator<=(senitiel) const noexcept { return index <= Size; };
-    [[nodiscard]] constexpr bool operator>=(senitiel) const noexcept { return index >= Size; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator<(senitiel) const noexcept { return index < Size; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator>(senitiel) const noexcept { return index > Size; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator<=(senitiel) const noexcept { return index <= Size; };
+    ENCHANTUM_DETAILS_NODISCARD constexpr bool operator>=(senitiel) const noexcept { return index >= Size; };
 
-    [[nodiscard]] friend constexpr bool operator<(senitiel, const sized_iterator it) noexcept
+    ENCHANTUM_DETAILS_NODISCARD friend constexpr bool operator<(senitiel, const sized_iterator it) noexcept
     {
       return Size < it.index;
     };
-    [[nodiscard]] friend constexpr bool operator>(senitiel, const sized_iterator it) noexcept
+    ENCHANTUM_DETAILS_NODISCARD friend constexpr bool operator>(senitiel, const sized_iterator it) noexcept
     {
       return Size > it.index;
     };
-    [[nodiscard]] friend constexpr bool operator<=(senitiel, const sized_iterator it) noexcept
+    ENCHANTUM_DETAILS_NODISCARD friend constexpr bool operator<=(senitiel, const sized_iterator it) noexcept
     {
       return Size <= it.index;
     };
-    [[nodiscard]] friend constexpr bool operator>=(senitiel, const sized_iterator it) noexcept
+    ENCHANTUM_DETAILS_NODISCARD friend constexpr bool operator>=(senitiel, const sized_iterator it) noexcept
     {
       return Size >= it.index;
     };
@@ -147,20 +147,20 @@ namespace details {
 
   template<typename E, typename String = string_view, bool NullTerminated = true>
   struct names_generator_t {
-    [[nodiscard]] static constexpr std::size_t size() noexcept { return count<E>; }
+    ENCHANTUM_DETAILS_NODISCARD static constexpr std::size_t size() noexcept { return count<E>; }
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
       using base       = sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())>;
       using value_type = String;
       using base::operator+=;
-      [[nodiscard]] constexpr String operator*() const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr String operator*() const noexcept
       {
         const auto* const p       = details::reflection_string_indices<E, NullTerminated>.data();
         const auto* const strings = details::reflection_data_string_storage<E, NullTerminated>.data();
         return String(strings + p[this->index], p[this->index + 1] - p[this->index] - NullTerminated);
       }
 
-      [[nodiscard]] constexpr String operator[](const std::ptrdiff_t i) const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr String operator[](const std::ptrdiff_t i) const noexcept
       {
         auto it = *this;
         it += i;
@@ -168,10 +168,10 @@ namespace details {
       }
     };
 
-    [[nodiscard]] static constexpr auto begin() { return iterator{}; }
-    [[nodiscard]] static constexpr auto end() { return senitiel{}; }
+    ENCHANTUM_DETAILS_NODISCARD static constexpr auto begin() { return iterator{}; }
+    ENCHANTUM_DETAILS_NODISCARD static constexpr auto end() { return senitiel{}; }
 
-    [[nodiscard]] constexpr auto operator[](const std::size_t i) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr auto operator[](const std::size_t i) const noexcept
     {
       auto it = begin();
       it += static_cast<std::ptrdiff_t>(i);
@@ -181,19 +181,19 @@ namespace details {
 
   template<typename E>
   struct values_generator_t {
-    [[nodiscard]] static constexpr std::size_t size() noexcept { return count<E>; }
+    ENCHANTUM_DETAILS_NODISCARD static constexpr std::size_t size() noexcept { return count<E>; }
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
       using base       = sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())>;
       using value_type = E;
       using base::operator+=;
-      [[nodiscard]] constexpr E dereference(std::true_type, std::false_type) const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr E dereference(std::true_type, std::false_type) const noexcept
       {
         using T = typename std::underlying_type<E>::type;
         return static_cast<E>(static_cast<T>(min<E>) + static_cast<T>(this->index));
       }
 
-      [[nodiscard]] constexpr E dereference(std::false_type, std::true_type) const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr E dereference(std::false_type, std::true_type) const noexcept
       {
         using T                        = typename std::underlying_type<E>::type;
         using UT                       = typename std::make_unsigned<T>::type;
@@ -203,17 +203,17 @@ namespace details {
         return static_cast<E>(UT{1} << (real_min_offset + static_cast<UT>(this->index - has_zero_flag<E>)));
       }
 
-      [[nodiscard]] constexpr E dereference(std::false_type, std::false_type) const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr E dereference(std::false_type, std::false_type) const noexcept
       {
         return values<E>[static_cast<std::size_t>(this->index)];
       }
 
-      [[nodiscard]] constexpr E operator*() const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr E operator*() const noexcept
       {
         return dereference(std::integral_constant<bool, is_contiguous<E>>{},
                            std::integral_constant<bool, is_contiguous_bitflag<E>>{});
       }
-      [[nodiscard]] constexpr E operator[](const std::ptrdiff_t i) const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr E operator[](const std::ptrdiff_t i) const noexcept
       {
         auto it = *this;
         it += i;
@@ -221,10 +221,10 @@ namespace details {
       }
     };
 
-    [[nodiscard]] static constexpr auto begin() { return iterator{}; }
-    [[nodiscard]] static constexpr auto end() { return senitiel{}; }
+    ENCHANTUM_DETAILS_NODISCARD static constexpr auto begin() { return iterator{}; }
+    ENCHANTUM_DETAILS_NODISCARD static constexpr auto end() { return senitiel{}; }
 
-    [[nodiscard]] constexpr auto operator[](const std::size_t i) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr auto operator[](const std::size_t i) const noexcept
     {
       auto it = begin();
       it += static_cast<std::ptrdiff_t>(i);
@@ -234,20 +234,20 @@ namespace details {
 
   template<typename E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true>
   struct entries_generator_t {
-    [[nodiscard]] static constexpr std::size_t size() noexcept { return count<E>; }
+    ENCHANTUM_DETAILS_NODISCARD static constexpr std::size_t size() noexcept { return count<E>; }
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
       using base       = sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())>;
       using value_type = Pair;
       using base::operator+=;
-      [[nodiscard]] constexpr Pair operator*() const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr Pair operator*() const noexcept
       {
         return Pair{
           values_generator_t<E>{}[static_cast<std::size_t>(this->index)],
           names_generator_t<E, string_view, NullTerminated>{}[static_cast<std::size_t>(this->index)],
         };
       }
-      [[nodiscard]] constexpr Pair operator[](const std::ptrdiff_t i) const noexcept
+      ENCHANTUM_DETAILS_NODISCARD constexpr Pair operator[](const std::ptrdiff_t i) const noexcept
       {
         auto it = *this;
         it += i;
@@ -255,10 +255,10 @@ namespace details {
       }
     };
 
-    [[nodiscard]] static constexpr auto begin() { return iterator{}; }
-    [[nodiscard]] static constexpr auto end() { return senitiel{}; }
+    ENCHANTUM_DETAILS_NODISCARD static constexpr auto begin() { return iterator{}; }
+    ENCHANTUM_DETAILS_NODISCARD static constexpr auto end() { return senitiel{}; }
 
-    [[nodiscard]] constexpr auto operator[](const std::size_t i) const noexcept
+    ENCHANTUM_DETAILS_NODISCARD constexpr auto operator[](const std::size_t i) const noexcept
     {
       auto it = begin();
       it += static_cast<std::ptrdiff_t>(i);
