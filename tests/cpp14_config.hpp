@@ -120,6 +120,30 @@ struct string_view {
     return npos;
   }
 
+  constexpr std::size_t rfind(string_view needle) const noexcept
+  {
+    if (needle.empty())
+      return size();
+    if (needle.size() > size())
+      return npos;
+
+    for (std::size_t pos = size() - needle.size() + 1; pos != 0; --pos) {
+      const std::size_t offset = pos - 1;
+      bool              match  = true;
+      for (std::size_t i = 0; i < needle.size(); ++i) {
+        if (begin_[offset + i] != needle[i]) {
+          match = false;
+          break;
+        }
+      }
+      if (match)
+        return offset;
+    }
+    return npos;
+  }
+
+  constexpr std::size_t rfind(const char* s) const noexcept { return rfind(string_view(s)); }
+
   const char* begin_ = nullptr;
   const char* end_   = nullptr;
 };
