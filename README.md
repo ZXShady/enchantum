@@ -45,6 +45,8 @@ Key Features
 
 [CMake Integration](#cmake-integration)
 
+[Interesting Blogs](#interesting-blogs)
+
 Tested locally on Windows 10 with:
 - Visual Studio 2022 (19.44)
 - GCC 14.2.0
@@ -334,3 +336,8 @@ The cmake file provides the target `enchantum::enchantum` since this library is 
 add_subdirectory("third_party/enchantum")
 target_link_libraries(your_executable enchantum::enchantum)
 ```
+
+# Interesting Blogs
+A post written by my friend [Vittorio Romeo](https://github.com/vittorioromeo) highlighting the compile-time cost of C++26 reflection while comparing 2 other different methods including this library.
+
+https://www.reddit.com/r/cpp/comments/1tb89tx/cost_of_enumtostring_c26_reflection_vs_the_old/
