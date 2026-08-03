@@ -1,7 +1,10 @@
 #pragma once
 
 #include "details/string_view.hpp"
-#if defined(__RESHARPER__)
+
+#if __cplusplus > 202302 && defined(__has_include) && __has_include(<meta>)
+  #include "details/enchantum_cxx26.hpp"
+#elif defined(__RESHARPER__)
   #include "details/enchantum_resharper_cpp.hpp"
 #elif defined(__NVCOMPILER)
   #include "details/enchantum_nvcc.hpp"
@@ -136,15 +139,13 @@ namespace details {
   #if defined(__clang_major__) && __clang_major__ >= 20
       has_fixed_underlying_type<E> &&
   #endif
-      !details::has_specialized_traits<E> && 
-      !is_bitflag<E> && 
-      !std::is_same_v<std::underlying_type_t<E>,bool>) {
+      !details::has_specialized_traits<E> && !is_bitflag<E> && !std::is_same_v<std::underlying_type_t<E>, bool>) {
   #define ENCHANTUM_ERROR_STRING                                                    \
     "enchantum has detected that this enum is not fully reflected. Please look at " \
     "https://github.com/ZXShady/enchantum/blob/main/docs/"                          \
     "features.md#enchantum_check_out_of_bounds_by "                                 \
     "for more information"
-    // TODO: switch to new check for those 2 compilers
+      // TODO: switch to new check for those 2 compilers
   #if defined(__NVCOMPILER) || defined(__RESHARPER__)
       static_assert(elements.valid_count == reflection_data_impl<E, NullTerminated,
         details::ClampToRange<std::underlying_type_t<E>>(enum_traits<E>::min * ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY),
@@ -167,9 +168,9 @@ namespace details {
         constexpr bool upper_has_value = has_a_value_in<E, max + 1, max * scale>;
 
         static_assert(!upper_has_value, ENCHANTUM_ERROR_STRING);
-        constexpr auto min = +enum_traits<E>::min;
-        constexpr auto tmin = std::numeric_limits<T>::min();
-        constexpr bool can_check_lower = min > tmin && min >=tmin / scale;
+        constexpr auto min             = +enum_traits<E>::min;
+        constexpr auto tmin            = std::numeric_limits<T>::min();
+        constexpr bool can_check_lower = min > tmin && min >= tmin / scale;
         if constexpr (!upper_has_value && can_check_lower) {
           if constexpr (min < 0)
             static_assert(!has_a_value_in<E, min * scale, min - 1>, ENCHANTUM_ERROR_STRING);
@@ -181,7 +182,7 @@ namespace details {
     }
 #endif
 #undef ENCHANTUM_ERROR_STRING
-      
+
     FinalReflectionResult<E, StringLengthType, elements.valid_count> ret;
     std::size_t                                                      i            = 0;
     StringLengthType                                                 string_index = 0;

@@ -11,6 +11,10 @@ STD="$1"
 shift
 FLAGS="$@"
 
+if [[ "$STD" -ge 26 ]]; then
+  FLAGS="$FLAGS -DCMAKE_CXX_FLAGS=-freflection"
+fi
+
 for CONFIG in Debug Release; do
   DIR="build-cpp${STD}-${CONFIG}"
   cmake -B "$DIR" -G Ninja $FLAGS -DCMAKE_BUILD_TYPE=$CONFIG -DENCHANTUM_BUILD_TESTS=ON -DCMAKE_CXX_STANDARD=$STD
