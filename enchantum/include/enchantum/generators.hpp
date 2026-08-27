@@ -107,8 +107,8 @@ namespace details {
       using value_type = String;
       [[nodiscard]] constexpr String operator*() const noexcept
       {
-        const auto* const p       = details::reflection_string_indices<E, NullTerminated>.data();
-        const auto* const strings = details::reflection_data_string_storage<E, NullTerminated>.data();
+        const auto* const p       = &details::reflection_string_indices<E, NullTerminated>[0];
+        const auto* const strings = &details::reflection_data_string_storage<E, NullTerminated>[0];
         return String(strings + p[this->index], p[this->index + 1] - p[this->index] - NullTerminated);
       }
 
