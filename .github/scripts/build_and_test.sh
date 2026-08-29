@@ -17,3 +17,12 @@ for CONFIG in Debug Release; do
   cmake --build "$DIR"
   ctest --test-dir "$DIR" --output-on-failure
 done
+
+CONSUMER_BUILD="build-consumer-cpp${STD}"
+INSTALL_LOC="${PWD}/install_path"
+cmake -B "build-install" -G Ninja $FLAGS -DCMAKE_INSTALL_PREFIX="${INSTALL_LOC}" -DCMAKE_CXX_STANDARD=$STD
+cmake --build "build-install" --target install
+
+cmake -B "$CONSUMER_BUILD" -S tests/consumer -G Ninja $FLAGS -DCMAKE_PREFIX_PATH="${INSTALL_LOC}" -DCMAKE_CXX_STANDARD=$STD
+
+cmake --build "$CONSUMER_BUILD"

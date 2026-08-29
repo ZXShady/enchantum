@@ -67,13 +67,13 @@ write_basic_package_version_file(
 configure_package_config_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/enchantumConfig.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/enchantumConfig.cmake"
-    INSTALL_DESTINATION cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_DATADIR}/enchantum/cmake
 )
 
 install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/enchantumConfig.cmake"
     "${CMAKE_CURRENT_BINARY_DIR}/enchantumConfigVersion.cmake"
-    DESTINATION cmake
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/enchantum/cmake
     COMPONENT enchantum
 )
 
