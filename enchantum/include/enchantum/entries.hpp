@@ -1,18 +1,27 @@
 #pragma once
 
 #include "details/string_view.hpp"
-#if defined(__RESHARPER__)
-  #include "details/enchantum_resharper_cpp.hpp"
-#elif defined(__NVCOMPILER)
-  #include "details/enchantum_nvcc.hpp"
-#elif defined(__clang__)
-  #include "details/enchantum_clang.hpp"
-#elif defined(__GNUC__) || defined(__GNUG__)
-  #include "details/enchantum_gcc.hpp"
-#elif defined(_MSC_VER)
-  #include "details/enchantum_msvc.hpp"
+
+#include "fwd.hpp"
+
+#if defined(__cpp_impl_reflection) && __cpp_impl_reflection >= 202506L
+  #include <meta>
+  #include <cstdint>
+  #include "details/shared.hpp"
 #else
-  #error unsupported compiler please open an issue for enchantum
+  #if defined(__RESHARPER__)
+    #include "details/enchantum_resharper_cpp.hpp"
+  #elif defined(__NVCOMPILER)
+    #include "details/enchantum_nvcc.hpp"
+  #elif defined(__clang__)
+    #include "details/enchantum_clang.hpp"
+  #elif defined(__GNUC__) || defined(__GNUG__)
+    #include "details/enchantum_gcc.hpp"
+  #elif defined(_MSC_VER)
+    #include "details/enchantum_msvc.hpp"
+  #else
+    #error unsupported compiler please open an issue for enchantum
+  #endif
 #endif
 
 #include "common.hpp"
@@ -38,7 +47,134 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
   return static_cast<std::underlying_type_t<E>>(e);
 }
 #endif
+#if defined(__cpp_impl_reflection) && __cpp_impl_reflection >= 202506L
 
+namespace details {
+
+  template<typename E>
+  consteval std::size_t sort_unique(std::vector<std::meta::info>& info)
+  {
+    using T = std::underlying_type_t<E>;
+
+
+    if constexpr(is_bitflag<E>)
+    {
+      using U = std::make_unsigned_t<T>;
+      for(std::size_t i =0;i<info.size();)
+      {
+        auto u = static_cast<U>(std::meta::extract<E>(info[i]));
+        // is not pow of 2 or 0
+        if((u&(u-1)) != 0)
+          info.erase(info.begin() + i);
+        else
+          ++i;
+      }
+    }
+
+    std::meta::info* data = info.data();
+    std::size_t size = info.size();
+
+    for (std::size_t i = 0; i < size; ++i) {
+      for (std::size_t j = 0; j + 1 < size - i; ++j) {
+        if (static_cast<T>(std::meta::extract<E>(data[j])) > static_cast<T>(std::meta::extract<E>(data[j + 1]))) {
+          const auto t = data[j];
+          data[j]      = data[j + 1];
+          data[j + 1]  = t;
+        }
+      }
+    }
+
+    if (size == 0)
+      return 0;
+
+    std::size_t newsize = 1;
+    for (std::size_t i = 1; i < size; ++i)
+      if (static_cast<T>(std::meta::extract<E>(data[i])) != static_cast<T>(std::meta::extract<E>(data[newsize - 1])))
+        data[newsize++] = data[i];
+
+    
+    return newsize;
+  }
+
+
+  template<typename E>
+  consteval auto get_size(std::vector<std::meta::info>&& enums) 
+  {
+    auto newsize = details::sort_unique<E>(enums);
+    std::size_t sz=0;
+    for(std::size_t i =0;i<newsize;++i )
+        sz += std::meta::annotations_of_with_type(enums[i],^^enchantum::ignore_t).empty(); 
+    return sz;
+  }
+
+template<typename E,typename Pair,bool NullTerminated>
+constexpr auto get_entries() 
+{
+  static_assert(std::meta::is_enumerable_type(^^E),"enhcantum disallows reflection of forward declared enums.");
+  enum {
+    size = details::get_size<E>(std::meta::enumerators_of(^^E))
+  };
+  if constexpr(size > 0) {
+    struct LenAndValues {
+      size_t stringlen;
+      E values[size];
+      unsigned int offsets[size+1];
+    };
+
+    constexpr static auto elements = [&]() {
+      LenAndValues ret{};
+      auto refl = std::meta::enumerators_of(^^E);
+      details::sort_unique<E>(refl);
+      for(std::size_t i =0;i<size;++i)
+      {
+        auto currname = std::meta::identifier_of(refl[i]);
+        currname.remove_prefix(prefix_length_or_zero<E>);
+        ret.stringlen+= currname.size() + NullTerminated;
+        ret.values[i]=std::meta::extract<E>(refl[i]);
+        ret.offsets[i+1] = static_cast<unsigned int>(currname.size() + NullTerminated + ret.offsets[i]);
+      }
+      return ret;
+    }();
+
+
+    constexpr static auto strings = [](){
+      std::array<char,elements.stringlen> names;
+      auto* namesp = names.data();
+      auto refl = std::meta::enumerators_of(^^E);
+      details::sort_unique<E>(refl);
+
+      for(std::size_t i =0;i<size;++i)
+      {
+        auto currname = std::meta::identifier_of(refl[i]);
+        const auto jsize = currname.size();
+        for(auto j = details::prefix_length_or_zero<E>;j<jsize;++j)
+          *namesp++ = currname[j];
+        if constexpr(NullTerminated)
+          *namesp++ = '\0';
+      }
+      return names;
+    }();
+
+    const auto* const offsets = elements.offsets; 
+    const auto* stringsp = strings.data();
+    std::array<Pair, size> ret{};
+    auto* const ret_data = ret.data();
+    for (std::size_t i = 0; i < size; ++i) {
+        auto& [e, s]     = ret_data[i];
+        e                = elements.values[i];
+        using StringView = std::remove_cvref_t<decltype(s)>;
+        s                = StringView(stringsp + offsets[i], offsets[i + 1] - offsets[i] - NullTerminated);
+      }
+    return ret;
+  } else {
+    return std::array<Pair, 0>{};
+  }
+}
+}
+
+
+
+#else // no refelction
 
 namespace details {
 
@@ -136,15 +272,13 @@ namespace details {
   #if defined(__clang_major__) && __clang_major__ >= 20
       has_fixed_underlying_type<E> &&
   #endif
-      !details::has_specialized_traits<E> && 
-      !is_bitflag<E> && 
-      !std::is_same_v<std::underlying_type_t<E>,bool>) {
+      !details::has_specialized_traits<E> && !is_bitflag<E> && !std::is_same_v<std::underlying_type_t<E>, bool>) {
   #define ENCHANTUM_ERROR_STRING                                                    \
     "enchantum has detected that this enum is not fully reflected. Please look at " \
     "https://github.com/ZXShady/enchantum/blob/main/docs/"                          \
     "features.md#enchantum_check_out_of_bounds_by "                                 \
     "for more information"
-    // TODO: switch to new check for those 2 compilers
+      // TODO: switch to new check for those 2 compilers
   #if defined(__NVCOMPILER) || defined(__RESHARPER__)
       static_assert(elements.valid_count == reflection_data_impl<E, NullTerminated,
         details::ClampToRange<std::underlying_type_t<E>>(enum_traits<E>::min * ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY),
@@ -167,9 +301,9 @@ namespace details {
         constexpr bool upper_has_value = has_a_value_in<E, max + 1, max * scale>;
 
         static_assert(!upper_has_value, ENCHANTUM_ERROR_STRING);
-        constexpr auto min = +enum_traits<E>::min;
-        constexpr auto tmin = std::numeric_limits<T>::min();
-        constexpr bool can_check_lower = min > tmin && min >=tmin / scale;
+        constexpr auto min             = +enum_traits<E>::min;
+        constexpr auto tmin            = std::numeric_limits<T>::min();
+        constexpr bool can_check_lower = min > tmin && min >= tmin / scale;
         if constexpr (!upper_has_value && can_check_lower) {
           if constexpr (min < 0)
             static_assert(!has_a_value_in<E, min * scale, min - 1>, ENCHANTUM_ERROR_STRING);
@@ -181,7 +315,7 @@ namespace details {
     }
 #endif
 #undef ENCHANTUM_ERROR_STRING
-      
+
     FinalReflectionResult<E, StringLengthType, elements.valid_count> ret;
     std::size_t                                                      i            = 0;
     StringLengthType                                                 string_index = 0;
@@ -255,6 +389,8 @@ namespace details {
   }
 } // namespace details
 
+#endif
+
 #ifdef __cpp_concepts
 template<Enum E, typename Pair = std::pair<E, enchantum::string_view>, bool NullTerminated = true>
 #else
@@ -266,6 +402,35 @@ template<typename E,
 inline constexpr auto entries = enchantum::details::get_entries<E, Pair, NullTerminated>();
 
 namespace details {
+
+#if defined(__cpp_impl_reflection) && __cpp_impl_reflection >= 202506L
+
+  template<typename E, bool NullTerminated>
+  inline constexpr auto reflection_string_indices = []() 
+  {
+    constexpr auto vals = entries<E,std::pair<E,enchantum::string_view>, NullTerminated>;
+    
+    constexpr auto totallen = [&]()
+    {
+      size_t len=0;
+      for(auto [_,str] : vals)
+        len += str.size() + NullTerminated;
+      return len;
+    }();
+    using T = std::conditional_t<(totallen<=UINT8_MAX),uint8_t,uint16_t>;
+    std::array<T,vals.size()+1> indices;
+    indices[0] = 0; 
+    for(std::size_t i =0;auto [_,str] : vals) {
+      indices[i+1] = static_cast<T>(str.size()+indices[i] + NullTerminated);
+      ++i;
+    }
+    return indices;
+  }();
+  template<typename E, bool NullTerminated>
+  inline constexpr auto reflection_data_string_storage = 
+    entries<E,std::pair<E,enchantum::string_view>, NullTerminated>.empty() ? nullptr : entries<E,std::pair<E,enchantum::string_view>, NullTerminated>[0].second.data();
+
+#endif
   template<typename E>
   constexpr auto get_values() noexcept
   {
@@ -340,6 +505,8 @@ template<typename E>
 inline constexpr bool is_contiguous_bitflag = [](const auto is_bitflag) {
   if constexpr (is_bitflag.value) {
     constexpr auto& enums = entries<E>;
+    if(enums.empty())
+      return false;
     using T               = std::underlying_type_t<E>;
     for (auto i = std::size_t{has_zero_flag<E>}; i < enums.size() - 1; ++i)
       if (T(enums[i].first) << 1 != T(enums[i + 1].first))

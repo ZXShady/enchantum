@@ -25,7 +25,8 @@ Quick Reference
   - [is_contiguous_bitflag](#is_contiguous_bitflag)
   - [enum_traits](#enum_traits)
   - [BinaryPredicate](#binary_predicate)
-  
+  - [ignore](#ignore)
+
 **Functions**:
   - [to_string](#to_string)
   - [to_string_bitflag](#to_string_bitflag)
@@ -408,6 +409,30 @@ enum class E { Value };
 
 enchantum::cast<E>("Value",CaseInsensitive{}); // ERROR! not callable while being const!
 
+```
+
+### `ignore`
+
+```cpp
+// defined in header fwd.hpp
+// only when using C++26
+struct ignore_t {};
+constexpr inline ignore_t ignore;
+```
+
+Description: A type used in C++26's annotations to notify enchantum that an enum member is ignored and not included. Which is useful for auxiliary members.
+
+Example:
+```cpp
+enum class Entity {
+  Player,
+  Zombie,
+  Skeleton,
+  COUNT [[=enchantum::ignore]] 
+};
+
+static_assert(enchantum::count<Entity> == 3); // not 4
+static_assert(enchantum::names<Entity>.back() == "Skeleton"); // not COUNT
 ```
 
 --- 

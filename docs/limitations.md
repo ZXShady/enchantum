@@ -1,6 +1,6 @@
 # Limitations
 
-This library just like other libraries uses compiler-specific hacks based on `__FUNCSIG__` / `__PRETTY_FUNCTION__`.
+This library just like other libraries uses compiler-specific hacks based on `__FUNCSIG__` / `__PRETTY_FUNCTION__` until C++26 where all these restrictions don't apply.
 
 If you face any issues while using the library don't hesistate to open up an issue.
 
@@ -10,13 +10,14 @@ This library cannot reflect automaticly on forward declared enums you will get a
 
 The reason is to avoid [ODR](https://cppreference.com/w/cpp/language/definition.html) issues, where you reflect on a forward declared enum in one translation unit then reflect the full definition in another unit you will face [ODR](https://cppreference.com/w/cpp/language/definition.html) issues.
 
-But however this disallows automatic detection of empty enums.
+But however this disallows automatic detection of empty enums (until C++26).
 
 ```cpp
 enum class Empty {};
 ```
 
 if you have an empty enum with no members and you wish to build a generic library using enchantum algorithms then you can use the [ENCHANTUM_DECLARE_EMPTY](/features.md#enchantum_declare_empty) macro to declare the enum as empty.
+
 ## Enum Range
 
 Enum values must be in the range [`ENCHANTUM_MIN_RANGE`,`ENCHANTUM_MAX_RANGE`] 

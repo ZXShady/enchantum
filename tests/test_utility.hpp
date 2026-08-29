@@ -32,6 +32,7 @@ struct Really_Unreadable_Class_Name {
     Flag2 = 1 << 2,
     Flag3 = 1 << 3,
     Flag4 = 1 << 4,
+    Flag_Combined = Flag1 | Flag3 | Flag4,
     Flag5 = 1 << 5,
     Flag6 = 1 << 6,
   };

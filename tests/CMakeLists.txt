@@ -59,6 +59,10 @@ if(STD LESS 20)
     list(REMOVE_ITEM SRCS "${CMAKE_CURRENT_SOURCE_DIR}/std_format.cpp")
     list(REMOVE_ITEM SRCS "${CMAKE_CURRENT_SOURCE_DIR}/single_header.cpp")
 endif()
+
+if(STD LESS 26)
+    list(REMOVE_ITEM SRCS "${CMAKE_CURRENT_SOURCE_DIR}/cxx26_reflection.cpp")
+endif()
 target_sources(tests PRIVATE ${SRCS})
 
 

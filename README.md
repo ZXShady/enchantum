@@ -14,7 +14,9 @@ Key Features
   - Fast compile times (benchmarked below)
 
   - Most efficient binary size wise.
-  
+
+  - Supports C++26 reflection
+
   - 0 Allocations
 
   - Supports:

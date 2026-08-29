@@ -40,6 +40,7 @@ jobs:
           - { name: Ubuntu GCC 14,    os: ubuntu-latest, compiler: gcc, version: 14, flags: "-DCMAKE_CXX_COMPILER=g++" ,supports_cpp20: 'true'}
           
           - { name: Ubuntu GCC 15,    os: ubuntu-latest, compiler: gcc, version: 15, flags: "-DCMAKE_CXX_COMPILER=g++" }
+          - { name: Ubuntu GCC 16,    os: ubuntu-latest, compiler: gcc, version: 16, flags: "-DCMAKE_CXX_COMPILER=g++" ,supports_cpp26: 'true'}
           
           - { name: Ubuntu Clang 9,  os: ubuntu-22.04, compiler: clang, version: 9, flags: "-DCMAKE_CXX_COMPILER=clang++" ,supports_cpp20: 'false'}
 
@@ -99,3 +100,8 @@ jobs:
         if: matrix.platform.supports_cpp20 == 'true'
         run: |
           .github/scripts/build_and_test.sh 20 "${{ matrix.platform.flags }}"
+
+      - name: Build (C++26)
+        if: matrix.platform.supports_cpp26 == 'true'
+        run: |
+          .github/scripts/build_and_test.sh 26 "${{ matrix.platform.flags }}"
