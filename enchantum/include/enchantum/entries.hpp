@@ -52,9 +52,28 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 namespace details {
 
   template<typename E>
-  consteval std::size_t sort_unique(std::meta::info* data, std::size_t size)
+  consteval std::size_t sort_unique(std::vector<std::meta::info>& info)
   {
     using T = std::underlying_type_t<E>;
+
+
+    if constexpr(is_bitflag<E>)
+    {
+      using U = std::make_unsigned_t<T>;
+      for(std::size_t i =0;i<info.size();)
+      {
+        auto u = static_cast<U>(std::meta::extract<E>(info[i]));
+        // is not pow of 2 or 0
+        if((u&(u-1)) != 0)
+          info.erase(info.begin() + i);
+        else
+          ++i;
+      }
+    }
+
+    std::meta::info* data = info.data();
+    std::size_t size = info.size();
+
     for (std::size_t i = 0; i < size; ++i) {
       for (std::size_t j = 0; j + 1 < size - i; ++j) {
         if (static_cast<T>(std::meta::extract<E>(data[j])) > static_cast<T>(std::meta::extract<E>(data[j + 1]))) {
@@ -73,6 +92,7 @@ namespace details {
       if (static_cast<T>(std::meta::extract<E>(data[i])) != static_cast<T>(std::meta::extract<E>(data[newsize - 1])))
         data[newsize++] = data[i];
 
+    
     return newsize;
   }
 
@@ -80,7 +100,7 @@ namespace details {
   template<typename E>
   consteval auto get_size(std::vector<std::meta::info>&& enums) 
   {
-    auto newsize = details::sort_unique<E>(enums.data(),enums.size());
+    auto newsize = details::sort_unique<E>(enums);
     std::size_t sz=0;
     for(std::size_t i =0;i<newsize;++i )
         sz += std::meta::annotations_of_with_type(enums[i],^^enchantum::ignore_t).empty(); 
@@ -104,7 +124,7 @@ constexpr auto get_entries()
     constexpr static auto elements = [&]() {
       LenAndValues ret{};
       auto refl = std::meta::enumerators_of(^^E);
-      details::sort_unique<E>(refl.data(),refl.size());
+      details::sort_unique<E>(refl);
       for(std::size_t i =0;i<size;++i)
       {
         auto currname = std::meta::identifier_of(refl[i]);
@@ -121,7 +141,7 @@ constexpr auto get_entries()
       std::array<char,elements.stringlen> names;
       auto* namesp = names.data();
       auto refl = std::meta::enumerators_of(^^E);
-      details::sort_unique<E>(refl.data(),refl.size());
+      details::sort_unique<E>(refl);
 
       for(std::size_t i =0;i<size;++i)
       {
@@ -485,6 +505,8 @@ template<typename E>
 inline constexpr bool is_contiguous_bitflag = [](const auto is_bitflag) {
   if constexpr (is_bitflag.value) {
     constexpr auto& enums = entries<E>;
+    if(enums.empty())
+      return false;
     using T               = std::underlying_type_t<E>;
     for (auto i = std::size_t{has_zero_flag<E>}; i < enums.size() - 1; ++i)
       if (T(enums[i].first) << 1 != T(enums[i + 1].first))
