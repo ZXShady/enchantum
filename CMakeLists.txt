@@ -9,7 +9,7 @@ if(POLICY CMP0128)
     cmake_policy(SET CMP0128 NEW)
 endif()
 
-set(INCDIR "${CMAKE_CURRENT_SOURCE_DIR}/enchantum/include")
+set(INCDIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 file(GLOB_RECURSE INCS "${INCDIR}/*.hpp")
 
 add_library(enchantum INTERFACE ${INCS})
