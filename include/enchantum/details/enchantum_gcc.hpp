@@ -8,6 +8,14 @@
 #include <type_traits>
 #include <utility>
 
+#if __GNUC__ <= 10
+    // GCC 10 does not have it
+  #define CAST(type, value) static_cast<type>(value)
+#else
+    // __builtin_bit_cast used to silence errors when casting out of unscoped enums range
+  #define CAST(type, value) __builtin_bit_cast(type, value)
+#endif
+
 #if defined(__has_include) && __has_include(<bits/char_traits.h>)
   #include <bits/char_traits.h>
 #endif
@@ -113,7 +121,11 @@ namespace details {
     return __PRETTY_FUNCTION__ + SZC("constexpr auto enchantum::details::var_name() [with auto ...Vs = {");
   }
 
-
+  template<auto... Vs>
+  constexpr auto var_name2() noexcept
+  {
+    return SZC(__PRETTY_FUNCTION__) - SZC("constexpr auto enchantum::details::var_name2() [with auto ...Vs = {}]");
+  }
   constexpr bool is_out_of_range_parse(const char* str, const std::size_t least_length_when_casting, const std::size_t array_size)
   {
     for (std::size_t index = 0; index < array_size; ++index) {
@@ -175,19 +187,11 @@ namespace details {
 
 
       constexpr auto str = [](const auto dependant) {
-#if __GNUC__ <= 10
-      // GCC 10 does not have it
-  #define CAST(type, value) static_cast<type>(value)
-#else
-      // __builtin_bit_cast used to silence errors when casting out of unscoped enums range
-  #define CAST(type, value) __builtin_bit_cast(type, value)
-#endif
         // dummy 0
         if constexpr (sizeof(dependant) && is_bitflag<E>) // sizeof... to make contest dependant
           return details::var_name<E{}, CAST(E, static_cast<Under>(Underlying{1} << Is))..., 0>();
         else
           return details::var_name<CAST(E, static_cast<Under>(static_cast<decltype(Min)>(Is) + Min))..., 0>();
-#undef CAST
       }(0);
 
       constexpr auto enum_in_array_len = details::enum_in_array_name_size<E{}>();
@@ -222,28 +226,99 @@ namespace details {
     return data;
   }
 
-  template<typename E, auto Min, std::size_t... Is>
-  constexpr bool is_out_of_range(std::index_sequence<Is...>) noexcept
-  {
-    constexpr auto ArraySize = sizeof...(Is);
-    using Under              = std::underlying_type_t<E>;
+    constexpr std::int32_t count_up_to(std::int32_t n) {
+      if (n < 0) {
+          return 0;
+      }
 
-#if __GNUC__ <= 10
-    // GCC 10 does not have it
-  #define CAST(type, value) static_cast<type>(value)
-#else
-    // __builtin_bit_cast used to silence errors when casting out of unscoped enums range
-  #define CAST(type, value) __builtin_bit_cast(type, value)
-#endif
-    constexpr auto str = details::var_name<CAST(E, static_cast<Under>(static_cast<decltype(Min)>(Is) + Min))..., 0>();
-#undef CAST
+      std::int32_t total = 0;
+      std::int32_t start = 0;
+      std::int32_t digits = 1;
+
+      while (start <= n) {
+          std::int32_t power = 1;
+
+        switch (digits) {
+            case 1:
+                power = 10;
+                break;
+            case 2:
+                power = 100;
+                break;
+            case 3:
+                power = 1000;
+                break;
+            case 4:
+                power = 10000;
+                break;
+            case 5:
+                power = 100000;
+                break;
+            case 6:
+                power = 1000000;
+                break;
+            case 7:
+                power = 10000000;
+                break;
+            case 8:
+                power = 100000000;
+                break;
+            case 9:
+                power = 1000000000;
+                break;
+        }
+
+
+          const auto end = (n < power - 1) ? n : power-1;
+
+          total += (end - start + 1) * digits;
+
+          start = end + 1;
+          digits++;
+      }
+
+      return total;
+    }
+    constexpr std::int32_t count_posnums(std::int32_t a,std::int32_t b) {
+      return a > b ? 0 : details::count_up_to(b) - details::count_up_to(a - 1);
+    }
+    constexpr std::int32_t count_chars(std::int32_t a, std::int32_t b) {
+        if (a > b) {
+            return 0;
+        }
+
+        if (a < 0 && b < 0) {
+            // turn them positive and add the negative signs
+            return count_posnums(-b, -a) + (b - a + 1);
+        }
+
+        // +b
+        if (a < 0) {
+            return count_posnums(1, -a)
+                 + count_posnums(0, b)
+                 + (-a); // negative signs
+        }
+
+        // both positive
+        return count_posnums(a, b);
+    }
+
+
+
+
+  template<typename E,std::int32_t... Is>
+  constexpr auto is_out_of_range( std::int32_t Min0,std::int32_t Max0,std::int32_t Min1,std::int32_t Max1, std::integer_sequence<int32_t,Is...>) noexcept
+  {
+    auto str = details::var_name2<CAST(E, static_cast<std::underlying_type_t<E>>(Is))...>();
+    const auto totalNumbers = static_cast<std::size_t>(Max0-Min0 + Max1-Min1 + 2);
 
     constexpr auto length_of_enum_in_template_array_casting = details::length_of_enum_in_template_array_if_casting<E>();
 
-    return details::is_out_of_range_parse(
-      /*str = */ str,
-      /*least_length_when_casting=*/SZC("(") + length_of_enum_in_template_array_casting + SZC(")0"),
-      /*array_size = */ ArraySize);
+    const auto total = (SZC("(") + length_of_enum_in_template_array_casting + SZC(")")) * totalNumbers;
+    str -= 2*(totalNumbers-1);
+    str -= total;
+    str -= details::count_chars(Min0,Max0) + details::count_chars(Min1,Max1);
+    return str != 0;
   }
 
 
@@ -256,3 +331,5 @@ namespace details {
 #if __GNUC__ <= 10
   #pragma GCC diagnostic pop
 #endif
+
+#undef CAST

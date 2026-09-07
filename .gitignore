@@ -26,9 +26,7 @@ cmake_install.cmake
 
 Testing
 Debug/
-build/
-buildClang/
-buildGCC/
+build*/
 CMakeFiles/
 .vs/
 benchmarks/time.py

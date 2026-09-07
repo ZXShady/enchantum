@@ -56,6 +56,12 @@ namespace details {
     //auto __cdecl f<class std::array<enum `anonymous namespace'::UnscopedAnon,32>{enum `anonymous-namespace'::UnscopedAnon
     return __FUNCSIG__ + SZC("auto __cdecl enchantum::details::var_name<");
   }
+  template<auto... Vs>
+  constexpr auto __cdecl var_name2() noexcept
+  {
+    // !__FUNCSIG__[1000000];
+    return SZC(__FUNCSIG__) - SZC("auto __cdecl enchantum::details::var_name2<>(void) noexcept");
+  }
   template<typename IntType>
   constexpr bool is_out_of_range_parse(const char*       str,
                                        const bool        skip_work_if_neg,
@@ -218,42 +224,198 @@ namespace details {
     return data;
   }
 
+  constexpr uint64_t count16(uint64_t min) {
+    auto total = uint64_t(0);
+    
+    if(min >= 0x1000000000000000ull && min <= 0xffffffffffffffffull)
+    {
+        total += (min-0x1000000000000000ull+1)*16;
+        min = 0x1000000000000000ull-1;
+    }
+    
 
-  template<typename E, auto Min, std::size_t... Is>
-  constexpr bool is_out_of_range(std::index_sequence<Is...>) noexcept
+    if(min >= 0x100000000000000ull && min <= 0xfffffffffffffffull)
+    {
+        total += (min-0x100000000000000ull+1)*15;
+        min = 0x100000000000000ull-1;
+    }
+    
+
+    if(min >= 0x10000000000000ull && min <= 0xffffffffffffffull)
+    {
+        total += (min-0x10000000000000ull+1)*14;
+        min = 0x10000000000000ull-1;
+    }
+    
+
+    if(min >= 0x1000000000000ull && min <= 0xfffffffffffffull)
+    {
+        total += (min-0x1000000000000ull+1)*13;
+        min = 0x1000000000000ull-1;
+    }
+    
+
+    if(min >= 0x100000000000ull && min <= 0xffffffffffffull)
+    {
+        total += (min-0x100000000000ull+1)*12;
+        min = 0x100000000000ull-1;
+    }
+    
+
+    if(min >= 0x10000000000ull && min <= 0xfffffffffffull)
+    {
+        total += (min-0x10000000000ull+1)*11;
+        min = 0x10000000000ull-1;
+    }
+    
+
+    if(min >= 0x1000000000ull && min <= 0xffffffffffull)
+    {
+        total += (min-0x1000000000ull+1)*10;
+        min = 0x1000000000ull-1;
+    }
+    
+
+    if(min >= 0x100000000ull && min <= 0xfffffffffull)
+    {
+        total += (min-0x100000000ull+1)*9;
+        min = 0x100000000ull-1;
+    }
+    
+
+    if(min >= 0x10000000ull && min <= 0xffffffffull)
+    {
+        total += (min-0x10000000ull+1)*8;
+        min = 0x10000000ull-1;
+    }
+    
+
+    if(min >= 0x1000000ull && min <= 0xfffffffull)
+    {
+        total += (min-0x1000000ull+1)*7;
+        min = 0x1000000ull-1;
+    }
+    
+
+    if(min >= 0x100000ull && min <= 0xffffffull)
+    {
+        total += (min-0x100000ull+1)*6;
+        min = 0x100000ull-1;
+    }
+    
+
+    if(min >= 0x10000ull && min <= 0xfffffull)
+    {
+        total += (min-0x10000ull+1)*5;
+        min = 0x10000ull-1;
+    }
+    
+
+    if(min >= 0x1000ull && min <= 0xffffull)
+    {
+        total += (min-0x1000ull+1)*4;
+        min = 0x1000ull-1;
+    }
+    
+
+    if(min >= 0x100ull && min <= 0xfffull)
+    {
+        total += (min-0x100ull+1)*3;
+        min = 0x100ull-1;
+    }
+    
+
+    if(min >= 0x10ull && min <= 0xffull)
+    {
+        total += (min-0x10ull+1)*2;
+        min = 0x10ull-1;
+    }
+    
+
+    if(min >= 0x0ull && min <= 0xfull)
+    {
+        total += (min-0x0ull+1)*1;
+        min = 0x0ull;
+    }
+    
+    return total;
+  }
+  constexpr uint8_t count_letters(uint64_t x) {
+    // clang-format off
+      if(x <= 0xfull)               return 1;
+      if(x <= 0xffull)              return 2;
+      if(x <= 0xfffull)             return 3;
+      if(x <= 0xffffull)            return 4;
+      if(x <= 0xfffffull)           return 5;
+      if(x <= 0xffffffull)          return 6;
+      if(x <= 0xfffffffull)         return 7;
+      if(x <= 0xffffffffull)        return 8;
+      if(x <= 0xfffffffffull)       return 9;
+      if(x <= 0xffffffffffull)      return 10;
+      if(x <= 0xfffffffffffull)     return 11;
+      if(x <= 0xffffffffffffull)    return 12;
+      if(x <= 0xfffffffffffffull)   return 13;
+      if(x <= 0xffffffffffffffull)  return 14;
+      if(x <= 0xfffffffffffffffull) return 15;
+    // clang-format on
+      return 16;
+  }
+
+constexpr uint64_t count_numbers(int64_t min,int64_t max,int treat_as)
+{
+    if(max < min)
+      return 0;
+    if(min < 0 || max < 0)
+    {
+        uint64_t len = 0;
+        switch(treat_as) 
+        {
+            case sizeof(char):
+            for(int64_t i = min;i <= max;++i)
+                len += count_letters(static_cast<unsigned char>(i));
+            break;
+            case sizeof(short):
+            for(int64_t i = min;i <=max;++i)
+                len += count_letters(static_cast<unsigned short>(i));
+            break;
+            case sizeof(int):
+            for(int64_t i = min;i <=max;++i)
+                len += count_letters(static_cast<unsigned int>(i));
+            break;
+            case sizeof(long long):
+              return std::uint64_t(max-min+1)*16;
+            // for(int64_t i = min;i <= max;++i) 
+                // len += count_letters(static_cast<unsigned long long>(i));
+            break;
+        }
+        return len;
+        // + details::count16(std::uint64_t(max));
+    }
+
+    return details::count16(std::uint64_t(max))-details::count16(std::uint64_t(min)-1);
+}
+
+
+  template<typename E,std::int32_t... Is>
+  constexpr auto is_out_of_range( std::int32_t Min0,std::int32_t Max0,std::int32_t Min1,std::int32_t Max1, std::integer_sequence<int32_t,Is...>) noexcept
   {
-    constexpr auto ArraySize = sizeof...(Is);
-    using MinT               = decltype(Min);
-    using Under              = std::underlying_type_t<E>;
-
-#if ENCHANTUM_ENABLE_MSVC_SPEEDUP
-    constexpr auto skip_work_if_neg = std::is_unsigned_v<Under> || sizeof(Under) <= 2 ? 0 :
-  // MSVC 19.31 and below don't cast int/unsigned int into `unsigned long long` (std::uint64_t)
-  // While higher versions do cast them
-  #if _MSC_VER <= 1931
-      sizeof(Under) == 4
-  #else
-      std::is_same_v<Under, char32_t>
-  #endif
-      ? sizeof(char32_t) * 2 - 1
-      : sizeof(std::uint64_t) * 2 - 1 -
-        (sizeof(Under) == 8); // subtract 1 more from uint64_t since I am adding it in skip_if_cast_count
-#else
-    constexpr auto skip_work_if_neg = false;
-#endif
-    const auto str           = details::var_name<static_cast<E>(static_cast<MinT>(Is) + Min)..., 0>();
-    const auto type_name_len = details::raw_type_name_func<E>().size() - 1;
-
-    return details::is_out_of_range_parse(
-      /*str = */ str,
-      skip_work_if_neg,
-#if _MSC_VER <= 1924
-      /*least_length_when_casting=*/SZC("0x0"),
-#else
-      /*least_length_when_casting=*/SZC("(enum ") + type_name_len + SZC(")0x0") + (sizeof(E) == 8),
-#endif
-      /*min = */ static_cast<std::underlying_type_t<E>>(Min),
-      /*array_size = */ ArraySize);
+    using T = std::underlying_type_t<E>;
+    const auto totalNumbers = static_cast<std::size_t>(Max0-Min0 + Max1-Min1 +2);
+    auto len =  enchantum::details::var_name2<E(Is)...>();
+    constexpr auto size = std::is_same_v<T,int> || std::is_same_v<T, long> ? sizeof(long long) : sizeof(T);
+    #if _MSC_VER > 1924
+    len -= (SZC("(enum )") + enchantum::raw_type_name<E>.size()) * totalNumbers;
+    #endif
+    len -= (totalNumbers-1) * SZC(",");
+    len -= totalNumbers * SZC("0x");
+    if constexpr(std::is_same_v<T,signed long long> || std::is_same_v<T,unsigned long long>)
+        len -= (Max1-Min1+1) * SZC("0");
+      // char c[1];
+      // c[details::count_numbers(Min0,Max0,size)] = 0;
+      // + details::count_numbers(Min1,Max1,size)] = 0;
+      len -= details::count_numbers(Min0,Max0,size) + details::count_numbers(Min1,Max1,size);
+      // c[details::count_numbers(Min1,Max1,size)] = 0;
+      return len != 0;
   }
 
 } // namespace details

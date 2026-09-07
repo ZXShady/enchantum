@@ -25,6 +25,13 @@
   #define ENCHANTUM_MIN_RANGE (-ENCHANTUM_MAX_RANGE)
 #endif
 
+#ifndef ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY
+  #define ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY 2
+#endif
+#if ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY < 0
+  #error ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY must not be a negative number.
+#endif
+
 namespace enchantum {
 
 template<typename T, bool = std::is_enum_v<T>>
