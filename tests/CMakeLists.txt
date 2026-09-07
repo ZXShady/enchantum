@@ -65,6 +65,35 @@ if(STD LESS 26)
 endif()
 target_sources(tests PRIVATE ${SRCS})
 
+file(GLOB FAIL_SRCS CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/fail/*.cpp"
+)
+
+foreach(FAIL_SRC IN LISTS FAIL_SRCS)
+    get_filename_component(FAIL_NAME "${FAIL_SRC}" NAME_WE)
+    # My God you are a savior my man thanks!
+    # Source - https://stackoverflow.com/a/30191576
+    # Posted by Fraser
+    # Retrieved 2026-09-07, License - CC BY-SA 3.0
+    set(FAIL_TEST fail_${FAIL_NAME})
+    add_executable(${FAIL_TEST} ${FAIL_SRC})
+    set_target_properties(${FAIL_TEST} PROPERTIES
+                          EXCLUDE_FROM_ALL TRUE
+                          EXCLUDE_FROM_DEFAULT_BUILD TRUE)
+    # Provide a PP definition to target the appropriate part of
+    # "will_fail.cpp", or provide separate files per test.
+    target_link_libraries(${FAIL_TEST} PRIVATE enchantum::enchantum)
+
+    # Add the tests.  These invoke "cmake --build ..." which is a
+    # cross-platform way of building the given target.
+    add_test(NAME ${FAIL_TEST}
+         COMMAND ${CMAKE_COMMAND} --build . --target ${FAIL_TEST} --config $<CONFIGURATION>
+         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+    # Expect these tests to fail (i.e. cmake --build should return
+    # a non-zero value)
+    set_tests_properties(${FAIL_TEST} PROPERTIES WILL_FAIL TRUE)
+endforeach()
+
 
 add_executable(tests_config)
 target_compile_features(tests_config PRIVATE cxx_std_17)

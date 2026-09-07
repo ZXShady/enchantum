@@ -43,32 +43,12 @@ namespace details {
     return __PRETTY_FUNCTION__ + SZC("auto enchantum::details::var_name() [Vs = <");
   }
 
-
-  constexpr bool is_out_of_range_parse(
-    std::size_t       index_check,
-    const char*       str,
-    const std::size_t least_length_when_casting,
-    const std::size_t array_size)
+  template<auto... Vs>
+  constexpr auto var_name2() noexcept
   {
-    (void)index_check;
-    for (std::size_t index = 0; index < array_size; ++index) {
-#if __clang_major__ > 12
-      // check if cast (starts with '(')
-      if (str[index_check] == '(')
-#else
-      // check if it is a number or negative sign
-      if (str[0] == '-' || (str[0] >= '0' && str[0] <= '9'))
-#endif
-      {
-        str = __builtin_char_memchr(str + least_length_when_casting, ',', UINT8_MAX) + SZC(", ");
-      }
-      else {
-        return true;
-      }
-    }
-    return false;
+    // "auto enchantum::details::var_name() [Vs = <(A)0, a, b, c, e, d, (A)6>]"
+    return static_cast<int32_t>(SZC(__PRETTY_FUNCTION__) - SZC("auto enchantum::details::var_name2() [Vs = <>]"));
   }
-
 
   template<bool IsBitFlag, typename IntType>
   constexpr void parse_string(
@@ -175,29 +155,99 @@ namespace details {
     __builtin_memcpy(data.strings.data(), elements_local.strings, data.strings.size());
     return data;
   }
+    constexpr std::int32_t count_up_to(std::int32_t n) {
+      if (n < 0) {
+          return 0;
+      }
 
-  template<typename E, auto Min, std::size_t... Is>
-  constexpr bool is_out_of_range(std::index_sequence<Is...>) noexcept
+      std::int32_t total = 0;
+      std::int32_t start = 0;
+      std::int32_t digits = 1;
+
+      while (start <= n) {
+          std::int32_t power = 1;
+
+        switch (digits) {
+            case 1:
+                power = 10;
+                break;
+            case 2:
+                power = 100;
+                break;
+            case 3:
+                power = 1000;
+                break;
+            case 4:
+                power = 10000;
+                break;
+            case 5:
+                power = 100000;
+                break;
+            case 6:
+                power = 1000000;
+                break;
+            case 7:
+                power = 10000000;
+                break;
+            case 8:
+                power = 100000000;
+                break;
+            case 9:
+                power = 1000000000;
+                break;
+        }
+
+
+          const auto end = (n < power - 1) ? n : power-1;
+
+          total += (end - start + 1) * digits;
+
+          start = end + 1;
+          digits++;
+      }
+
+      return total;
+    }
+    constexpr std::int32_t count_posnums(std::int32_t a,std::int32_t b) {
+      return a > b ? 0 : details::count_up_to(b) - details::count_up_to(a - 1);
+    }
+    constexpr std::int32_t count_chars(std::int32_t a, std::int32_t b) {
+        if (a > b) {
+            return 0;
+        }
+
+        if (a < 0 && b < 0) {
+            // turn them positive and add the negative signs
+            return count_posnums(-b, -a) + (b - a + 1);
+        }
+
+        // +b
+        if (a < 0) {
+            return count_posnums(1, -a)
+                 + count_posnums(0, b)
+                 + (-a); // negative signs
+        }
+
+        // both positive
+        return count_posnums(a, b);
+    }
+
+
+
+
+  template<typename E,std::int32_t... Is>
+  constexpr auto is_out_of_range( std::int32_t Min0,std::int32_t Max0,std::int32_t Min1,std::int32_t Max1, std::integer_sequence<int32_t,Is...>) noexcept
   {
-    using MinT       = decltype(Min);
-
-    constexpr auto ArraySize = sizeof...(Is);
-    const auto     str       = details::var_name<static_cast<E>(static_cast<MinT>(Is) + Min)...,0>();
-
-    constexpr auto enum_in_array_name = details::enum_in_array_name(raw_type_name<E>, is_scoped_enum<E>);
-    constexpr auto enum_in_array_len  = enum_in_array_name.size();
-    constexpr std::size_t index_check = enum_in_array_name.size() != 0 && enum_in_array_name[0] == '(' ? 1 : 0;
-    (void)enum_in_array_len; // not used until Clang 13
-    return details::is_out_of_range_parse(
-      /*index_check=*/index_check,
-      /*str = */ str,
-#if __clang_major__ > 12
-      /*least_length_when_casting=*/SZC("(") + enum_in_array_len + SZC(")0"),
-#else
-      /*least_length_when_casting=*/1,
-#endif
-      /*array_size = */ ArraySize);
-  } 
+    auto     str       = details::var_name2<static_cast<E>(Is)...>();
+    const auto totalNumbers = static_cast<std::size_t>(Max0-Min0 + Max1-Min1 + 2);
+    #if __clang_major__ > 12
+    str -= (SZC("(") + raw_type_name<E>.size() + SZC(")")) * totalNumbers;
+    #endif
+    
+    str -= 2*(totalNumbers-1);
+    str -= details::count_chars(Min0,Max0) + details::count_chars(Min1,Max1);
+    return str != 0;
+  }
 
 } // namespace details
 

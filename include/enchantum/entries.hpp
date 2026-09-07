@@ -30,12 +30,7 @@
 #include <type_traits>
 #include <utility>
 
-#ifndef ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY
-  #define ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY 2
-#endif
-#if ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY < 0
-  #error ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY must not be a negative number.
-#endif
+
 namespace enchantum {
 
 #ifdef __cpp_lib_to_underlying
@@ -178,6 +173,8 @@ constexpr auto get_entries()
 
 namespace details {
 
+
+
   template<typename Int>
   constexpr std::size_t get_index_sequence_max(
     const bool        is_bitflag,
@@ -220,11 +217,24 @@ namespace details {
                                                              std::is_signed_v<std::underlying_type_t<E>>)>{});
 
 
-  template<typename E, auto Min, decltype(Min) Max>
-  inline constexpr bool has_a_value_in = details::is_out_of_range<E, Min>(
-    std::make_index_sequence<
-      details::get_index_sequence_max(false, has_fixed_underlying_type<E>, sizeof(E), Min, Max, std::is_signed_v<std::underlying_type_t<E>>)>{});
+  template<typename,typename>
+  struct conc;
 
+  template<int32_t... Is,int32_t... Js>
+  struct conc<std::integer_sequence<int32_t,Is...>,std::integer_sequence<int32_t,Js...>>
+  {
+    using type = std::integer_sequence<int32_t,Is...,Js...>;
+  };
+  template<int32_t,typename T>
+  struct int_seq_impl;
+  template<int32_t Min,int32_t... Is>
+  struct int_seq_impl<Min,std::integer_sequence<int32_t,Is...>>
+  {
+    using type = std::integer_sequence<int32_t,(Is+Min)...>;
+  };
+  
+  template<int32_t Min,int32_t Max>
+  using int_seq =typename int_seq_impl<Min,std::make_integer_sequence<int32_t,Max-Min+1>> ::type;
 
   // Thanks https://en.cppreference.com/w/cpp/utility/intcmp.html
   template<typename T, typename U>
@@ -266,18 +276,18 @@ namespace details {
   constexpr auto get_reflection_data() noexcept
   {
     constexpr auto elements = reflection_data_impl<E, NullTerminated>.elements;
-    using StringLengthType = std::conditional_t<(elements.total_string_length < UINT8_MAX), std::uint8_t, std::uint16_t>;
 #if ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY >= 2
     if constexpr (
   #if defined(__clang_major__) && __clang_major__ >= 20
       has_fixed_underlying_type<E> &&
   #endif
       !details::has_specialized_traits<E> && !is_bitflag<E> && !std::is_same_v<std::underlying_type_t<E>, bool>) {
-  #define ENCHANTUM_ERROR_STRING                                                    \
-    "enchantum has detected that this enum is not fully reflected. Please look at " \
-    "https://github.com/ZXShady/enchantum/blob/main/docs/"                          \
-    "features.md#enchantum_check_out_of_bounds_by "                                 \
-    "for more information"
+  #define ENCHANTUM_ERROR_STRING                                                                                                                        \
+    "\n\n\n===================ERROR===================\n"                                                                                               \
+    "enchantum has detected that this enum is not fully reflected.\n"                                                                                   \
+    "Please look at https://github.com/ZXShady/enchantum/blob/main/docs/features.md#enchantum_check_out_of_bounds_by\n"                                 \
+    "for more information\n"                                                                                                                            \
+    "===========================================\n\n\n"
       // TODO: switch to new check for those 2 compilers
   #if defined(__NVCOMPILER) || defined(__RESHARPER__)
       static_assert(elements.valid_count == reflection_data_impl<E, NullTerminated,
@@ -294,28 +304,30 @@ namespace details {
       constexpr auto scale = ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY;
 
       constexpr auto tmax = std::numeric_limits<T>::max();
-
-      constexpr bool can_check_upper = max < tmax && max <= tmax / scale;
-
-      if constexpr (can_check_upper) {
-        constexpr bool upper_has_value = has_a_value_in<E, max + 1, max * scale>;
-
-        static_assert(!upper_has_value, ENCHANTUM_ERROR_STRING);
         constexpr auto min             = +enum_traits<E>::min;
         constexpr auto tmin            = std::numeric_limits<T>::min();
-        constexpr bool can_check_lower = min > tmin && min >= tmin / scale;
-        if constexpr (!upper_has_value && can_check_lower) {
-          if constexpr (min < 0)
-            static_assert(!has_a_value_in<E, min * scale, min - 1>, ENCHANTUM_ERROR_STRING);
-          else
-            static_assert(!has_a_value_in<E, min + 1, min * scale>, ENCHANTUM_ERROR_STRING);
+        constexpr bool can_check_lower = min >= tmin && min >= tmin / scale;
+      constexpr bool can_check_upper = max <= tmax && max <= tmax / scale;
+      if constexpr(can_check_lower && can_check_upper) {
+        constexpr auto Min1 = static_cast<int32_t>(max)+1;
+        constexpr auto Max1 = static_cast<int32_t>(max)*scale;
+        if constexpr(std::is_unsigned_v<T>)
+        {
+          constexpr bool is_out_of_range = details::is_out_of_range<E>(0,-1,Min1,Max1,int_seq<Min1,Max1>{});
+          static_assert(!is_out_of_range,ENCHANTUM_ERROR_STRING);
+        } else {
+            constexpr auto Min0 = static_cast<int32_t>(min)*scale;
+            constexpr auto Max0 = static_cast<int32_t>(min)-1;
+            constexpr bool is_out_of_range = details::is_out_of_range<E>(Min0,Max0,Min1,Max1,typename conc<int_seq<Min0,Max0>,int_seq<Min1,Max1>>::type{});
+            static_assert(!is_out_of_range,ENCHANTUM_ERROR_STRING);
         }
       }
-  #endif
     }
 #endif
 #undef ENCHANTUM_ERROR_STRING
+#endif
 
+    using StringLengthType = std::conditional_t<(elements.total_string_length < UINT8_MAX), std::uint8_t, std::uint16_t>;
     FinalReflectionResult<E, StringLengthType, elements.valid_count> ret;
     std::size_t                                                      i            = 0;
     StringLengthType                                                 string_index = 0;
