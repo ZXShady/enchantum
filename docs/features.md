@@ -8,21 +8,18 @@ All non-`void` functions are `[[nodiscard]]` unless explicitly said otherwise.
 
 Quick Reference
 
-**Concepts And Traits**:
+**Concepts, Annotations and Traits**:
   - [Enum](#enum)
   - [SignedEnum](#signedenum)
   - [UnsignedEnum](#unsignedenum)
   - [ScopedEnum / is_scoped_enum](#scopedenum--is_scoped_enum)
-  - [UnscopedEnum / is_scoped_enum](#unscopedenum--is_unscoped_enum)
-  - [ContiguousEnum](#contiguousenum)
-  - [BitFlagEnum](#bitflagenum)
-  - [ContiguousBitFlagEnum](#contiguousbitflagenum)
+  - [UnscopedEnum / is_unscoped_enum](#unscopedenum--is_unscoped_enum)
+  - [ContiguousEnum / is_contiguous_bitflag](#is_contiguous--contiguousenum)
+  - [BitFlagEnum / is_bitflag](#is_bitflag--bitflagenum)
+  - [ContiguousBitFlagEnum / is_contiguous_bitflag](#is_contiguous_bitflag--contiguousbitflagenum)
   - [EnumOfUnderlying](#enumofunderlying)
   - [EnumFixedUnderlying](#enumfixedunderlying)
   - [has_zero_flag](#has_zero_flag)
-  - [is_contiguous](#is_contiguous)
-  - [is_bitflag](#is_bitflag)
-  - [is_contiguous_bitflag](#is_contiguous_bitflag)
   - [enum_traits](#enum_traits)
   - [BinaryPredicate](#binary_predicate)
   - [ignore](#ignore)
@@ -174,13 +171,31 @@ enum UnscopedColor { Red, Green, Blue };
 static_assert(enchantum::UnscopedEnum<UnscopedColor>);
 ```
 
-## BitFlagEnum
-The `BitFlagEnum` concept is used for enums that support main bitwise operations, such as `&`, `|` , `~` , `&=` and `|=` . This concept can be used to check if an enum is intended for bitflag operations, where each enum value represents a distinct bit.
+## is_bitflag / BitFlagEnum
 
+
+Checks if an enum is a bitflag enum, i.e., an enum that supports bitwise operations such as `&`, `|`, and `~`.
+you can override this variable for specific enums if needed (e.g `operator&` returns a proxy comparable to bool and convertible to the enum value )
+or make it `false` to disallow treating as bitflag.
+  
+The `BitFlagEnum` concept is used for enums that support main bitwise operations.
 Enums that satify this concept have their 2^N members and 0 value reflected.
 
 ```cpp
-#include <enchantum/common.hpp>
+// defined in header common.hpp
+
+template<Enum E>
+inline constexpr bool is_bitflag =  
+(
+       requires(E e) { { e & e } -> std::same_as<E>; }
+    || requires(E e) { { e & e } -> std::same_as<bool>; }
+) &&
+requires(E e) {
+    { ~e } -> std::same_as<E>;
+    { e | e } -> std::same_as<E>;
+    { e &= e } -> std::same_as<E&>;
+    { e |= e } -> std::same_as<E&>;
+};
 
 template<typename T>
 concept BitFlagEnum = Enum<T> && is_bitflag<T>;
@@ -204,14 +219,26 @@ Flags operator~(Flags x);
 Flags& operator&=(Flags a,Flags b);
 Flags& operator|=(Flags a,Flags b);
 
-
+static_assert(enchantum::is_bitflag<Flags>);
 static_assert(enchantum::BitFlagEnum<Flags>);
 ```
 
-### ContiguousBitFlagEnum
+### is_contiguous_bitflag / ContiguousBitFlagEnum
+
+Checks whether a bitflag enum is contiguous. All members are sequentially powers of 2 (excluding `0` value).
+
+Defined in header `enchantum.hpp`
+
 The `ContiguousBitFlagEnum` concept subsumes `BitFlagEnum` and checks whether the flag values are contiguous.
 
 ```cpp
+// defined in header enchantum.hpp
+template<typename>
+constexpr inline bool is_contiguous_bitflag = false;
+
+template<BitFlagEnum E>
+constexpr inline bool is_contiguous_bitflag<E> = /*implementation details*/;
+
 template<typename E>
 concept ContiguousBitFlagEnum = BitFlagEnum<E> && is_contiguous_bitflag<E>;
 ```
@@ -231,6 +258,7 @@ enum class ContiguousFlags : unsigned int {
 ENCHANTUM_DEFINE_BITWISE_FOR(ContiguousFlags) 
 
 static_assert(enchantum::ContiguousBitFlagEnum<ContiguousFlags>);
+static_assert(enchantum::is_contiguous_bitflag<ContiguousFlags>);
 
 enum class NonContiguousFlags : unsigned int {
     None = 0,
@@ -241,14 +269,22 @@ enum class NonContiguousFlags : unsigned int {
 ENCHANTUM_DEFINE_BITWISE_FOR(NonContiguousFlags)
 
 static_assert(!enchantum::ContiguousBitFlagEnum<NonContiguousFlags>);
+static_assert(!enchantum::is_contiguous_bitflag<NonContiguousFlags>);
 
 ```
 
-### `ContiguousEnum`
+### is_contiguous / ContiguousEnum
 
-The ContiguousEnum concept is used for enums where the underlying values are contiguous. For example, `enum { A = 0, B, C }` is a contiguous enum because the underlying values are 0, 1, and 2, respectively.
+The `ContiguousEnum` concept is used for enums where the underlying values are contiguous. For example, `enum { A = 0, B, C }` is a contiguous enum because the underlying values are 0, 1, and 2, respectively.
 
 ```cpp
+// defined in header enchantum.hpp
+template<typename>
+constexpr inline bool is_contiguous = false;
+
+template<Enum E>
+constexpr inline bool is_contiguous<E> = /*implementation details*/;
+
 template<typename E>
 concept ContiguousEnum = Enum<E> && is_contiguous<E>;
 ```
@@ -288,8 +324,8 @@ static_assert(enchantum::EnumOfUnderlying<Status,char>);
 template<typename T>
 concept EnumFixedUnderlying = Enum<T> && requires { T{0}; };
 ```
-- **Description**:
-  Checks whether the enum has an explicit underlying type specified.
+
+Checks whether the enum has an explicit underlying type specified.
 
 > Example usage:
 ```cpp
@@ -316,8 +352,8 @@ template<BitFlagEnum E>
 inline constexpr bool has_zero_flag<E> = /*impl*/;
 
 ```
-**Description**:
-  Checks whether a `BitFlagEnum` has a zero flag (i.e `None` value)
+
+Checks whether a `BitFlagEnum` has a zero flag (i.e `None` value)
 
 > Example usage:
 ```cpp
@@ -1307,84 +1343,6 @@ std::cout << "Circular previous value: " << static_cast<int>(prevCircular) << st
 ```
 
 ---
-
-### `is_bitflag`
-
-```cpp
-template<Enum E>
-inline constexpr bool is_bitflag =  
-(
-       requires(E e) { { e & e } -> std::same_as<E>; }
-    || requires(E e) { { e & e } -> std::same_as<bool>; }
-) &&
-requires(E e) {
-    { ~e } -> std::same_as<E>;
-    { e | e } -> std::same_as<E>;
-    { e &= e } -> std::same_as<E&>;
-    { e |= e } -> std::same_as<E&>;
-};
-```
-
-- **Description**:  
-  Checks if an enum is a bitflag enum, i.e., an enum that supports bitwise operations such as `&`, `|`, and `~`.
-  you can override this variable for specific enums if needed (e.g `operator&` returns a proxy comparable to bool and convertible to the enum value )
-  or make it `false` to disallow treating as bitflag.
-  
-- **Returns**:  
-  `true` if the enum supports bitwise operations, `false` otherwise.
-
-- **Example**:
-```cpp
-#include <enchantum/common.hpp>
-
-enum class Flags : uint32_t {
-    None = 0,
-    FlagA = 1 << 0,
-    FlagB = 1 << 1,
-    FlagC = 1 << 2
-};
-  
-Flags operator~(Flags);
-bool   operator&(Flags, Flags); // can return `Flags` as well
-Flags  operator|(Flags, Flags);
-Flags& operator|=(Flags&, Flags);
-Flags& operator&=(Flags&, Flags);
-
-static_assert(enchantum::is_bitflag<Flags>);  // true
-```
-
-### `is_contiguous`
-
-```cpp
-template<typename>
-constexpr inline bool is_contiguous = false;
-
-template<Enum E>
-constexpr inline bool is_contiguous<E> = /*implementation details*/;
-
-```
-
-Checks whether an enum is contiguous. All members are sequential.
-
-Defined in header `enchantum.hpp`
-
-### `is_contiguous_bitflag`
-
-```cpp
-template<typename>
-constexpr inline bool is_contiguous_bitflag = false;
-
-template<BitFlagEnum E>
-constexpr inline bool is_contiguous_bitflag<E> = /*implementation details*/;
-
-```
-
-Checks whether a bitflag enum is contiguous. All members are sequentially powers of 2 (excluding `0` value).
-
-Defined in header `enchantum.hpp`
-
----
-
 
 ## iostream support
 

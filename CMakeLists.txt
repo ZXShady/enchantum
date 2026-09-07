@@ -13,6 +13,10 @@ set(INCDIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 file(GLOB_RECURSE INCS "${INCDIR}/*.hpp")
 
 add_library(enchantum INTERFACE ${INCS})
+source_group(
+    TREE "${INCDIR}/enchantum"
+    FILES ${INCS}
+)
 add_library(enchantum::enchantum ALIAS enchantum)
 target_compile_features(enchantum INTERFACE cxx_std_17)
  
@@ -21,21 +25,12 @@ target_include_directories(enchantum INTERFACE
     $<INSTALL_INTERFACE:include>
 )
 
-option(ENCHANTUM_BUILD_TESTS "Enable tests for this `enchantum` library" OFF)
-option(ENCHANTUM_ENABLE_MSVC_SPEEDUP "Enable faster but not 100% accurate MSVC enum reflection." ON)
-option(ENCHANTUM_BUILD_BENCHMARKS "Enable compile time benchmarks `enchantum` library" OFF)
-
-target_compile_definitions(enchantum INTERFACE ENCHANTUM_ENABLE_MSVC_SPEEDUP=$<BOOL:${ENCHANTUM_ENABLE_MSVC_SPEEDUP}>)
+option(ENCHANTUM_BUILD_TESTS "Enable tests for enchantum" OFF)
 
 if(ENCHANTUM_BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
 endif()
-
-if(ENCHANTUM_BUILD_BENCHMARKS)
-  add_subdirectory(benchmarks)
-endif()
-
 
 install(TARGETS enchantum
     EXPORT enchantumTargets

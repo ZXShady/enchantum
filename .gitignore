@@ -29,5 +29,5 @@ Debug/
 build*/
 CMakeFiles/
 .vs/
-benchmarks/time.py
-benchmarks/*.cpp
+benchmarks/*
+!benchmarks/*.py
