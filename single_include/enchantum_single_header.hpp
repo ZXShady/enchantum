@@ -1,4 +1,26 @@
+// MIT License - Thanks for using this library!
+// Copyright (c) 2025 ZXShady
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #pragma once
+
+// IWYU pragma: begin_exports
 
 #ifdef ENCHANTUM_CONFIG_FILE
   #include ENCHANTUM_CONFIG_FILE
@@ -17,6 +39,7 @@ using ::std::string_view;
 
 } // namespace enchantum
 #include <array>
+#include <cstddef>
 
 namespace enchantum {
 
@@ -33,7 +56,10 @@ namespace details {
   template<typename T>
   constexpr auto raw_type_name_func() noexcept
   {
-#if defined(__NVCOMPILER)
+#if defined(__RESHARPER__)
+      constexpr std::size_t prefix =0;
+    constexpr auto s = string_view(__rscpp_type_name<T>());
+#elif defined(__NVCOMPILER)
     constexpr std::size_t prefix = 0;
     constexpr auto s = string_view(__PRETTY_FUNCTION__ + SZC("constexpr auto enchantum::details::raw_type_name_func() noexcept [with T = "),
             SZC(__PRETTY_FUNCTION__) - SZC("constexpr auto enchantum::details::raw_type_name_func() noexcept [with T = ]"));
@@ -142,8 +168,8 @@ using ::std::string;
   #include <concepts>
 #endif
 #include <limits>
-#include <string_view>
 #include <type_traits>
+#include <utility>
 
 #ifndef ENCHANTUM_ASSERT
   #include <cassert>
@@ -162,6 +188,13 @@ using ::std::string;
 #endif
 #ifndef ENCHANTUM_MIN_RANGE
   #define ENCHANTUM_MIN_RANGE (-ENCHANTUM_MAX_RANGE)
+#endif
+
+#ifndef ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY
+  #define ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY 2
+#endif
+#if ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY < 0
+  #error ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY must not be a negative number.
 #endif
 
 namespace enchantum {
@@ -378,8 +411,122 @@ namespace details {
 } // namespace details
 } // namespace enchantum
 
-#if defined(__NVCOMPILER)
+// IWYU pragma: begin_exports
+
+namespace enchantum {
+template<typename E>
+struct enum_traits;
+
+#if defined(__cpp_impl_reflection) && __cpp_impl_reflection >= 202506L
+
+struct ignore_t {};
+constexpr inline ignore_t ignore{};
+
+#endif
+
+} // namespace enchantum
+
+#if defined(__cpp_impl_reflection) && __cpp_impl_reflection >= 202506L
+  #include <meta>
+  #include <cstdint>
   
+#else
+  #if defined(__RESHARPER__)
+    
+
+#include <array>
+#include <cstdint>
+#include <initializer_list>
+#include <type_traits>
+#include <utility>
+
+namespace enchantum {
+namespace details {
+
+  // WORKAROUND
+  // resharper seems to not copy values of arrays correctly in constexpr contexts.
+  // it copies the last element of the array to the WHOLE array
+  // giving the array a default value other than default-init fixes the issue
+  // as for why 'Count' is explicitly taken although it is equal to sizeof...(Is)
+  // is to workaround another bug, which seems to think sizeof...(Is) is 0
+  template<std::size_t Count, typename Value, std::size_t... Is>
+  constexpr auto rscpp_make_defaulted_array_of(const Value value, std::index_sequence<Is...>)
+  {
+    return std::array<Value, Count>{(Is, void(), value)...};
+  }
+
+  template<typename E, bool NullTerminated, auto Min, std::size_t... Is>
+  constexpr auto reflect(std::index_sequence<Is...>) noexcept
+  {
+    using MinT = decltype(Min);
+    using T    = std::underlying_type_t<E>;
+    using U    = std::make_unsigned_t<std::conditional_t<std::is_same_v<bool, T>, unsigned char, T>>;
+    constexpr bool        IsBitFlag    = is_bitflag<E>;
+    constexpr std::size_t max_elements = sizeof...(Is) + IsBitFlag;
+
+    constexpr auto elements_local = [] {
+      const char* names[max_elements]{};
+      T           values[max_elements]{};
+      std::size_t count = 0;
+
+      if constexpr (IsBitFlag) {
+        if (const auto* name = __rscpp_enumerator_name(E(0))) {
+          names[count]    = name;
+          values[count++] = 0;
+        }
+
+        for (std::size_t i : {Is...}) {
+          const auto val  = T(U(1) << i);
+          const auto name = __rscpp_enumerator_name(E(val));
+          if (name) {
+            names[count]    = name;
+            values[count++] = val;
+          }
+        }
+      }
+      else {
+        for (std::size_t i = 0; i < max_elements; ++i) {
+          const auto val  = T(MinT(i) + Min);
+          const auto name = __rscpp_enumerator_name(E(val));
+          if (name) {
+            names[count]    = name;
+            values[count++] = val;
+          }
+        }
+      }
+
+      auto ret = ReflectStringReturnValue<T, max_elements>{};
+      for (std::size_t i = 0; i < count; ++i) {
+        const auto        str = names[i] + prefix_length_or_zero<E>;
+        const std::size_t len = __builtin_strlen(str);
+        ret.values[i]         = values[i];
+        ret.string_lengths[i] = len;
+        for (std::size_t j = 0; j < len; ++j)
+          ret.strings[ret.total_string_length + j] = str[j];
+        ret.total_string_length += len + (NullTerminated ? 1 : 0);
+      }
+      ret.valid_count = count;
+      return ret;
+    }();
+
+    using Strings = std::array<char, elements_local.total_string_length>;
+
+    struct {
+      decltype(elements_local) elements;
+      Strings                  strings{};
+    } data = {elements_local};
+
+    const auto size = data.strings.size();
+    const auto str  = data.strings.data();
+    for (std::size_t i = 0; i < size; ++i)
+      str[i] = elements_local.strings[i];
+    return data;
+  }
+
+} // namespace details
+} // namespace enchantum
+  #elif defined(__NVCOMPILER)
+    
 
 #include <array>
 #include <cassert>
@@ -514,8 +661,8 @@ namespace details {
 
 } // namespace details
 } // namespace enchantum
-#elif defined(__clang__)
-  
+  #elif defined(__clang__)
+    
 
 // Clang <= 12 outputs "NUMBER" if casting
 // Clang > 12 outputs "(E)NUMBER".
@@ -554,6 +701,13 @@ namespace details {
   {
     // "auto enchantum::details::var_name() [Vs = <(A)0, a, b, c, e, d, (A)6>]"
     return __PRETTY_FUNCTION__ + SZC("auto enchantum::details::var_name() [Vs = <");
+  }
+
+  template<auto... Vs>
+  constexpr auto var_name2() noexcept
+  {
+    // "auto enchantum::details::var_name() [Vs = <(A)0, a, b, c, e, d, (A)6>]"
+    return static_cast<int32_t>(SZC(__PRETTY_FUNCTION__) - SZC("auto enchantum::details::var_name2() [Vs = <>]"));
   }
 
   template<bool IsBitFlag, typename IntType>
@@ -597,7 +751,7 @@ namespace details {
       }
     }
   }
-  
+
   template<typename E, bool NullTerminated, auto Min, std::size_t... Is>
   constexpr auto reflect(std::index_sequence<Is...>) noexcept
   {
@@ -660,7 +814,96 @@ namespace details {
     } data = {elements_local};
     __builtin_memcpy(data.strings.data(), elements_local.strings, data.strings.size());
     return data;
-  } // namespace details
+  }
+    constexpr std::int32_t count_up_to(std::int32_t n) {
+      if (n < 0) {
+          return 0;
+      }
+
+      std::int32_t total = 0;
+      std::int32_t start = 0;
+      std::int32_t digits = 1;
+
+      while (start <= n) {
+          std::int32_t power = 1;
+
+        switch (digits) {
+            case 1:
+                power = 10;
+                break;
+            case 2:
+                power = 100;
+                break;
+            case 3:
+                power = 1000;
+                break;
+            case 4:
+                power = 10000;
+                break;
+            case 5:
+                power = 100000;
+                break;
+            case 6:
+                power = 1000000;
+                break;
+            case 7:
+                power = 10000000;
+                break;
+            case 8:
+                power = 100000000;
+                break;
+            case 9:
+                power = 1000000000;
+                break;
+        }
+
+          const auto end = (n < power - 1) ? n : power-1;
+
+          total += (end - start + 1) * digits;
+
+          start = end + 1;
+          digits++;
+      }
+
+      return total;
+    }
+    constexpr std::int32_t count_posnums(std::int32_t a,std::int32_t b) {
+      return a > b ? 0 : details::count_up_to(b) - details::count_up_to(a - 1);
+    }
+    constexpr std::int32_t count_chars(std::int32_t a, std::int32_t b) {
+        if (a > b) {
+            return 0;
+        }
+
+        if (a < 0 && b < 0) {
+            // turn them positive and add the negative signs
+            return count_posnums(-b, -a) + (b - a + 1);
+        }
+
+        // +b
+        if (a < 0) {
+            return count_posnums(1, -a)
+                 + count_posnums(0, b)
+                 + (-a); // negative signs
+        }
+
+        // both positive
+        return count_posnums(a, b);
+    }
+
+  template<typename E,std::int32_t... Is>
+  constexpr auto is_out_of_range( std::int32_t Min0,std::int32_t Max0,std::int32_t Min1,std::int32_t Max1, std::integer_sequence<int32_t,Is...>) noexcept
+  {
+    auto     str       = details::var_name2<static_cast<E>(Is)...>();
+    const auto totalNumbers = static_cast<std::size_t>(Max0-Min0 + Max1-Min1 + 2);
+    #if __clang_major__ > 12
+    str -= (SZC("(") + raw_type_name<E>.size() + SZC(")")) * totalNumbers;
+    #endif
+    
+    str -= 2*(totalNumbers-1);
+    str -= details::count_chars(Min0,Max0) + details::count_chars(Min1,Max1);
+    return str != 0;
+  }
 
 } // namespace details
 
@@ -675,8 +918,8 @@ namespace details {
   #endif
 #endif
 #undef SZC
-#elif defined(__GNUC__) || defined(__GNUG__)
-  
+  #elif defined(__GNUC__) || defined(__GNUG__)
+    
 
 #include <array>
 #include <cassert>
@@ -685,7 +928,19 @@ namespace details {
 #include <type_traits>
 #include <utility>
 
-#define ENCAHNTUM_DETAILS_GCC_MAJOR __GNUC__
+#if __GNUC__ <= 10
+    // GCC 10 does not have it
+  #define CAST(type, value) static_cast<type>(value)
+#else
+    // __builtin_bit_cast used to silence errors when casting out of unscoped enums range
+  #define CAST(type, value) __builtin_bit_cast(type, value)
+#endif
+
+#if defined(__has_include) && __has_include(<bits/char_traits.h>)
+  #include <bits/char_traits.h>
+#endif
+
+#define ENCHANTUM_DETAILS_GCC_MAJOR __GNUC__
 #if __GNUC__ <= 10
 // for out of bounds conversions for C style enums
   #pragma GCC diagnostic push
@@ -726,8 +981,8 @@ namespace details {
   template<auto V>
   constexpr auto gcc10_workaround() noexcept
   {
-    using E = decltype(V);
-    using T = std::underlying_type_t<E>;
+    using E               = decltype(V);
+    using T               = std::underlying_type_t<E>;
     constexpr auto prefix = SZC("constexpr auto enchantum::details::gcc10_workaround() [with auto V = ");
     constexpr auto begin  = __PRETTY_FUNCTION__ + prefix;
     if constexpr (begin[0] == '(') {
@@ -784,6 +1039,12 @@ namespace details {
     return __PRETTY_FUNCTION__ + SZC("constexpr auto enchantum::details::var_name() [with auto ...Vs = {");
   }
 
+  template<auto... Vs>
+  constexpr auto var_name2() noexcept
+  {
+    return SZC(__PRETTY_FUNCTION__) - SZC("constexpr auto enchantum::details::var_name2() [with auto ...Vs = {}]");
+  }
+
   template<bool IsBitFlag, typename IntType>
   constexpr void parse_string(
     const char*         str,
@@ -831,19 +1092,11 @@ namespace details {
       using Underlying = std::make_unsigned_t<std::conditional_t<std::is_same_v<bool, Under>, unsigned char, Under>>;
 
       constexpr auto str = [](const auto dependant) {
-#if __GNUC__ <= 10
-      // GCC 10 does not have it
-  #define CAST(type, value) static_cast<type>(value)
-#else
-      // __builtin_bit_cast used to silence errors when casting out of unscoped enums range
-  #define CAST(type, value) __builtin_bit_cast(type, value)
-#endif
         // dummy 0
         if constexpr (sizeof(dependant) && is_bitflag<E>) // sizeof... to make contest dependant
           return details::var_name<E{}, CAST(E, static_cast<Under>(Underlying{1} << Is))..., 0>();
         else
           return details::var_name<CAST(E, static_cast<Under>(static_cast<decltype(Min)>(Is) + Min))..., 0>();
-#undef CAST
       }(0);
 
       constexpr auto enum_in_array_len = details::enum_in_array_name_size<E{}>();
@@ -870,12 +1123,103 @@ namespace details {
     struct {
       decltype(elements_local) elements;
       Strings                  strings{};
-    } data = {elements_local};
+    } data                  = {elements_local};
     const auto  size        = data.strings.size();
     auto* const data_string = data.strings.data();
     for (std::size_t i = 0; i < size; ++i)
       data_string[i] = elements_local.strings[i];
     return data;
+  }
+
+    constexpr std::int32_t count_up_to(std::int32_t n) {
+      if (n < 0) {
+          return 0;
+      }
+
+      std::int32_t total = 0;
+      std::int32_t start = 0;
+      std::int32_t digits = 1;
+
+      while (start <= n) {
+          std::int32_t power = 1;
+
+        switch (digits) {
+            case 1:
+                power = 10;
+                break;
+            case 2:
+                power = 100;
+                break;
+            case 3:
+                power = 1000;
+                break;
+            case 4:
+                power = 10000;
+                break;
+            case 5:
+                power = 100000;
+                break;
+            case 6:
+                power = 1000000;
+                break;
+            case 7:
+                power = 10000000;
+                break;
+            case 8:
+                power = 100000000;
+                break;
+            case 9:
+                power = 1000000000;
+                break;
+        }
+
+          const auto end = (n < power - 1) ? n : power-1;
+
+          total += (end - start + 1) * digits;
+
+          start = end + 1;
+          digits++;
+      }
+
+      return total;
+    }
+    constexpr std::int32_t count_posnums(std::int32_t a,std::int32_t b) {
+      return a > b ? 0 : details::count_up_to(b) - details::count_up_to(a - 1);
+    }
+    constexpr std::int32_t count_chars(std::int32_t a, std::int32_t b) {
+        if (a > b) {
+            return 0;
+        }
+
+        if (a < 0 && b < 0) {
+            // turn them positive and add the negative signs
+            return count_posnums(-b, -a) + (b - a + 1);
+        }
+
+        // +b
+        if (a < 0) {
+            return count_posnums(1, -a)
+                 + count_posnums(0, b)
+                 + (-a); // negative signs
+        }
+
+        // both positive
+        return count_posnums(a, b);
+    }
+
+  template<typename E,std::int32_t... Is>
+  constexpr auto is_out_of_range( std::int32_t Min0,std::int32_t Max0,std::int32_t Min1,std::int32_t Max1, std::integer_sequence<int32_t,Is...>) noexcept
+  {
+    auto str = details::var_name2<CAST(E, static_cast<std::underlying_type_t<E>>(Is))...>();
+    const auto totalNumbers = static_cast<std::size_t>(Max0-Min0 + Max1-Min1 + 2);
+
+    constexpr auto length_of_enum_in_template_array_casting = details::length_of_enum_in_template_array_if_casting<E>();
+
+    const auto total = (SZC("(") + length_of_enum_in_template_array_casting + SZC(")")) * totalNumbers;
+    str -= 2*(totalNumbers-1);
+    str -= total;
+    str -= details::count_chars(Min0,Max0) + details::count_chars(Min1,Max1);
+    return str != 0;
   }
 
 } // namespace details
@@ -888,8 +1232,10 @@ namespace details {
   #pragma GCC diagnostic pop
 #endif
 
-#elif defined(_MSC_VER)
-  
+#undef CAST
+
+  #elif defined(_MSC_VER)
+    
 
 #include <array>
 #include <cassert>
@@ -921,7 +1267,7 @@ namespace details {
     if constexpr (is_scoped_enum<decltype(Enum)>) {
       if (s[0] == '(') {
         s.remove_prefix(SZC("(enum "));
-        s.remove_suffix(SZC(")0x0"));
+        s.remove_suffix(SZC(")0x0") + (sizeof(Enum) == 8)); // MSVC adds a extra 0 at the end for some reason for 8 bit enums
         return s.size();
       }
       return s.substr(0, s.rfind(':') - 1).size();
@@ -929,7 +1275,7 @@ namespace details {
     else {
       if (s[0] == '(') {
         s.remove_prefix(SZC("(enum "));
-        s.remove_suffix(SZC(")0x0"));
+        s.remove_suffix(SZC(")0x0") + (sizeof(Enum) == 8)); // MSVC adds a extra 0 at the end for some reason for 8 bit enums
       }
       if (const auto pos = s.rfind(':'); pos != s.npos)
         return pos - 1;
@@ -942,6 +1288,12 @@ namespace details {
   {
     //auto __cdecl f<class std::array<enum `anonymous namespace'::UnscopedAnon,32>{enum `anonymous-namespace'::UnscopedAnon
     return __FUNCSIG__ + SZC("auto __cdecl enchantum::details::var_name<");
+  }
+  template<auto... Vs>
+  constexpr auto __cdecl var_name2() noexcept
+  {
+    // !__FUNCSIG__[1000000];
+    return SZC(__FUNCSIG__) - SZC("auto __cdecl enchantum::details::var_name2<>(void) noexcept");
   }
 
   template<bool IsBitFlag, typename IntType>
@@ -1064,29 +1416,220 @@ namespace details {
       Strings                  strings{};
     } data = {elements_local};
 
-    const auto  size     = data.strings.size();
+    const auto  size        = data.strings.size();
     auto* const data_string = data.strings.data();
     for (std::size_t i = 0; i < size; ++i)
       data_string[i] = elements_local.strings[i];
     return data;
   }
+
+  constexpr uint64_t count16(uint64_t min) {
+    auto total = uint64_t(0);
+    
+    if(min >= 0x1000000000000000ull && min <= 0xffffffffffffffffull)
+    {
+        total += (min-0x1000000000000000ull+1)*16;
+        min = 0x1000000000000000ull-1;
+    }
+    
+
+    if(min >= 0x100000000000000ull && min <= 0xfffffffffffffffull)
+    {
+        total += (min-0x100000000000000ull+1)*15;
+        min = 0x100000000000000ull-1;
+    }
+    
+
+    if(min >= 0x10000000000000ull && min <= 0xffffffffffffffull)
+    {
+        total += (min-0x10000000000000ull+1)*14;
+        min = 0x10000000000000ull-1;
+    }
+    
+
+    if(min >= 0x1000000000000ull && min <= 0xfffffffffffffull)
+    {
+        total += (min-0x1000000000000ull+1)*13;
+        min = 0x1000000000000ull-1;
+    }
+    
+
+    if(min >= 0x100000000000ull && min <= 0xffffffffffffull)
+    {
+        total += (min-0x100000000000ull+1)*12;
+        min = 0x100000000000ull-1;
+    }
+    
+
+    if(min >= 0x10000000000ull && min <= 0xfffffffffffull)
+    {
+        total += (min-0x10000000000ull+1)*11;
+        min = 0x10000000000ull-1;
+    }
+    
+
+    if(min >= 0x1000000000ull && min <= 0xffffffffffull)
+    {
+        total += (min-0x1000000000ull+1)*10;
+        min = 0x1000000000ull-1;
+    }
+    
+
+    if(min >= 0x100000000ull && min <= 0xfffffffffull)
+    {
+        total += (min-0x100000000ull+1)*9;
+        min = 0x100000000ull-1;
+    }
+    
+
+    if(min >= 0x10000000ull && min <= 0xffffffffull)
+    {
+        total += (min-0x10000000ull+1)*8;
+        min = 0x10000000ull-1;
+    }
+    
+
+    if(min >= 0x1000000ull && min <= 0xfffffffull)
+    {
+        total += (min-0x1000000ull+1)*7;
+        min = 0x1000000ull-1;
+    }
+    
+
+    if(min >= 0x100000ull && min <= 0xffffffull)
+    {
+        total += (min-0x100000ull+1)*6;
+        min = 0x100000ull-1;
+    }
+    
+
+    if(min >= 0x10000ull && min <= 0xfffffull)
+    {
+        total += (min-0x10000ull+1)*5;
+        min = 0x10000ull-1;
+    }
+    
+
+    if(min >= 0x1000ull && min <= 0xffffull)
+    {
+        total += (min-0x1000ull+1)*4;
+        min = 0x1000ull-1;
+    }
+    
+
+    if(min >= 0x100ull && min <= 0xfffull)
+    {
+        total += (min-0x100ull+1)*3;
+        min = 0x100ull-1;
+    }
+    
+
+    if(min >= 0x10ull && min <= 0xffull)
+    {
+        total += (min-0x10ull+1)*2;
+        min = 0x10ull-1;
+    }
+    
+
+    if(min >= 0x0ull && min <= 0xfull)
+    {
+        total += (min-0x0ull+1)*1;
+        min = 0x0ull;
+    }
+    
+    return total;
+  }
+  constexpr uint8_t count_letters(uint64_t x) {
+    // clang-format off
+      if(x <= 0xfull)               return 1;
+      if(x <= 0xffull)              return 2;
+      if(x <= 0xfffull)             return 3;
+      if(x <= 0xffffull)            return 4;
+      if(x <= 0xfffffull)           return 5;
+      if(x <= 0xffffffull)          return 6;
+      if(x <= 0xfffffffull)         return 7;
+      if(x <= 0xffffffffull)        return 8;
+      if(x <= 0xfffffffffull)       return 9;
+      if(x <= 0xffffffffffull)      return 10;
+      if(x <= 0xfffffffffffull)     return 11;
+      if(x <= 0xffffffffffffull)    return 12;
+      if(x <= 0xfffffffffffffull)   return 13;
+      if(x <= 0xffffffffffffffull)  return 14;
+      if(x <= 0xfffffffffffffffull) return 15;
+    // clang-format on
+      return 16;
+  }
+
+constexpr uint64_t count_numbers(int64_t min,int64_t max,int treat_as)
+{
+    if(max < min)
+      return 0;
+    if(min < 0 || max < 0)
+    {
+        uint64_t len = 0;
+        switch(treat_as) 
+        {
+            case sizeof(char):
+            for(int64_t i = min;i <= max;++i)
+                len += count_letters(static_cast<unsigned char>(i));
+            break;
+            case sizeof(short):
+            for(int64_t i = min;i <=max;++i)
+                len += count_letters(static_cast<unsigned short>(i));
+            break;
+            case sizeof(int):
+            for(int64_t i = min;i <=max;++i)
+                len += count_letters(static_cast<unsigned int>(i));
+            break;
+            case sizeof(long long):
+              return std::uint64_t(max-min+1)*16;
+            // for(int64_t i = min;i <= max;++i) 
+                // len += count_letters(static_cast<unsigned long long>(i));
+            break;
+        }
+        return len;
+        // + details::count16(std::uint64_t(max));
+    }
+
+    return details::count16(std::uint64_t(max))-details::count16(std::uint64_t(min)-1);
+}
+
+  template<typename E,std::int32_t... Is>
+  constexpr auto is_out_of_range( std::int32_t Min0,std::int32_t Max0,std::int32_t Min1,std::int32_t Max1, std::integer_sequence<int32_t,Is...>) noexcept
+  {
+    using T = std::underlying_type_t<E>;
+    const auto totalNumbers = static_cast<std::size_t>(Max0-Min0 + Max1-Min1 +2);
+    auto len =  enchantum::details::var_name2<E(Is)...>();
+    constexpr auto size = std::is_same_v<T,int> || std::is_same_v<T, long> ? sizeof(long long) : sizeof(T);
+    #if _MSC_VER > 1924
+    len -= (SZC("(enum )") + enchantum::raw_type_name<E>.size()) * totalNumbers;
+    #endif
+    len -= (totalNumbers-1) * SZC(",");
+    len -= totalNumbers * SZC("0x");
+    if constexpr(std::is_same_v<T,signed long long> || std::is_same_v<T,unsigned long long>)
+        len -= (Max1-Min1+1) * SZC("0");
+      // char c[1];
+      // c[details::count_numbers(Min0,Max0,size)] = 0;
+      // + details::count_numbers(Min1,Max1,size)] = 0;
+      len -= details::count_numbers(Min0,Max0,size) + details::count_numbers(Min1,Max1,size);
+      // c[details::count_numbers(Min1,Max1,size)] = 0;
+      return len != 0;
+  }
+
 } // namespace details
 } // namespace enchantum
 
 #undef SZC
-#else
-  #error unsupported compiler please open an issue for enchantum
+  #else
+    #error unsupported compiler please open an issue for enchantum
+  #endif
 #endif
 
+#include <array>
+#include <climits>
 #include <type_traits>
 #include <utility>
 
-#ifndef ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY
-  #define ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY 2
-#endif
-#if ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY < 0
-  #error ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY must not be a negative number.
-#endif
 namespace enchantum {
 
 #ifdef __cpp_lib_to_underlying
@@ -1098,6 +1641,129 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
   return static_cast<std::underlying_type_t<E>>(e);
 }
 #endif
+#if defined(__cpp_impl_reflection) && __cpp_impl_reflection >= 202506L
+
+namespace details {
+
+  template<typename E>
+  consteval std::size_t sort_unique(std::vector<std::meta::info>& info)
+  {
+    using T = std::underlying_type_t<E>;
+
+    if constexpr(is_bitflag<E>)
+    {
+      using U = std::make_unsigned_t<T>;
+      for(std::size_t i =0;i<info.size();)
+      {
+        auto u = static_cast<U>(std::meta::extract<E>(info[i]));
+        // is not pow of 2 or 0
+        if((u&(u-1)) != 0)
+          info.erase(info.begin() + i);
+        else
+          ++i;
+      }
+    }
+
+    std::meta::info* data = info.data();
+    std::size_t size = info.size();
+
+    for (std::size_t i = 0; i < size; ++i) {
+      for (std::size_t j = 0; j + 1 < size - i; ++j) {
+        if (static_cast<T>(std::meta::extract<E>(data[j])) > static_cast<T>(std::meta::extract<E>(data[j + 1]))) {
+          const auto t = data[j];
+          data[j]      = data[j + 1];
+          data[j + 1]  = t;
+        }
+      }
+    }
+
+    if (size == 0)
+      return 0;
+
+    std::size_t newsize = 1;
+    for (std::size_t i = 1; i < size; ++i)
+      if (static_cast<T>(std::meta::extract<E>(data[i])) != static_cast<T>(std::meta::extract<E>(data[newsize - 1])))
+        data[newsize++] = data[i];
+
+    
+    return newsize;
+  }
+
+  template<typename E>
+  consteval auto get_size(std::vector<std::meta::info>&& enums) 
+  {
+    auto newsize = details::sort_unique<E>(enums);
+    std::size_t sz=0;
+    for(std::size_t i =0;i<newsize;++i )
+        sz += std::meta::annotations_of_with_type(enums[i],^^enchantum::ignore_t).empty(); 
+    return sz;
+  }
+
+template<typename E,typename Pair,bool NullTerminated>
+constexpr auto get_entries() 
+{
+  static_assert(std::meta::is_enumerable_type(^^E),"enhcantum disallows reflection of forward declared enums.");
+  enum {
+    size = details::get_size<E>(std::meta::enumerators_of(^^E))
+  };
+  if constexpr(size > 0) {
+    struct LenAndValues {
+      size_t stringlen;
+      E values[size];
+      unsigned int offsets[size+1];
+    };
+
+    constexpr static auto elements = [&]() {
+      LenAndValues ret{};
+      auto refl = std::meta::enumerators_of(^^E);
+      details::sort_unique<E>(refl);
+      for(std::size_t i =0;i<size;++i)
+      {
+        auto currname = std::meta::identifier_of(refl[i]);
+        currname.remove_prefix(prefix_length_or_zero<E>);
+        ret.stringlen+= currname.size() + NullTerminated;
+        ret.values[i]=std::meta::extract<E>(refl[i]);
+        ret.offsets[i+1] = static_cast<unsigned int>(currname.size() + NullTerminated + ret.offsets[i]);
+      }
+      return ret;
+    }();
+
+    constexpr static auto strings = [](){
+      std::array<char,elements.stringlen> names;
+      auto* namesp = names.data();
+      auto refl = std::meta::enumerators_of(^^E);
+      details::sort_unique<E>(refl);
+
+      for(std::size_t i =0;i<size;++i)
+      {
+        auto currname = std::meta::identifier_of(refl[i]);
+        const auto jsize = currname.size();
+        for(auto j = details::prefix_length_or_zero<E>;j<jsize;++j)
+          *namesp++ = currname[j];
+        if constexpr(NullTerminated)
+          *namesp++ = '\0';
+      }
+      return names;
+    }();
+
+    const auto* const offsets = elements.offsets; 
+    const auto* stringsp = strings.data();
+    std::array<Pair, size> ret{};
+    auto* const ret_data = ret.data();
+    for (std::size_t i = 0; i < size; ++i) {
+        auto& [e, s]     = ret_data[i];
+        e                = elements.values[i];
+        using StringView = std::remove_cvref_t<decltype(s)>;
+        s                = StringView(stringsp + offsets[i], offsets[i + 1] - offsets[i] - NullTerminated);
+      }
+    return ret;
+  } else {
+    return std::array<Pair, 0>{};
+  }
+}
+}
+
+#else // no refelction
 
 namespace details {
 
@@ -1114,7 +1780,7 @@ namespace details {
     if (!is_bitflag)
       return static_cast<std::size_t>(max - min + 1);
 
-#if __clang_major__ >= 20
+#if defined(__clang_major__) && __clang_major__ >= 20
     if (!has_fixed_underlying) {
       auto        v = max;
       std::size_t r = 1;
@@ -1142,6 +1808,25 @@ namespace details {
                                                              Max,
                                                              std::is_signed_v<std::underlying_type_t<E>>)>{});
 
+  template<typename,typename>
+  struct conc;
+
+  template<int32_t... Is,int32_t... Js>
+  struct conc<std::integer_sequence<int32_t,Is...>,std::integer_sequence<int32_t,Js...>>
+  {
+    using type = std::integer_sequence<int32_t,Is...,Js...>;
+  };
+  template<int32_t,typename T>
+  struct int_seq_impl;
+  template<int32_t Min,int32_t... Is>
+  struct int_seq_impl<Min,std::integer_sequence<int32_t,Is...>>
+  {
+    using type = std::integer_sequence<int32_t,(Is+Min)...>;
+  };
+  
+  template<int32_t Min,int32_t Max>
+  using int_seq =typename int_seq_impl<Min,std::make_integer_sequence<int32_t,Max-Min+1>> ::type;
+
   // Thanks https://en.cppreference.com/w/cpp/utility/intcmp.html
   template<typename T, typename U>
   constexpr bool cmp_less(const T t, const U u) noexcept
@@ -1166,10 +1851,7 @@ namespace details {
     return details::cmp_less(t, int(u));
   }
 
-  constexpr bool cmp_less(const bool t, const bool u) noexcept
-  {
-    return int(t) < int(u);
-  }
+  constexpr bool cmp_less(const bool t, const bool u) noexcept { return int(t) < int(u); }
 
   template<typename T, typename U>
   constexpr T ClampToRange(U u)
@@ -1185,21 +1867,58 @@ namespace details {
   constexpr auto get_reflection_data() noexcept
   {
     constexpr auto elements = reflection_data_impl<E, NullTerminated>.elements;
-    using StringLengthType = std::conditional_t<(elements.total_string_length < UINT8_MAX), std::uint8_t, std::uint16_t>;
-
 #if ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY >= 2
     if constexpr (
-  #if __clang_major__ >= 20
+  #if defined(__clang_major__) && __clang_major__ >= 20
       has_fixed_underlying_type<E> &&
   #endif
-      !details::has_specialized_traits<E>) {
+      !details::has_specialized_traits<E> && !is_bitflag<E> && !std::is_same_v<std::underlying_type_t<E>, bool>) {
+  #define ENCHANTUM_ERROR_STRING                                                                                                                        \
+    "\n\n\n===================ERROR===================\n"                                                                                               \
+    "enchantum has detected that this enum is not fully reflected.\n"                                                                                   \
+    "Please look at https://github.com/ZXShady/enchantum/blob/main/docs/features.md#enchantum_check_out_of_bounds_by\n"                                 \
+    "for more information\n"                                                                                                                            \
+    "===========================================\n\n\n"
+      // TODO: switch to new check for those 2 compilers
+  #if defined(__NVCOMPILER) || defined(__RESHARPER__)
       static_assert(elements.valid_count == reflection_data_impl<E, NullTerminated,
         details::ClampToRange<std::underlying_type_t<E>>(enum_traits<E>::min * ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY),
         details::ClampToRange<std::underlying_type_t<E>>(enum_traits<E>::max * ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY)
     >.elements.valid_count,
-          "enchantum has detected that this enum is not fully reflected. Please look at https://github.com/ZXShady/enchantum/blob/main/docs/features.md#enchantum_check_out_of_bounds_by for more information");
+          ENCHANTUM_ERROR_STRING);
+  #else
+      // check [min,max] * 2 but exluding [min,max]
+      using T = std::underlying_type_t<E>;
+
+      constexpr auto max = +enum_traits<E>::max;
+
+      constexpr auto scale = ENCHANTUM_CHECK_OUT_OF_BOUNDS_BY;
+
+      constexpr auto tmax = std::numeric_limits<T>::max();
+        constexpr auto min             = +enum_traits<E>::min;
+        constexpr auto tmin            = std::numeric_limits<T>::min();
+        constexpr bool can_check_lower = min >= tmin && min >= tmin / scale;
+      constexpr bool can_check_upper = max <= tmax && max <= tmax / scale;
+      if constexpr(can_check_lower && can_check_upper) {
+        constexpr auto Min1 = static_cast<int32_t>(max)+1;
+        constexpr auto Max1 = static_cast<int32_t>(max)*scale;
+        if constexpr(std::is_unsigned_v<T>)
+        {
+          constexpr bool is_out_of_range = details::is_out_of_range<E>(0,-1,Min1,Max1,int_seq<Min1,Max1>{});
+          static_assert(!is_out_of_range,ENCHANTUM_ERROR_STRING);
+        } else {
+            constexpr auto Min0 = static_cast<int32_t>(min)*scale;
+            constexpr auto Max0 = static_cast<int32_t>(min)-1;
+            constexpr bool is_out_of_range = details::is_out_of_range<E>(Min0,Max0,Min1,Max1,typename conc<int_seq<Min0,Max0>,int_seq<Min1,Max1>>::type{});
+            static_assert(!is_out_of_range,ENCHANTUM_ERROR_STRING);
+        }
+      }
     }
 #endif
+#undef ENCHANTUM_ERROR_STRING
+#endif
+
+    using StringLengthType = std::conditional_t<(elements.total_string_length < UINT8_MAX), std::uint8_t, std::uint16_t>;
     FinalReflectionResult<E, StringLengthType, elements.valid_count> ret;
     std::size_t                                                      i            = 0;
     StringLengthType                                                 string_index = 0;
@@ -1208,14 +1927,14 @@ namespace details {
       // "aabc"
 
       ret.string_indices[i] = string_index;
-#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
-  // false positives from T += T
-  // it does not make sense.
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
+      // false positives from T += T
+      // it does not make sense.
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wconversion"
 #endif
       string_index += static_cast<StringLengthType>(elements.string_lengths[i] + NullTerminated);
-#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif
     }
@@ -1231,45 +1950,89 @@ namespace details {
 
   template<typename E, bool NullTerminated>
   inline constexpr auto reflection_string_indices = reflection_data<E, NullTerminated>.string_indices;
+
+  template<typename E, typename Pair, bool NullTerminated, typename Reflected = int>
+  constexpr auto get_entries()
+  {
+#if defined(__NVCOMPILER)
+    // nvc++ had issues with that and did not allow it. it just did not work after testing in godbolt and I don't know why
+    const auto reflected = details::reflection_data<E, NullTerminated>;
+    const auto strings   = details::reflection_data_string_storage<E, NullTerminated>.data();
+#else
+    constexpr auto reflected = details::reflection_data<std::remove_cv_t<E>, NullTerminated>;
+    constexpr auto strings   = details::reflection_data_string_storage<std::remove_cv_t<E>, NullTerminated>.data();
+#endif
+    constexpr auto size = sizeof(reflected.values) / sizeof(reflected.values[0]);
+    static_assert(size != 0,
+                  "enchantum failed to reflect this enum.\n"
+                  "Please read https://github.com/ZXShady/enchantum/blob/main/docs/limitations.md before opening an "
+                  "issue\n"
+                  "with your enum type with all its namespace/classes it is defined inside to help the creator debug "
+                  "the "
+                  "issues.");
+
+    const auto& indices = reflected.string_indices;
+#if defined(__RESHARPER__)
+    auto ret = details::rscpp_make_defaulted_array_of<size>(Pair{reflected.values[0],
+                                                                 string_view(strings + indices[0],
+                                                                             indices[1] - indices[0] - NullTerminated)},
+                                                            std::make_index_sequence<size>{});
+#else
+    std::array<Pair, size> ret{};
+#endif
+    auto* const ret_data = ret.data();
+    for (std::size_t i = 0; i < size; ++i) {
+      auto& [e, s]     = ret_data[i];
+      e                = reflected.values[i];
+      using StringView = std::remove_cv_t<std::remove_reference_t<decltype(s)>>;
+      s                = StringView(strings + indices[i], indices[i + 1] - indices[i] - NullTerminated);
+    }
+    return ret;
+  }
 } // namespace details
 
+#endif
+
 #ifdef __cpp_concepts
-template<Enum E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true>
+template<Enum E, typename Pair = std::pair<E, enchantum::string_view>, bool NullTerminated = true>
 #else
-template<typename E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true, std::enable_if_t<std::is_enum_v<E>, int> = 0>
+template<typename E,
+         typename Pair                            = std::pair<E, enchantum::string_view>,
+         bool NullTerminated                      = true,
+         std::enable_if_t<std::is_enum_v<E>, int> = 0>
 #endif
-inline constexpr auto entries = []() {
-
-#if defined(__NVCOMPILER)
-  // nvc++ had issues with that and did not allow it. it just did not work after testing in godbolt and I don't know why
-  const auto reflected = details::reflection_data<E, NullTerminated>;
-  const auto strings   = details::reflection_data_string_storage<E, NullTerminated>.data();
-#else
-  const auto reflected = details::reflection_data<std::remove_cv_t<E>, NullTerminated>;
-  const auto strings   = details::reflection_data_string_storage<std::remove_cv_t<E>, NullTerminated>.data();
-#endif
-  using Pairs = std::array<Pair, sizeof(reflected.values) / sizeof(reflected.values[0])>;
-  Pairs          ret{};
-  constexpr auto size = ret.size();
-  static_assert(size != 0,
-                "enchantum failed to reflect this enum.\n"
-                "Please read https://github.com/ZXShady/enchantum/blob/main/docs/limitations.md before opening an "
-                "issue\n"
-                "with your enum type with all its namespace/classes it is defined inside to help the creator debug the "
-                "issues.");
-  auto* const ret_data = ret.data();
-
-  for (std::size_t i = 0; i < size; ++i) {
-    auto& [e, s]     = ret_data[i];
-    e                = reflected.values[i];
-    using StringView = std::remove_cv_t<std::remove_reference_t<decltype(s)>>;
-    s                = StringView(strings + reflected.string_indices[i],
-                   reflected.string_indices[i + 1] - reflected.string_indices[i] - NullTerminated);
-  }
-  return ret;
-}();
+inline constexpr auto entries = enchantum::details::get_entries<E, Pair, NullTerminated>();
 
 namespace details {
+
+#if defined(__cpp_impl_reflection) && __cpp_impl_reflection >= 202506L
+
+  template<typename E, bool NullTerminated>
+  inline constexpr auto reflection_string_indices = []() 
+  {
+    constexpr auto vals = entries<E,std::pair<E,enchantum::string_view>, NullTerminated>;
+    
+    constexpr auto totallen = [&]()
+    {
+      size_t len=0;
+      for(auto [_,str] : vals)
+        len += str.size() + NullTerminated;
+      return len;
+    }();
+    using T = std::conditional_t<(totallen<=UINT8_MAX),uint8_t,uint16_t>;
+    std::array<T,vals.size()+1> indices;
+    indices[0] = 0; 
+    for(std::size_t i =0;auto [_,str] : vals) {
+      indices[i+1] = static_cast<T>(str.size()+indices[i] + NullTerminated);
+      ++i;
+    }
+    return indices;
+  }();
+  template<typename E, bool NullTerminated>
+  inline constexpr auto reflection_data_string_storage = 
+    entries<E,std::pair<E,enchantum::string_view>, NullTerminated>.empty() ? nullptr : entries<E,std::pair<E,enchantum::string_view>, NullTerminated>[0].second.data();
+
+#endif
   template<typename E>
   constexpr auto get_values() noexcept
   {
@@ -1304,6 +2067,12 @@ template<typename E, typename String = string_view, bool NullTerminated = true, 
 #endif
 inline constexpr auto names = details::get_names<E, String, NullTerminated>();
 
+#define ENCHANTUM_DECLARE_EMPTY(ENUM)                                                                         \
+  template<>                                                                                                  \
+  inline constexpr auto enchantum::entries<ENUM> = ::std::array<std::pair<ENUM, ::enchantum::string_view>, 0> \
+  {                                                                                                           \
+  }
+
 template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 inline constexpr auto min = entries<E>.front().first;
 
@@ -1324,15 +2093,19 @@ inline constexpr bool has_zero_flag = [](const auto is_bitflag) {
 }(std::bool_constant<is_bitflag<E>>{});
 
 template<typename E>
-inline constexpr bool is_contiguous = static_cast<std::size_t>(
-                                        enchantum::to_underlying(max<E>) - enchantum::to_underlying(min<E>)) +
-    1 ==
-  count<E>;
+inline constexpr bool is_contiguous = []() {
+  if constexpr (count<E> == 0)
+    return false;
+  else
+    return static_cast<std::size_t>(enchantum::to_underlying(max<E>) - enchantum::to_underlying(min<E>)) + 1 == count<E>;
+}();
 
 template<typename E>
 inline constexpr bool is_contiguous_bitflag = [](const auto is_bitflag) {
   if constexpr (is_bitflag.value) {
     constexpr auto& enums = entries<E>;
+    if(enums.empty())
+      return false;
     using T               = std::underlying_type_t<E>;
     for (auto i = std::size_t{has_zero_flag<E>}; i < enums.size() - 1; ++i)
       if (T(enums[i].first) << 1 != T(enums[i + 1].first))
@@ -1387,7 +2160,8 @@ namespace enchantum{
 #include <cstddef>
 #include <cstdint>
 #include <utility>
-#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
+
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
   // false positives from T += T
   // it does not make sense.
   #pragma GCC diagnostic push
@@ -1397,14 +2171,11 @@ namespace enchantum{
 namespace enchantum {
 namespace details {
 
-  struct senitiel {};
-
   template<typename CRTP, std::ptrdiff_t Size>
   struct sized_iterator {
     static_assert(Size < INT16_MAX, "Too many enum entries");
-  private:
-    using IndexType = std::conditional_t<(Size <= INT8_MAX), std::int8_t, std::int16_t>;
   public:
+    using IndexType = std::conditional_t<(Size <= INT8_MAX), std::int8_t, std::int16_t>;
     IndexType       index{};
     constexpr CRTP& operator+=(const std::ptrdiff_t offset) & noexcept
     {
@@ -1464,73 +2235,33 @@ namespace details {
       return index - that.index;
     }
 
-    [[nodiscard]] constexpr std::ptrdiff_t        operator-(senitiel) const noexcept { return index - Size; }
-    [[nodiscard]] friend constexpr std::ptrdiff_t operator-(senitiel, sized_iterator it) noexcept
-    {
-      return Size - it.index;
-    }
-
-    [[nodiscard]] constexpr bool operator==(const sized_iterator that) const noexcept { return that.index == index; };
-    [[nodiscard]] constexpr bool operator==(senitiel) const noexcept { return Size == index; }
+    [[nodiscard]] constexpr bool operator==(const sized_iterator that) const noexcept { return that.index == index; }
 
 #ifdef __cpp_impl_three_way_comparison
-    [[nodiscard]] constexpr auto operator<=>(const sized_iterator that) const noexcept { return index <=> that.index; };
-    [[nodiscard]] constexpr auto operator<=>(senitiel) const noexcept { return index <=> Size; }
+    [[nodiscard]] constexpr auto operator<=>(const sized_iterator that) const noexcept { return index <=> that.index; }
 #else
 
-    [[nodiscard]] constexpr bool operator!=(const sized_iterator that) const noexcept { return that.index != index; };
-    [[nodiscard]] constexpr bool operator!=(senitiel) const noexcept { return Size != index; }
-
-    [[nodiscard]] friend constexpr bool operator==(senitiel, const sized_iterator it) noexcept
-    {
-      return Size == it.index;
-    }
-
-    [[nodiscard]] friend constexpr bool operator!=(senitiel, const sized_iterator it) noexcept
-    {
-      return Size != it.index;
-    }
+    [[nodiscard]] constexpr bool operator!=(const sized_iterator that) const noexcept { return that.index != index; }
 
     [[nodiscard]] constexpr bool operator<(const sized_iterator that) const noexcept { return index < that.index; };
     [[nodiscard]] constexpr bool operator>(const sized_iterator that) const noexcept { return index > that.index; };
     [[nodiscard]] constexpr bool operator<=(const sized_iterator that) const noexcept { return index <= that.index; };
     [[nodiscard]] constexpr bool operator>=(const sized_iterator that) const noexcept { return index >= that.index; };
 
-    [[nodiscard]] constexpr bool operator<(senitiel) const noexcept { return index < Size; };
-    [[nodiscard]] constexpr bool operator>(senitiel) const noexcept { return index > Size; };
-    [[nodiscard]] constexpr bool operator<=(senitiel) const noexcept { return index <= Size; };
-    [[nodiscard]] constexpr bool operator>=(senitiel) const noexcept { return index >= Size; };
-
-    [[nodiscard]] friend constexpr bool operator<(senitiel, const sized_iterator it) noexcept
-    {
-      return Size < it.index;
-    };
-    [[nodiscard]] friend constexpr bool operator>(senitiel, const sized_iterator it) noexcept
-    {
-      return Size > it.index;
-    };
-    [[nodiscard]] friend constexpr bool operator<=(senitiel, const sized_iterator it) noexcept
-    {
-      return Size <= it.index;
-    };
-    [[nodiscard]] friend constexpr bool operator>=(senitiel, const sized_iterator it) noexcept
-    {
-      return Size >= it.index;
-    };
-
 #endif
   };
 
   template<typename E, typename String = string_view, bool NullTerminated = true>
   struct names_generator_t {
+    using value_type = String;
     [[nodiscard]] static constexpr std::size_t size() noexcept { return count<E>; }
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
       using value_type = String;
       [[nodiscard]] constexpr String operator*() const noexcept
       {
-        const auto* const p       = details::reflection_string_indices<E, NullTerminated>.data();
-        const auto* const strings = details::reflection_data_string_storage<E, NullTerminated>.data();
+        const auto* const p       = &details::reflection_string_indices<E, NullTerminated>[0];
+        const auto* const strings = &details::reflection_data_string_storage<E, NullTerminated>[0];
         return String(strings + p[this->index], p[this->index + 1] - p[this->index] - NullTerminated);
       }
 
@@ -1538,7 +2269,7 @@ namespace details {
     };
 
     [[nodiscard]] static constexpr auto begin() { return iterator{}; }
-    [[nodiscard]] static constexpr auto end() { return senitiel{}; }
+    [[nodiscard]] static constexpr auto end() { return iterator{{static_cast<typename iterator::IndexType>(size())}}; }
 
     [[nodiscard]] constexpr auto operator[](const std::size_t i) const noexcept
     {
@@ -1549,6 +2280,7 @@ namespace details {
   template<typename E>
   struct values_generator_t {
     [[nodiscard]] static constexpr std::size_t size() noexcept { return count<E>; }
+    using value_type = E;
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
       using value_type = E;
@@ -1576,7 +2308,7 @@ namespace details {
     };
 
     [[nodiscard]] static constexpr auto begin() { return iterator{}; }
-    [[nodiscard]] static constexpr auto end() { return senitiel{}; }
+    [[nodiscard]] static constexpr auto end() { return iterator{{static_cast<typename iterator::IndexType>(size())}}; }
 
     [[nodiscard]] constexpr auto operator[](const std::size_t i) const noexcept
     {
@@ -1586,6 +2318,8 @@ namespace details {
 
   template<typename E, typename Pair = std::pair<E, string_view>, bool NullTerminated = true>
   struct entries_generator_t {
+    using value_type = Pair;
+
     [[nodiscard]] static constexpr std::size_t size() noexcept { return count<E>; }
 
     struct iterator : sized_iterator<iterator, static_cast<std::ptrdiff_t>(size())> {
@@ -1601,7 +2335,7 @@ namespace details {
     };
 
     [[nodiscard]] static constexpr auto begin() { return iterator{}; }
-    [[nodiscard]] static constexpr auto end() { return senitiel{}; }
+    [[nodiscard]] static constexpr auto end() { return iterator{{static_cast<typename iterator::IndexType>(size())}}; }
 
     [[nodiscard]] constexpr auto operator[](const std::size_t i) const noexcept
     {
@@ -1632,14 +2366,16 @@ inline constexpr details::entries_generator_t<E, Pair, NullTerminated> entries_g
 
 } // namespace enchantum
 
-#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif
+
+// IWYU pragma: end_exports
 
 #include <type_traits>
 #include <utility>
 
-#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wconversion"
   #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
@@ -1659,7 +2395,7 @@ namespace details {
       const auto b_data = b.data();
 
       for (std::size_t i = 0; i < a_size; ++i)
-        if (!binary_pred(a_data[i],b_data[i]))
+        if (!binary_pred(a_data[i], b_data[i]))
           return false;
       return true;
     }
@@ -1689,9 +2425,9 @@ template<ENCHANTUM_DETAILS_ENUM_CONCEPT(E)>
 [[nodiscard]] constexpr bool contains(const std::underlying_type_t<E> value) noexcept
 {
   using T = std::underlying_type_t<E>;
-
-  if (value < T(min<E>) || value > T(max<E>))
-    return false;
+  if constexpr (count<E> != 0)
+    if (value < T(min<E>) || value > T(max<E>))
+      return false;
 
   if constexpr (is_contiguous_bitflag<E>) {
     if constexpr (has_zero_flag<E>)
@@ -1758,7 +2494,7 @@ namespace details {
     {
       using T = std::underlying_type_t<E>;
 
-      if constexpr (is_contiguous<E>) {
+      if constexpr (is_contiguous<E> && count<E> != 0) {
         if (enchantum::contains(e)) {
           return optional<std::size_t>(std::size_t(T(e) - T(min<E>)));
         }
@@ -1847,11 +2583,13 @@ inline constexpr details::to_string_functor to_string{};
 
 } // namespace enchantum
 
-#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif
 
-#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
+#include <cstddef>
+
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wconversion"
   #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
@@ -1967,7 +2705,7 @@ template<ENCHANTUM_DETAILS_ENUM_BITFLAG_CONCEPT(E)>
 
 } // namespace enchantum
 
-#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif
 
@@ -1998,6 +2736,7 @@ namespace details {
 } // namespace enchantum
 
 #include <utility>
+#include <cstddef>
 
 namespace enchantum {
 
@@ -2079,6 +2818,7 @@ constexpr void for_each(Func f) // intentional not const
 
 #include <array>
 #include <stdexcept>
+#include <type_traits>
 
 namespace enchantum {
 
@@ -2190,9 +2930,8 @@ public:
     return operator[](*enchantum::enum_to_index(index));
   }
 
-  constexpr bool test(const E pos)
+  constexpr bool test(const E pos) const
   {
-
     if (const auto i = enchantum::enum_to_index(pos))
       return test(*i);
     ENCHANTUM_THROW(std::out_of_range("enchantum::bitset::test(E pos,bool value) out of range exception"), pos);
@@ -2360,7 +3099,7 @@ namespace iostream_operators {
 
 #include <cstddef>
 
-#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
@@ -2402,7 +3141,7 @@ inline constexpr details::next_value_circular_functor<-1> prev_value_circular{};
 
 } // namespace enchantum
 
-#if defined(ENCAHNTUM_DETAILS_GCC_MAJOR) && ENCAHNTUM_DETAILS_GCC_MAJOR <= 10
+#if defined(ENCHANTUM_DETAILS_GCC_MAJOR) && ENCHANTUM_DETAILS_GCC_MAJOR <= 10
   #pragma GCC diagnostic pop
 #endif
 
@@ -2418,25 +3157,25 @@ struct fmt::formatter<E>
 template<typename E>
 struct fmt::formatter<E, char, std::enable_if_t<std::is_enum_v<E>>>
 #endif
-: fmt::formatter<string_view> {
+: fmt::formatter< ::enchantum::string_view> {
   template<typename FmtContext>
   constexpr auto format(const E e, FmtContext& ctx) const
   {
-    return fmt::formatter<string_view>::format(enchantum::details::format(e), ctx);
+    return fmt::formatter< ::enchantum::string_view>::format(enchantum::details::format(e), ctx);
   }
 };
 #elif (__cplusplus >= 202002 || (defined(_MSVC_LANG) && _MSVC_LANG >= 202002)) && __has_include(<format>)
   
 
 #include <format>
-#include <string_view>
 
 template<enchantum::Enum E>
-struct std::formatter<E> : std::formatter<string_view> {
+struct std::formatter<E> : std::formatter< ::enchantum::string_view> {
   template<typename FmtContext>
   constexpr auto format(const E e, FmtContext& ctx) const
   {
-    return std::formatter<string_view>::format(enchantum::details::format(e), ctx);
+    return std::formatter< ::enchantum::string_view>::format(enchantum::details::format(e), ctx);
   }
 };
 #endif
+// IWYU pragma: end_exports
