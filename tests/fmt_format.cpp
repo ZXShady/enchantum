@@ -1,6 +1,14 @@
 #define FMT_HEADER_ONLY
 #define FMT_UNICODE 0 // we don't need unicode
+#if defined _MSC_VER && !defined __clang__
+  #pragma warning(push)
+  #pragma warning(disable : 4127 4702) // const-expr in if cond
+#endif
 #include <fmt/format.h>
+#if defined _MSC_VER && !defined __clang__
+  #pragma warning(pop)
+#endif
+
 
 #include "test_utility.hpp"
 #include <catch2/catch_test_macros.hpp>

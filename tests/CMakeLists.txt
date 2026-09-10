@@ -4,8 +4,22 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
   GIT_TAG devel
 )
-FetchContent_MakeAvailable(Catch2)
- 
+
+FetchContent_Declare( 
+  fmt
+  GIT_REPOSITORY https://github.com/fmtlib/fmt
+  GIT_TAG main
+)
+
+
+FetchContent_Declare( 
+  quill
+  GIT_REPOSITORY https://github.com/odygrd/quill
+  GIT_TAG master
+)
+
+FetchContent_MakeAvailable(Catch2 fmt quill)
+
 target_compile_features(Catch2 PRIVATE cxx_std_17)
 target_compile_definitions(Catch2 PUBLIC CATCH_CONFIG_ENABLE_OPTIONAL_STRINGMAKER)
 add_executable(tests)
@@ -13,8 +27,7 @@ add_executable(tests)
 target_include_directories(tests PRIVATE "third_party")
 target_compile_features(tests PRIVATE cxx_std_17)
 
-
-target_link_libraries(tests PRIVATE enchantum::enchantum Catch2::Catch2WithMain)
+target_link_libraries(tests PRIVATE enchantum::enchantum Catch2::Catch2WithMain fmt::fmt quill::quill)
 
 if(ENCHANTUM_RUNTIME_TESTS)
   message(STATUS "enchantum tests are being ran at runtime")
@@ -22,7 +35,7 @@ if(ENCHANTUM_RUNTIME_TESTS)
 endif()
 
 if(MSVC)
-  target_compile_options(tests PRIVATE /Za /permissive-)
+  target_compile_options(tests PRIVATE /permissive-)
   target_compile_options(tests PRIVATE /WX /W4)
 else()
   target_compile_options(tests PRIVATE -Werror -Wall -Wextra -Wshadow -Wconversion -Wpedantic)
