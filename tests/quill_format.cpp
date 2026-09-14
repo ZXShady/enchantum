@@ -4,7 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_template_test_macros.hpp>
 
-#if defined(__clang_major__) && (__clang_major__ == 9 || __clang_major__ == 11)
+#if defined(__clang_major__) && __clang_major__ == 9
 #include <enchantum/details/format_util.hpp>
 
 template <typename E>
@@ -27,7 +27,7 @@ static std::string quill_fmt(E e)
 
 namespace {
   struct StringSink : quill::Sink {
-    static void Init() 
+    static void Init()
     {
         // if I did not do this it would hang
   static char init_once=(quill::Backend::start(),char());
@@ -45,7 +45,7 @@ namespace {
       str += log_statement;
     }
     std::string str;
-  }; 
+  };
 }
 
 template <typename E>

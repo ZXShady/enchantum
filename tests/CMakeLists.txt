@@ -1,24 +1,27 @@
 ﻿include(FetchContent)
-FetchContent_Declare( 
+FetchContent_Declare(
   Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
   GIT_TAG devel
 )
 
-FetchContent_Declare( 
+FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt
-  GIT_TAG main
+  GIT_TAG e424e3f2e607da02742f73db84873b8084fc714c # 12.0.0
 )
-
-
-FetchContent_Declare( 
+FetchContent_Declare(
+  nlohmann_json
+  GIT_REPOSITORY https://github.com/nlohmann/json
+  GIT_TAG 55f93686c01528224f448c19128836e7df245f72 # 1.12.0
+)
+FetchContent_Declare(
   quill
   GIT_REPOSITORY https://github.com/odygrd/quill
   GIT_TAG master
 )
 
-FetchContent_MakeAvailable(Catch2 fmt quill)
+FetchContent_MakeAvailable(Catch2 fmt quill nlohmann_json)
 
 target_compile_features(Catch2 PRIVATE cxx_std_17)
 target_compile_definitions(Catch2 PUBLIC CATCH_CONFIG_ENABLE_OPTIONAL_STRINGMAKER)
@@ -27,7 +30,7 @@ add_executable(tests)
 target_include_directories(tests PRIVATE "third_party")
 target_compile_features(tests PRIVATE cxx_std_17)
 
-target_link_libraries(tests PRIVATE enchantum::enchantum Catch2::Catch2WithMain fmt::fmt quill::quill)
+target_link_libraries(tests PRIVATE enchantum::enchantum Catch2::Catch2WithMain nlohmann_json::nlohmann_json fmt::fmt quill::quill)
 
 if(ENCHANTUM_RUNTIME_TESTS)
   message(STATUS "enchantum tests are being ran at runtime")
@@ -57,7 +60,7 @@ check_cxx_source_compiles("
         auto s = std::format(\"{}\",42);
         (void)s;
         return 0;
-    }" 
+    }"
     HAS_STD_FORMAT
 )
 
@@ -119,6 +122,3 @@ include(CTest)
 include(Catch)
 catch_discover_tests(tests)
 catch_discover_tests(tests_config)
-
-
-
